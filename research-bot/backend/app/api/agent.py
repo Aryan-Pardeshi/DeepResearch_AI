@@ -1,15 +1,22 @@
-from fastapi import FastAPI
+from fastapi import APIRouter
 from backend.app.graph.builder import research_graph
 import uuid
 from pydantic import BaseModel
+
+from langgraph.types import Command
 
 class ResearchStartRequest(BaseModel):
     query: str
 
 
-app = FastAPI()
+class ResearchApproveRequest(BaseModel):
+    thread_id: str
+    message: str
 
-@app.post("/research/start")
+
+router = APIRouter()
+
+@router.post("/research/start")
 async def run_research(request: ResearchStartRequest):
     id = str(uuid.uuid4())
     config = {"configurable": {"thread_id": id}}
@@ -29,7 +36,30 @@ async def run_research(request: ResearchStartRequest):
     status = state.values.get("status")
 
     return {
-    "thread_id": id,
-    "plan": plan,
-    "status": status
-}
+        "thread_id": id,
+        "plan": plan,
+        "status": status
+    }
+
+
+@router.post("/research/approve")
+async def approve_plan(request: ResearchApproveRequest):
+    config = {"configurable": {"thread_id": request.thread_id}}
+    
+    #resume the graph that was paused due to interrupt()
+    #it also updates the graph values 
+    async for event in research_graph.astream(
+        Command(resume={"message": request.message}), config=config
+    ):
+        pass
+    
+    # Reads the state after resumption / planning execution loop
+    state = research_graph.get_state(config)
+    
+    return {
+        "thread_id": request.thread_id,
+        "plan_approved": state.values.get("plan_approved"),
+        "status": state.values.get("status"),
+        "plan": state.values.get("plan")
+    }
+

@@ -1,12 +1,13 @@
 import uvicorn
 from fastapi import FastAPI
 from dotenv import load_dotenv
+from backend.app.api.agent import router as agent_router
 
 # Load environment variables (.env file from root or backend directory)
 load_dotenv()
 
 app = FastAPI(title="AI Research Assistant Bot")
-
+app.include_router(agent_router)
 
 @app.get("/")
 def read_root():
