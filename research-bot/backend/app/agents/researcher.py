@@ -1,4 +1,11 @@
 # Worker agent (reused for each sub-question)
+import sys
+from pathlib import Path
+# Add workspace root to sys.path so 'backend' is importable
+root_dir = Path(__file__).resolve().parent.parent.parent.parent
+if str(root_dir) not in sys.path:
+    sys.path.insert(0, str(root_dir))
+
 import logging
 from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage
 from backend.app.graph.state import ResearchState
@@ -14,6 +21,7 @@ SYSTEM_PROMPT = """You are an expert research analyst with access to web search.
 Your workflow:
 1. Read the research task carefully.
 2. Identify 1-3 precise search queries that will best answer the task.
+Limit yourself to a maximum of 3 searches. Be precise with your queries.
 3. Use the search_web tool. Use time_range when the task involves recent or time-sensitive topics:
    - "day"   → news from the last 24 hours
    - "week"  → last 7 days
@@ -92,9 +100,9 @@ def researcher_node(state: ResearchState) -> dict:
                 logger.warning(f"Unknown tool call: {tool_call['name']}")
                 messages.append(ToolMessage(content=f"Unknown tool {tool_call['name']}", tool_call_id=tool_call["id"]))
 
-    # Synthesis step: ask the same agent to produce structured JSON (no tools needed now)
+    # Synthesis step: use plain llm (no tools) — just synthesize the gathered results
     messages.append(HumanMessage(content=SYNTHESIS_PROMPT))
-    final_response = agent.invoke(messages)
+    final_response = llm.invoke(messages)
 
     try:
         import json
@@ -116,3 +124,21 @@ def researcher_node(state: ResearchState) -> dict:
         "citations": final_result.citations
     }
 
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    test_state = {
+        "query": "What are the latest breakthroughs in fusion energy in 2026?",
+        "plan": [],
+        "plan_approved": False,
+        "user_feedback": None,
+        "status": "researching",
+        "results": [],
+        "final_answer": None,
+        "citations": []
+    }
+    print("Testing researcher_node...")
+    output = researcher_node(test_state)
+    print("\n--- Output ---")
+    print("Result:", output["results"][0][:500])
+    print("Citations:", output["citations"])
