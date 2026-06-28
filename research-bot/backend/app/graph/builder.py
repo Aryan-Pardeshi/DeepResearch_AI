@@ -32,9 +32,9 @@ builder.add_node("aggregator", aggregator_node)
 
 
 def route_after_approval(state: ResearchState):
-    """Temporary route: End graph if approved, otherwise loop back to planner."""
+    """Fan out to one researcher per sub-task if approved, otherwise loop back to planner."""
     if state.get("plan_approved"):
-        return END
+        return dispatch_researchers(state)  # returns List[Send("researcher", ...)]
     return "planner"
 
 
@@ -44,7 +44,7 @@ builder.add_edge("planner", "approval")
 # conditional node because if approved it goes to aggregator and if not approved it goes back to planner
 # Langchain dosnt allow list[Send()] from normal nodes only allows state to be returned
 builder.add_conditional_edges(
-    "approval", route_after_approval, [END, "planner"]
+    "approval", route_after_approval, ["researcher", "planner"]
 )
 
 builder.add_edge("researcher", "aggregator")
