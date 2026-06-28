@@ -17,11 +17,16 @@ def aggregator_node(state: ResearchState) -> dict:
 
     messages = [
         SystemMessage(content=(
-            "You are a senior research report writer. Synthesize the provided research sections "
-            "into a single, well-structured markdown report. Include an executive summary, "
-            "key findings with supporting evidence, and a conclusion. Be objective and factual."
+            "You are a Principal Research Analyst and Writer.\n\n"
+            "Your task is to synthesize the provided raw research sections into a cohesive, publication-ready markdown report.\n"
+            "Guidelines:\n"
+            "1. **Relevance**: Make sure the report directly answers the User Query.\n"
+            "2. **Structure**: Include an Executive Summary, Key Findings (detailed with supporting evidence), and a Future Outlook/Conclusion.\n"
+            "3. **Markdown**: Use professional typography with headers, bullet points, bold text for key metrics/terms, and blockquotes if appropriate.\n"
+            "4. **Citations**: Weave the provided source URLs naturally into the content using markdown links (e.g. `[Source Name](URL)`) where they back up specific claims. Do not invent links."
         )),
-        HumanMessage(content=f"Research sections:\n\n{combined}\n\nWrite the final markdown report.")
+
+        HumanMessage(content=f"User Query: {state['query']}\n\nResearch sections:\n\n{combined}\n\nWrite the final markdown report.")
     ]
 
     final = llm2.invoke(messages)
