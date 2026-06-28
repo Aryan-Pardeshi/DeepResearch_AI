@@ -1,1 +1,10 @@
-# requirements.txt
+langchain
+langgraph
+langchain-community
+langchain-google-genai
+tavily-python
+fastapi
+uvicorn
+pydantic
+python-dotenv
+langchain-openai
