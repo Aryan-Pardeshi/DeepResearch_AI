@@ -1,5 +1,5 @@
 # Final report builder
-from backend.app.llm import llm2
+from backend.app.llm import llm_pro
 from backend.app.graph.state import ResearchState
 from langchain_core.messages import SystemMessage, HumanMessage
 
@@ -29,7 +29,7 @@ def aggregator_node(state: ResearchState) -> dict:
         HumanMessage(content=f"User Query: {state['query']}\n\nResearch sections:\n\n{combined}\n\nWrite the final markdown report.")
     ]
 
-    final = llm2.invoke(messages)
+    final = llm_pro.invoke(messages)
     
     #update the state with the final answer and set status to completed
     return {"final_answer": final.content, "citations": citations,"status": "completed"}

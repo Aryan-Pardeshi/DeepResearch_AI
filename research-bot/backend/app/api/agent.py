@@ -34,9 +34,11 @@ async def run_research(request: ResearchStartRequest):
     # Values from current state (not yet persisted)
     plan = state.values.get("plan")
     status = state.values.get("status")
+    ps = state.values.get("ps")
 
     return {
         "thread_id": id,
+        "ps": ps,
         "plan": plan,
         "status": status
     }
@@ -65,6 +67,7 @@ async def approve_plan(request: ResearchApproveRequest):
         "thread_id": request.thread_id,
         "plan_approved": state.values.get("plan_approved"),
         "status": state.values.get("status"),
+        "ps": state.values.get("ps"),
         "plan": state.values.get("plan")
     }
 

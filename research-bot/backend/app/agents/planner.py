@@ -11,21 +11,25 @@ from langchain_core.prompts import ChatPromptTemplate
 from backend.app.graph.state import ResearchState
 from typing import List
 from pydantic import BaseModel, Field
-from backend.app.llm import llm
+from backend.app.llm import llm_pro
 
 logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = (
-    "You are a strategic research planner. Break down the given query into at most 5 independent sub-tasks. "
-    "Each sub-task must:\n"
-    "- Cover a distinct aspect of the query\n"
-    "- Be self-contained (a researcher can work on it without the others)\n"
-    "- Be concise: under 20 words\n"
-    "If you are given user feedback on a previous plan, revise the plan accordingly.\n"
-    "Respond in JSON with key 'sub_tasks' as a list of strings."
+    """You are a strategic research planner. Break down the given query into a Problem-Statement (ps) and at most 5 independent sub-tasks.
+    A ps is a detailed problem statement for the plan think thrugh the query and make a ps.
+    Each sub-task must:\n
+    - Cover a distinct aspect of the query\n
+    - Be self-contained (a researcher can work on it without the others)\n
+    - Be concise: under 20 words\n
+    If you are given user feedback on a previous plan, revise the plan accordingly.\n
+    Respond in JSON with key 'sub_tasks' as a list of strings.
+    If the user only has told to revise the ps or plan then dont revise both, depending of the users request.
+    """
 )
 
 class ResearchPlan(BaseModel):
+    ps : str = Field(description="Detailed Problem Statement of the research plan ")
     sub_tasks: List[str] = Field(
         description="Ordered list of independent research sub-tasks",
         min_length=1,
@@ -33,11 +37,11 @@ class ResearchPlan(BaseModel):
     )
 
 def planner_node(state: ResearchState) -> dict:
-    planner_llm = llm.with_structured_output(ResearchPlan, method="json_mode")
+    planner_llm = llm_pro.with_structured_output(ResearchPlan, method="json_mode")
 
-    user_content = f"Create a research plan for: {state['query']}"
+    user_content = f"Create a Problem statement (ps) and a research plan for: {state['query']}"
     if state.get("user_feedback"):
-        user_content += f"\n\nUser feedback on previous plan: {state['user_feedback']}\nPrevious plan: {state.get('plan', [])}"
+        user_content += f"\n\nUser feedback on previous ps and plan : {state['user_feedback']}\nPrevious ps: {state.get('ps', '')}\nPrevious plan: {state.get('plan', [])}"
 
     prompt = ChatPromptTemplate([
         ("system", SYSTEM_PROMPT),
@@ -47,7 +51,7 @@ def planner_node(state: ResearchState) -> dict:
     result = planner_llm.invoke(messages)
 
     logger.info(f"Planner generated {len(result.sub_tasks)} sub-tasks for query: {state['query']}")
-    return {"plan": result.sub_tasks, "status": "awaiting_approval"}
+    return {"ps": result.ps, "plan": result.sub_tasks, "status": "awaiting_approval"}
 
 
 

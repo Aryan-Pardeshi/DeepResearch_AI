@@ -6,6 +6,7 @@ class ResearchState(TypedDict):
     """State for the research assistant graph."""
 
     query: str 
+    ps: str
     plan: List[str]
     plan_approved: bool
     user_feedback: Optional[str]

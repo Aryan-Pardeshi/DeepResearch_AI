@@ -17,7 +17,7 @@ from langgraph.types import interrupt
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = ("Based on the User Response you must decide if the plan has to be approved or revised. You must respond in JSON format, setting the key 'approved' to true if approved, or false if rejected/revisions are requested.")
+SYSTEM_PROMPT = ("Treat Problem statement based changes and plan based changes as same. Based on the User Response you must decide if the plan has to be approved or revised. You must respond in JSON format, setting the key 'plan_approved' to true if approved, or false if rejected/revisions are requested.")
 
 class PlanState(BaseModel):
     plan_approved: bool = Field(description="Whether the plan is approved or not")
@@ -32,7 +32,7 @@ def plan_approval(state: ResearchState)->dict:
     # Classify the feedback using structured output LLM (with json_mode for DeepSeek compatibility)
     approval_llm = llm1.with_structured_output(PlanState, method="json_mode")
     
-    user_content = f"User feedback on previous plan: {feedback}\nPrevious plan: {state.get('plan', [])}"
+    user_content = f"User feedback: {feedback}\nPrevious ps: {state.get('ps', '')}\nPrevious plan: {state.get('plan', [])}"
 
     prompt = ChatPromptTemplate([("system", SYSTEM_PROMPT), ("user", user_content)])
     messages = prompt.format_messages()
