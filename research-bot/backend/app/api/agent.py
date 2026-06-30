@@ -48,10 +48,15 @@ async def approve_plan(request: ResearchApproveRequest):
     
     #resume the graph that was paused due to interrupt()
     #it also updates the graph values 
-    async for event in research_graph.astream(
-        Command(resume={"message": request.message}), config=config
+    async for chunk,event in research_graph.astream(
+        Command(resume={"message": request.message}), config=config,
+        stream_mode=["updates"]
     ):
-        pass
+        if chunk["type"] == "updates":
+            for aggregator_node, state in chunk["data"].items():
+                print(f"Node {aggregator_node} updated: {state}")
+        # elif chunk["type"] == "custom":
+        #     print(f"Status: {chunk['data']['status']}")
     
     # Reads the state after resumption / planning execution loop
     state = research_graph.get_state(config)
