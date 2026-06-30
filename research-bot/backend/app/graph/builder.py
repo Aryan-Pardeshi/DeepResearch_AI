@@ -33,7 +33,7 @@ builder.add_node("aggregator", aggregator_node)
 
 def route_after_approval(state: ResearchState):
     """Fan out to one researcher per sub-task if approved, otherwise loop back to planner."""
-    if state.get("plan_approved"):
+    if state.get("plan_approved"): #if plan approved true
         return dispatch_researchers(state)  # returns List[Send("researcher", ...)]
     return "planner"
 
@@ -42,11 +42,11 @@ def route_after_approval(state: ResearchState):
 builder.add_edge(START, "planner")
 builder.add_edge("planner", "approval")
 # conditional node because if approved it goes to aggregator and if not approved it goes back to planner
-# Langchain dosnt allow list[Send()] from normal nodes only allows state to be returned
+# also Langchain dosnt allow list[Send()] from normal nodes only allows state to be returned
 builder.add_conditional_edges(
-    "approval", route_after_approval, ["researcher", "planner"]
-)
+    "approval", route_after_approval, ["researcher", "planner"]) #the 3rd parameter is kinda like instructions for langgraph no impact
 
+#we dont have approval , researcher edge coz we are using Send() 
 builder.add_edge("researcher", "aggregator")
 builder.add_edge("aggregator", END)
 
@@ -55,6 +55,9 @@ checkpointer = MemorySaver()
 
 # build graph
 research_graph = builder.compile(checkpointer=checkpointer)
+
+#############################
+
 
 if __name__ == "__main__":
     import sys

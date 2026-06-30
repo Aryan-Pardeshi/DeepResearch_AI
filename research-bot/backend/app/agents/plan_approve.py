@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 SYSTEM_PROMPT = ("Based on the User Response you must decide if the plan has to be approved or revised. You must respond in JSON format, setting the key 'approved' to true if approved, or false if rejected/revisions are requested.")
 
 class PlanState(BaseModel):
-    approved: bool = Field(description="Whether the plan is approved or not")
+    plan_approved: bool = Field(description="Whether the plan is approved or not")
 
 def plan_approval(state: ResearchState)->dict:
     # Pause execution to wait for user approval/feedback message
@@ -38,6 +38,8 @@ def plan_approval(state: ResearchState)->dict:
     messages = prompt.format_messages()
     result = approval_llm.invoke(messages)
     
-    logger.info(f"Plan approval result: {result.approved}")
-    status = "researching" if result.approved else "planning"
-    return {"plan_approved": result.approved, "user_feedback": feedback, "status": status}
+    logger.info(f"Plan approval result: {result.plan_approved}")
+    logger.info(f"User feedback: {feedback}")
+    
+    status = "researching" if result.plan_approved else "planning"
+    return {"plan_approved": result.plan_approved, "user_feedback": feedback, "status": status}
