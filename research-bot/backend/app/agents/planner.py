@@ -9,7 +9,7 @@ if str(root_dir) not in sys.path:
 import logging
 from langchain_core.prompts import ChatPromptTemplate
 from backend.app.graph.state import ResearchState
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel, Field
 from backend.app.llm import llm_pro
 
@@ -29,9 +29,10 @@ SYSTEM_PROMPT = (
 )
 
 class ResearchPlan(BaseModel):
-    ps : str = Field(description="Detailed Problem Statement of the research plan ")
-    sub_tasks: List[str] = Field(
-        description="Ordered list of independent research sub-tasks",
+    ps: Optional[str] = Field(default=None, description="Detailed Problem Statement of the research plan. Omit if not revising.")
+    sub_tasks: Optional[List[str]] = Field(
+        default=None,
+        description="Ordered list of independent research sub-tasks. Omit if not revising.",
         min_length=1,
         max_length=5
     )
@@ -50,8 +51,11 @@ def planner_node(state: ResearchState) -> dict:
     messages = prompt.format_messages()
     result = planner_llm.invoke(messages)
 
-    logger.info(f"Planner generated {len(result.sub_tasks)} sub-tasks for query: {state['query']}")
-    return {"ps": result.ps, "plan": result.sub_tasks, "status": "awaiting_approval"}
+    new_ps = result.ps if result.ps is not None else state.get('ps', '')
+    new_plan = result.sub_tasks if result.sub_tasks is not None else state.get('plan', [])
+
+    logger.info(f"Planner generated {len(new_plan)} sub-tasks for query: {state['query']}")
+    return {"ps": new_ps, "plan": new_plan, "status": "awaiting_approval"}
 
 
 
