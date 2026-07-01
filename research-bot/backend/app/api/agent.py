@@ -75,7 +75,7 @@ async def approve_plan(request: ResearchApproveRequest):
             ):
                 event_type = event["event"]
                 
-                # 0. Capture when any node starts running
+                # Capture when any node starts running
                 if event_type == "on_chain_start":
                     node_name = event.get("metadata", {}).get("langgraph_node")
                     if node_name and event.get("name") == node_name and not node_name.startswith("__"):

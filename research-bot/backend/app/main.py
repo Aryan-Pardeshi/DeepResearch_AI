@@ -3,10 +3,22 @@ from fastapi import FastAPI
 from dotenv import load_dotenv
 from backend.app.api.agent import router as agent_router
 
+from fastapi.middleware.cors import CORSMiddleware
+
 # Load environment variables (.env file from root or backend directory)
 load_dotenv()
 
 app = FastAPI(title="AI Research Assistant Bot")
+
+# Allow all origins for local development and testing
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(agent_router)
 
 @app.get("/")
