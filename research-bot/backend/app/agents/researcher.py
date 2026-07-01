@@ -73,81 +73,95 @@ class ResearchResult(BaseModel):
 
 
 def researcher_node(state: ResearchState) -> dict:
+    import time
+    import random
     query = state["query"]
     logger.info(f"Researcher starting for query: {query}")
 
-    # Single agent: same LLM instance used for both tool calling and synthesis
-    agent = llm.bind_tools([search_web])
-
-    messages = [
-        SystemMessage(content=SYSTEM_PROMPT),
-        HumanMessage(content=f"Research Task: {query}")
-    ]
-
-    max_steps = 10
-    search_count = 0
-
-    for step in range(max_steps):
-        response = _invoke_with_timeout(agent, messages)
-        messages.append(response)
-
-        # No tool calls → LLM is done searching, move to synthesis
-        if not response.tool_calls:
-            logger.info(f"Researcher completed search in {step + 1} steps with {search_count} searches")
-            break
-
-        # Execute each requested tool call
-        for tool_call in response.tool_calls:
-            if tool_call["name"] == "search_web":
-                args = tool_call["args"]
-                
-                # Inject search_topic from the active graph state if not already set by the LLM
-                if "search_topic" not in args and "search_topic" in state:
-                    args["search_topic"] = state["search_topic"]
-                
-                logger.info(f"Executing search: query='{args.get('query')}', search_topic={args.get('search_topic')}, time_range={args.get('time_range')}")
-
-                try:
-                    tool_output = search_web.invoke(args)
-                    search_count += 1
-                except Exception as e:
-                    tool_output = f"Search failed: {str(e)}"
-                    logger.warning(f"Search failed: {e}")
-
-                messages.append(
-                    ToolMessage(
-                        content=str(tool_output),
-                        tool_call_id=tool_call["id"],
-                        name=tool_call["name"]
-                    )
-                )
-            else:
-                logger.warning(f"Unknown tool call: {tool_call['name']}")
-                messages.append(ToolMessage(content=f"Unknown tool {tool_call['name']}", tool_call_id=tool_call["id"]))
-
-    # Synthesis step: use plain llm (no tools) — just synthesize the gathered results
-    messages.append(HumanMessage(content=SYNTHESIS_PROMPT))
-    final_response = _invoke_with_timeout(llm, messages)
+    # Stagger execution of concurrent researcher nodes to reduce API rate limit spikes
+    stagger_time = random.uniform(0.5, 3.0)
+    logger.info(f"Staggering researcher start by {stagger_time:.2f}s for: {query}")
+    time.sleep(stagger_time)
 
     try:
-        import json
-        raw = final_response.content.strip()
-        # Strip markdown code fences if present
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        data = json.loads(raw)
-        final_result = ResearchResult(**data)
-    except Exception as e:
-        logger.error(f"Structured output parsing failed: {e}")
-        return {"results": [final_response.content], "citations": []}
+        # Single agent: same LLM instance used for both tool calling and synthesis
+        agent = llm.bind_tools([search_web])
 
-    logger.info(f"Researcher completed. Citations: {len(final_result.citations)}")
-    return {
-        "results": [final_result.result],
-        "citations": final_result.citations
-    }
+        messages = [
+            SystemMessage(content=SYSTEM_PROMPT),
+            HumanMessage(content=f"Research Task: {query}")
+        ]
+
+        max_steps = 10
+        search_count = 0
+
+        for step in range(max_steps):
+            response = _invoke_with_timeout(agent, messages)
+            messages.append(response)
+
+            # No tool calls → LLM is done searching, move to synthesis
+            if not response.tool_calls:
+                logger.info(f"Researcher completed search in {step + 1} steps with {search_count} searches")
+                break
+
+            # Execute each requested tool call
+            for tool_call in response.tool_calls:
+                if tool_call["name"] == "search_web":
+                    args = tool_call["args"]
+                    
+                    # Inject search_topic from the active graph state if not already set by the LLM
+                    if "search_topic" not in args and "search_topic" in state:
+                        args["search_topic"] = state["search_topic"]
+                    
+                    logger.info(f"Executing search: query='{args.get('query')}', search_topic={args.get('search_topic')}, time_range={args.get('time_range')}")
+
+                    try:
+                        tool_output = search_web.invoke(args)
+                        search_count += 1
+                    except Exception as e:
+                        tool_output = f"Search failed: {str(e)}"
+                        logger.warning(f"Search failed: {e}")
+
+                    messages.append(
+                        ToolMessage(
+                            content=str(tool_output),
+                            tool_call_id=tool_call["id"],
+                            name=tool_call["name"]
+                        )
+                    )
+                else:
+                    logger.warning(f"Unknown tool call: {tool_call['name']}")
+                    messages.append(ToolMessage(content=f"Unknown tool {tool_call['name']}", tool_call_id=tool_call["id"]))
+
+        # Synthesis step: use plain llm (no tools) — just synthesize the gathered results
+        messages.append(HumanMessage(content=SYNTHESIS_PROMPT))
+        final_response = _invoke_with_timeout(llm, messages)
+
+        try:
+            import json
+            raw = final_response.content.strip()
+            # Strip markdown code fences if present
+            if raw.startswith("```"):
+                raw = raw.split("```")[1]
+                if raw.startswith("json"):
+                    raw = raw[4:]
+            data = json.loads(raw)
+            final_result = ResearchResult(**data)
+        except Exception as e:
+            logger.error(f"Structured output parsing failed: {e}")
+            return {"results": [final_response.content], "citations": []}
+
+        logger.info(f"Researcher completed. Citations: {len(final_result.citations)}")
+        return {
+            "results": [final_result.result],
+            "citations": final_result.citations
+        }
+    except Exception as e:
+        logger.error(f"Error in researcher node for task '{query}': {e}", exc_info=True)
+        return {
+            "results": [f"Research failed for this task due to an error: {str(e)}"],
+            "citations": []
+        }
 
 
 if __name__ == "__main__":
