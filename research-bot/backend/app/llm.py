@@ -11,14 +11,12 @@ llm = ChatOpenAI(
     openai_api_base=os.getenv("DEEPSEEK_BASE_URL")
 )
 
-llm1 = llm
-# llm1 = ChatOpenAI(
-#     model="deepseek-v4-flash",
-#     openai_api_key=os.getenv("DEEPSEEK_API_KEY"),
-#     openai_api_base=os.getenv("DEEPSEEK_BASE_URL"),
-#     extra_body={"thinking": {"type": "disabled"}}
-# )
-
+llm_fast = ChatOpenAI(
+    model="deepseek-v4-flash",
+    openai_api_key=os.getenv("DEEPSEEK_API_KEY"),
+    openai_api_base=os.getenv("DEEPSEEK_BASE_URL"),
+    extra_body={"thinking": {"type": "disabled"}}
+)
 
 llm_pro = ChatOpenAI(
     model="deepseek-v4-flash",

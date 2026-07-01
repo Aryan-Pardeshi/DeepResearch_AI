@@ -17,6 +17,7 @@ from backend.app.agents.plan_approve import plan_approval
 from backend.app.agents.aggregator import aggregator_node
 from backend.app.agents.supervisor import dispatch_researchers
 from backend.app.agents.researcher import researcher_node
+from backend.app.agents.query_validator import query_validator
 
 
 # state = memory
@@ -25,6 +26,7 @@ from backend.app.agents.researcher import researcher_node
 builder = StateGraph(ResearchState)
 
 # nodes
+builder.add_node("query_validator", query_validator)
 builder.add_node("planner", planner_node)
 builder.add_node("approval", plan_approval)
 builder.add_node("researcher", researcher_node)
@@ -39,12 +41,15 @@ def route_after_approval(state: ResearchState):
 
 
 # Connect nodes
-builder.add_edge(START, "planner")
+builder.add_edge(START, "query_validator")
+# builder.add_edge("query_validator", "planner")
+builder.add_conditional_edges(
+    "query_validator", lambda state: END if state.get("error") else "planner"  , ["planner", END])
 builder.add_edge("planner", "approval")
 # conditional node because if approved it goes to aggregator and if not approved it goes back to planner
 # also Langchain dosnt allow list[Send()] from normal nodes only allows state to be returned
 builder.add_conditional_edges(
-    "approval", route_after_approval, ["researcher", "planner"]) #the 3rd parameter is kinda like instructions for langgraph no impact
+    "approval", route_after_approval, ["researcher", "planner"]) #the 3rd parameter gives strict runtime whitelist
 
 #we dont have approval , researcher edge coz we are using Send() 
 builder.add_edge("researcher", "aggregator")

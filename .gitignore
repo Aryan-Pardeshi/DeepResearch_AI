@@ -120,3 +120,4 @@ cython_debug/
 
 # VS Code
 .vscode/
+api_tests.py

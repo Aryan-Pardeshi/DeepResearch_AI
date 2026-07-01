@@ -15,5 +15,4 @@ class ResearchState(TypedDict):
     results: Annotated[List[str], operator.add] 
     final_answer: Optional[str]
     citations: Annotated[List[str], operator.add]
-    
-    
+    error: Optional[str]
