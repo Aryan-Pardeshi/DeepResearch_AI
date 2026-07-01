@@ -16,7 +16,7 @@ cursorStyle.innerHTML = `
 document.head.appendChild(cursorStyle);
 
 // Configuration
-const API_BASE_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = 'http://localhost:8000';
 
 // Activity Monitor — detects stalls in SSE/researcher activity
 const activityMonitor = {
@@ -111,7 +111,16 @@ const dom = {
     newResearchBtn: document.getElementById('new-research-btn'),
     
     // Download
-    downloadMdBtn: document.getElementById('download-md-btn')
+    downloadMdBtn: document.getElementById('download-md-btn'),
+    
+    // Settings
+    settingsBtn: document.getElementById('settings-btn'),
+    settingsModal: document.getElementById('settings-modal'),
+    settingsClose: document.getElementById('settings-modal-close'),
+    saveConfigBtn: document.getElementById('save-config-btn'),
+    inputDeepseek: document.getElementById('input-deepseek-key'),
+    inputTavily: document.getElementById('input-tavily-key'),
+    saveStatus: document.getElementById('save-status')
 };
 
 const STORAGE_KEY = 'deepresearch_session';
@@ -181,13 +190,45 @@ function restoreSession() {
     } catch (e) {}
 }
 
+async function checkApiConfig() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/health/config`);
+        if (!res.ok) return;
+        const config = await res.json();
+        if (!config.ok) {
+            const banner = document.createElement('div');
+            banner.className = 'config-warning-banner';
+            banner.id = 'config-warning-banner';
+            const items = config.issues.map(i => `<span>• ${i}</span>`).join('');
+            banner.innerHTML = `
+                <i data-lucide="alert-triangle" style="width: 18px; height: 18px; flex-shrink: 0; color: var(--accent-yellow);"></i>
+                <div class="config-warning-text">
+                    <strong>API Configuration Incomplete</strong>
+                    <div class="config-issues">${items}</div>
+                </div>
+                <button class="config-dismiss" id="config-dismiss-btn">&times;</button>
+            `;
+            const header = document.querySelector('header');
+            header.parentNode.insertBefore(banner, header.nextSibling);
+            lucide.createIcons();
+            document.getElementById('config-dismiss-btn').addEventListener('click', () => {
+                banner.remove();
+            });
+        }
+    } catch (e) {}
+}
+
 // Initialize Icons
 document.addEventListener('DOMContentLoaded', () => {
     lucide.createIcons();
     initEventListeners();
     checkBackendHealth().then(ok => {
-        if (ok) restoreSession();
-        else startHealthPolling();
+        if (ok) {
+            checkApiConfig();
+            restoreSession();
+        } else {
+            startHealthPolling();
+        }
     });
 });
 
@@ -288,6 +329,41 @@ function initEventListeners() {
         a.download = 'research-report.md';
         a.click();
         URL.revokeObjectURL(url);
+    });
+    
+    // Settings Modal
+    dom.settingsBtn.addEventListener('click', () => {
+        dom.settingsModal.style.display = 'flex';
+        dom.saveStatus.textContent = '';
+    });
+    dom.settingsClose.addEventListener('click', () => {
+        dom.settingsModal.style.display = 'none';
+    });
+    dom.settingsModal.addEventListener('click', (e) => {
+        if (e.target === dom.settingsModal) dom.settingsModal.style.display = 'none';
+    });
+    dom.saveConfigBtn.addEventListener('click', async () => {
+        const body = {};
+        if (dom.inputDeepseek.value.trim()) body.DEEPSEEK_API_KEY = dom.inputDeepseek.value.trim();
+        if (dom.inputTavily.value.trim()) body.TAVILY_API_KEY = dom.inputTavily.value.trim();
+        if (!Object.keys(body).length) return;
+        dom.saveStatus.textContent = 'Saving...';
+        dom.saveStatus.style.color = 'var(--text-secondary)';
+        try {
+            const res = await fetch(`${API_BASE_URL}/health/config`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            if (!res.ok) throw new Error('Save failed');
+            dom.saveStatus.textContent = 'Saved! Restart backend to apply.';
+            dom.saveStatus.style.color = 'var(--accent-teal)';
+            const banner = document.getElementById('config-warning-banner');
+            if (banner) banner.remove();
+        } catch (e) {
+            dom.saveStatus.textContent = `Error: ${e.message}`;
+            dom.saveStatus.style.color = 'var(--accent-red)';
+        }
     });
     
     // New Research Button

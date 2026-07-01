@@ -1,1 +1,24 @@
+services:
+  backend:
+    image: research-bot-backend
+    container_name: research-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    networks:
+      - research-net
 
+  frontend:
+    image: nginx:alpine
+    container_name: research-frontend
+    ports:
+      - "80:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html
+    networks:
+      - research-net
+
+networks:
+  research-net:
+    driver: bridge

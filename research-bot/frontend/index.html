@@ -22,11 +22,48 @@
             <div class="status-dot" id="app-status-dot"></div>
             <span id="app-status-text">Ready for query</span>
         </div>
-        <button class="btn-secondary btn-new-research" id="new-research-btn" style="display:none;">
-            <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
-            <span>New Research</span>
-        </button>
+        <div class="header-actions">
+            <button class="btn-icon" id="settings-btn" title="Configure API Keys">
+                <i data-lucide="settings" style="width: 18px; height: 18px;"></i>
+            </button>
+            <button class="btn-secondary btn-new-research" id="new-research-btn" style="display:none;">
+                <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+                <span>New Research</span>
+            </button>
+        </div>
     </header>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settings-modal" style="display:none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">API Configuration</h2>
+                <button class="modal-close" id="settings-modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem;">
+                    Paste your API keys below. They will be saved to <code>.env</code> and used immediately.
+                </p>
+                <div class="form-group">
+                    <label class="form-label" for="input-deepseek-key">DEEPSEEK_API_KEY</label>
+                    <input type="password" class="form-input" id="input-deepseek-key" placeholder="sk-...">
+                    <a class="form-hint" href="https://platform.deepseek.com/api_keys" target="_blank">Get a DeepSeek API key</a>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="input-tavily-key">TAVILY_API_KEY</label>
+                    <input type="password" class="form-input" id="input-tavily-key" placeholder="tvly-...">
+                    <a class="form-hint" href="https://app.tavily.com/home" target="_blank">Get a Tavily API key</a>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <span class="save-status" id="save-status"></span>
+                <button class="btn-primary" id="save-config-btn">
+                    <i data-lucide="check" style="width: 16px; height: 16px;"></i>
+                    <span>Save & Apply</span>
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Backend Offline Banner -->
     <div class="backend-offline-banner" id="backend-offline-banner" style="display: none;">
