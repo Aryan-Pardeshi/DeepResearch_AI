@@ -12,7 +12,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from backend.app.graph.state import ResearchState
 from typing import List
 from pydantic import BaseModel, Field
-from backend.app.llm import llm1    
+from backend.app.llm import llm_fast
 from langgraph.types import interrupt
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ def plan_approval(state: ResearchState)->dict:
     feedback = user_response.get("message", "") if isinstance(user_response, dict) else str(user_response)
     
     # Classify the feedback using structured output LLM (with json_mode for DeepSeek compatibility)
-    approval_llm = llm1.with_structured_output(PlanState, method="json_mode")
+    approval_llm = llm_fast.with_structured_output(PlanState, method="json_mode")
     
     user_content = f"User feedback: {feedback}\nPrevious ps: {state.get('ps', '')}\nPrevious plan: {state.get('plan', [])}"
 
