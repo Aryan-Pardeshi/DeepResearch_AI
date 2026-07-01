@@ -7,6 +7,7 @@ if str(root_dir) not in sys.path:
     sys.path.insert(0, str(root_dir))
 
 import logging
+import concurrent.futures
 from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage
 from backend.app.graph.state import ResearchState
 from typing import List
@@ -15,6 +16,17 @@ from backend.app.llm import llm
 from backend.app.tools.tavily_search import search_web
 
 logger = logging.getLogger(__name__)
+
+LLM_TIMEOUT = 90
+
+def _invoke_with_timeout(agent_or_llm, messages, timeout=LLM_TIMEOUT):
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        fut = pool.submit(agent_or_llm.invoke, messages)
+        try:
+            return fut.result(timeout=timeout)
+        except concurrent.futures.TimeoutError:
+            logger.error(f"LLM invoke timed out after {timeout}s")
+            raise TimeoutError(f"LLM call timed out after {timeout}s")
 
 SYSTEM_PROMPT = """You are an elite, highly-analytical research analyst with access to real-time web search.
 Your objective is to thoroughly investigate the assigned research task by formulating precise search queries and critically evaluating the results.
@@ -76,7 +88,7 @@ def researcher_node(state: ResearchState) -> dict:
     search_count = 0
 
     for step in range(max_steps):
-        response = agent.invoke(messages)
+        response = _invoke_with_timeout(agent, messages)
         messages.append(response)
 
         # No tool calls → LLM is done searching, move to synthesis
@@ -115,7 +127,7 @@ def researcher_node(state: ResearchState) -> dict:
 
     # Synthesis step: use plain llm (no tools) — just synthesize the gathered results
     messages.append(HumanMessage(content=SYNTHESIS_PROMPT))
-    final_response = llm.invoke(messages)
+    final_response = _invoke_with_timeout(llm, messages)
 
     try:
         import json
