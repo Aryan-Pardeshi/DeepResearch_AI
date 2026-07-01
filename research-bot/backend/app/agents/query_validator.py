@@ -44,11 +44,13 @@ def query_validator(state: ResearchState) -> dict:
     logger.info(f"Validating query: '{query}'")
     
     if not query:
+        logger.warning("Query validation failed: Empty query.")
         return {"status": "error", "error": "Please provide a specific research topic."}
         
     # Pre-filter very short queries (less than 3 words) to save API tokens
     words = query.split()
-    if len(words) < 3:
+    if len(words) < 4:
+        logger.warning(f"Query validation failed: Query too short ({len(words)} words).")
         return {"status": "error", "error": "Not a valid research query. Please provide a specific research topic."}
         
     try:
@@ -62,6 +64,7 @@ def query_validator(state: ResearchState) -> dict:
         
         if not validation.is_valid:
             error_msg = validation.error_message or "Not a valid research query. Please provide a specific research topic."
+            logger.warning(f"Query validation failed (LLM): {error_msg}")
             return {"status": "error", "error": error_msg}
             
     except Exception as e:
@@ -69,6 +72,8 @@ def query_validator(state: ResearchState) -> dict:
         # Fallback to a basic check if the LLM call fails
         words = query.split()
         if len(words) < 5:
+            logger.warning(f"Query validation failed (Fallback check): Query under 5 words ({len(words)} words).")
             return {"status": "error", "error": "Not a valid research query. Please provide a specific research topic."}
             
+    logger.info("Query validation successful.")
     return {}
