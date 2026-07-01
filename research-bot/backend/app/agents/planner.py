@@ -105,11 +105,13 @@ def planner_node(state: ResearchState) -> dict:
         error_msg = str(e)
         logger.error(f"Error generating research plan: {e}", exc_info=True)
         
-        # Check if the model refused due to safety or standard parsing/validation constraints
-        if "violates safety" in error_msg.lower() or "safety" in error_msg.lower() or "inappropriate" in error_msg.lower():
+        error_lower = error_msg.lower()
+        if any(kw in error_lower for kw in ["violates safety", "safety", "inappropriate", "restricted"]):
             friendly_error = "Query contains inappropriate or restricted content."
+        elif any(kw in error_lower for kw in ["api key", "authentication", "unauthorized", "401", "403", "invalid key", "missing credentials", "not set"]):
+            friendly_error = "API key is missing or invalid. Open settings to configure your API keys."
         else:
-            friendly_error = "Failed to generate research plan. Please try refining your query or verify the input."
+            friendly_error = f"Failed to generate research plan: {error_msg}"
             
         return {"status": "error", "error": friendly_error}
 

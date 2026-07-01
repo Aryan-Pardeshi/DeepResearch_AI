@@ -36,14 +36,14 @@ def check_config():
     deepseek_key = os.getenv("DEEPSEEK_API_KEY")
     tavily_key = os.getenv("TAVILY_API_KEY")
     issues = []
-    if not deepseek_key:
+    if not deepseek_key or deepseek_key == "your_key_here":
         issues.append("DEEPSEEK_API_KEY is not set in .env")
-    if not tavily_key:
+    if not tavily_key or tavily_key == "your_key_here":
         issues.append("TAVILY_API_KEY is not set in .env")
     return {
         "ok": len(issues) == 0,
-        "deepseek_configured": bool(deepseek_key),
-        "tavily_configured": bool(tavily_key),
+        "deepseek_configured": bool(deepseek_key) and deepseek_key != "your_key_here",
+        "tavily_configured": bool(tavily_key) and tavily_key != "your_key_here",
         "issues": issues
     }
 

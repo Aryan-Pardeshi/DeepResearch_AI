@@ -1,7 +1,10 @@
 # Final report builder
+import logging
 from backend.app.llm import llm_pro
 from backend.app.graph.state import ResearchState
 from langchain_core.messages import SystemMessage, HumanMessage
+
+logger = logging.getLogger(__name__)
 
 
 async def aggregator_node(state: ResearchState) -> dict:
@@ -39,7 +42,14 @@ async def aggregator_node(state: ResearchState) -> dict:
         ))
     ]
 
-    final = await llm_pro.ainvoke(messages)
+    try:
+        final = await llm_pro.ainvoke(messages)
+    except Exception as e:
+        error_msg = str(e).lower()
+        logger.error(f"Error in aggregator: {e}", exc_info=True)
+        if any(kw in error_msg for kw in ["api key", "authentication", "unauthorized", "401", "403", "invalid key", "missing credentials", "not set"]):
+            return {"status": "error", "error": "API key is missing or invalid. Open settings to configure your API keys."}
+        return {"status": "error", "error": f"Synthesis failed: {str(e)}"}
     
     #update the state with the final answer and set status to completed (do not return citations to avoid duplicating them via the operator.add reducer)
     return {"final_answer": final.content, "status": "completed"}

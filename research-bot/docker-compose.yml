@@ -1,5 +1,8 @@
 services:
   backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     image: research-bot-backend
     container_name: research-backend
     ports:

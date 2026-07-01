@@ -206,6 +206,7 @@ async function checkApiConfig() {
                     <strong>API Configuration Incomplete</strong>
                     <div class="config-issues">${items}</div>
                 </div>
+                <button class="btn-primary config-configure-btn" id="config-configure-btn">Configure</button>
                 <button class="config-dismiss" id="config-dismiss-btn">&times;</button>
             `;
             const header = document.querySelector('header');
@@ -214,6 +215,16 @@ async function checkApiConfig() {
             document.getElementById('config-dismiss-btn').addEventListener('click', () => {
                 banner.remove();
             });
+            document.getElementById('config-configure-btn').addEventListener('click', () => {
+                dom.settingsModal.style.display = 'flex';
+                dom.saveStatus.textContent = '';
+            });
+            dom.settingsModal.style.display = 'flex';
+            dom.saveStatus.textContent = '';
+            dom.planBtn.disabled = true;
+            dom.planBtn.title = 'Set your API keys in settings first';
+            dom.statusText.innerText = 'Set your API keys';
+            dom.statusDot.className = 'status-dot error';
         }
     } catch (e) {}
 }
@@ -571,6 +582,10 @@ async function handlePlanResearch() {
             showToast(data.error || 'Query validation failed. Please provide a specific topic.');
             resetLandingControls();
             setStatus('error');
+            if (data.error && (data.error.toLowerCase().includes('api key') || data.error.toLowerCase().includes('settings'))) {
+                dom.settingsModal.style.display = 'flex';
+                dom.saveStatus.textContent = '';
+            }
             return;
         }
         
@@ -810,12 +825,19 @@ function handleSSEEvent(data, isRevision = false) {
             break;
             
         case 'error':
-            showToast(`Execution failure reported by graph: ${data.message}`);
-            setStatus('error');
-            dom.reportStreamingIndicator.style.display = 'none';
-            dom.workspaceProgressBar.classList.remove('active');
-            activityMonitor.stop();
-            break;
+            {
+                const msg = data.message || '';
+                showToast(`Execution failure: ${msg}`);
+                setStatus('error');
+                dom.reportStreamingIndicator.style.display = 'none';
+                dom.workspaceProgressBar.classList.remove('active');
+                activityMonitor.stop();
+                if (msg.toLowerCase().includes('api key') || msg.toLowerCase().includes('settings')) {
+                    dom.settingsModal.style.display = 'flex';
+                    dom.saveStatus.textContent = '';
+                }
+                break;
+            }
     }
 }
 
