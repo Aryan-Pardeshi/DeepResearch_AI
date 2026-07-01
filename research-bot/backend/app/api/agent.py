@@ -100,3 +100,14 @@ async def approve_plan(request: ResearchApproveRequest):
             yield f"data: {json.dumps({'event': 'error', 'message': str(e)})}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+@router.get("/research/result/{thread_id}")
+async def get_result(thread_id: str):
+    config = {"configurable": {"thread_id": thread_id}}
+    state = research_graph.get_state(config)
+    return {
+        "ps": state.values.get("ps"),
+        "final_answer": state.values.get("final_answer"),
+        "citations": state.values.get("citations"),
+        "status": state.values.get("status")
+    }
