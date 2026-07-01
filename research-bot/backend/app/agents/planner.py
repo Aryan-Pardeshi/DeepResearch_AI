@@ -17,27 +17,60 @@ logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = ("""You are a strategic research planner.
 
-Given a research query, generate:
-1. A detailed Problem Statement (ps) — what gap or question this research addresses
-2. At most 5 independent sub-tasks — specific aspects to investigate
+Given a research query, create a structured research plan.
 
-Sub-task rules:
-- Each must cover a DISTINCT aspect
-- Each must be self-contained (no dependencies on other sub-tasks)
-- Under 20 words each
-- NO meta-steps like "summarize findings", "compile results", "review literature broadly"
+Output:
+1. Problem Statement (ps)
+- Explain the core research gap, uncertainty, limitation, or challenge.
+- Describe the difference between current understanding and desired understanding.
+- Do not propose solutions.
+- Keep it specific and research-focused.
+- Length: 1 to 3 sentences.
+- Do not use em dashes.
 
-Good sub-task examples (query: "room temperature superconductivity 2026"):
-- "Investigate LK-99 follow-up studies and replication attempts in 2024-2026"
-- "Examine hydrogen sulfide compounds under pressure as superconductor candidates"
-- "Analyze theoretical models predicting room-temperature superconductivity mechanisms"
+2. Sub-tasks (sub_tasks)
+Generate at most 5 independent research areas.
 
-Good PS example:
-"Despite decades of research, superconductivity remains confined to extreme conditions. This study examines whether recent 2024-2026 breakthroughs represent genuine progress toward ambient-condition superconductivity."
+Rules:
+- Each sub-task must investigate one distinct aspect of the query.
+- Each sub-task must be understandable without reading other tasks.
+- Each sub-task must represent a concrete research objective.
+- Keep each sub-task under 20 words.
+- Avoid vague tasks.
+- Do not create meta-tasks like:
+  "summarize findings"
+  "compile information"
+  "review literature"
+  "analyze all research"
 
-If revising: ONLY revise what the user explicitly asked to change. If they mention only the ps, keep sub_tasks unchanged. If they mention only the plan/tasks, keep ps unchanged.
+Example:
 
-Respond in JSON with keys 'ps' (string) and 'sub_tasks' (list of strings).
+Query:
+"room temperature superconductivity 2026"
+
+Good ps:
+"Despite progress in superconductivity research, achieving superconductivity at practical temperatures and pressures remains unresolved. This research examines current evidence, competing theories, and barriers preventing reliable room-temperature superconductors."
+
+Good sub_tasks:
+[
+"Investigate LK-99 replication studies and experimental outcomes from 2024-2026",
+"Examine hydrogen-rich compounds as high-temperature superconductor candidates",
+"Analyze theoretical mechanisms proposed for room-temperature superconductivity",
+"Evaluate experimental challenges preventing practical superconducting materials",
+"Study recent superconductivity measurement and verification methods"
+]
+
+Revision rules:
+- If the user requests a ps change, modify only ps.
+- If the user requests sub-task changes, modify only sub_tasks.
+- Preserve unchanged sections exactly when not requested.
+- Do not rewrite the entire plan unnecessarily.
+
+Return ONLY valid JSON:
+{
+  "ps": "string",
+  "sub_tasks": ["string"]
+}
 """)
 
 class ResearchPlan(BaseModel):
@@ -61,13 +94,24 @@ def planner_node(state: ResearchState) -> dict:
         ("user", user_content)
     ])
     messages = prompt.format_messages()
-    result = planner_llm.invoke(messages)
-
-    new_ps = result.ps if result.ps is not None else state.get('ps', '')
-    new_plan = result.sub_tasks if result.sub_tasks is not None else state.get('plan', [])
-
-    logger.info(f"Planner generated {len(new_plan)} sub-tasks for query: {state['query']}")
-    return {"ps": new_ps, "plan": new_plan, "status": "awaiting_approval"}
+    
+    try:
+        result = planner_llm.invoke(messages)
+        new_ps = result.ps if result.ps is not None else state.get('ps', '')
+        new_plan = result.sub_tasks if result.sub_tasks is not None else state.get('plan', [])
+        logger.info(f"Planner generated {len(new_plan)} sub-tasks for query: {state['query']}")
+        return {"ps": new_ps, "plan": new_plan, "status": "awaiting_approval"}
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"Error generating research plan: {e}", exc_info=True)
+        
+        # Check if the model refused due to safety or standard parsing/validation constraints
+        if "violates safety" in error_msg.lower() or "safety" in error_msg.lower() or "inappropriate" in error_msg.lower():
+            friendly_error = "Query contains inappropriate or restricted content."
+        else:
+            friendly_error = "Failed to generate research plan. Please try refining your query or verify the input."
+            
+        return {"status": "error", "error": friendly_error}
 
 
 

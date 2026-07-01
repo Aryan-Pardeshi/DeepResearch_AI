@@ -11,7 +11,7 @@ from backend.app.llm import llm_fast
 
 # System prompt for query validation
 VALIDATOR_SYSTEM_PROMPT = """You are an input validation assistant for a specialized Research Bot.
-Your task is to analyze the user's input query and determine if it is a valid, substantive research topic.
+Your task is to analyze the user's input query and determine if it is a valid, substantive, and safe research topic.
 
 Criteria for a VALID research query:
 - It asks to research, explain, analyze, or gather info on a specific topic (e.g., "Recent breakthroughs in Quantum Computing in 2026", "Impact of microplastics on marine life").
@@ -22,6 +22,7 @@ Criteria for an INVALID query:
 - It is a general query about you or the bot (e.g., "who are you", "what is your name", "what can you do").
 - It is a generic command without any topic (e.g., "do some research for me", "search something", "please start").
 - It is empty, gibberish, or completely lacks any researchable subject.
+- It contains inappropriate, harmful, unsafe, illegal, sensitive, or restricted content (e.g., self-harm, weapon creation, illegal drugs, cyberattacks, hate speech, explicit content). In this case, mark is_valid as false and set error_message to "Query contains inappropriate or restricted content."
 
 You MUST respond in JSON matching this schema:
 {{
@@ -32,11 +33,11 @@ You MUST respond in JSON matching this schema:
 
 class QueryValidation(BaseModel):
     is_valid: bool = Field(
-        description="True if the input query contains a specific research topic. False if it is just a greeting, chatbot meta-question, or generic conversational filler without a topic."
+        description="True if the input query contains a specific research topic and is safe/appropriate to process. False if it is a greeting, chatbot meta-question, generic conversational filler, or inappropriate/unsafe/restricted content."
     )
     error_message: Optional[str] = Field(
         default=None,
-        description="If is_valid is False, provide a friendly error message explaining why and asking the user to provide a specific research topic. Otherwise, leave empty."
+        description="If is_valid is False, provide a friendly error message explaining why (e.g. 'Query contains inappropriate or restricted content.' for unsafe queries) and ask the user to provide a specific research topic. Otherwise, leave empty."
     )
 
 def query_validator(state: ResearchState) -> dict:
