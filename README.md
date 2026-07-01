@@ -1,4 +1,4 @@
-# DeepResearch 🔍
+# <img src="https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011" width="32" height="32" style="vertical-align: middle;"> DeepResearch
 
 An AI-powered multi-agent research assistant that turns a query into a structured, cited research report — with human-in-the-loop plan approval and real-time streaming.
 
