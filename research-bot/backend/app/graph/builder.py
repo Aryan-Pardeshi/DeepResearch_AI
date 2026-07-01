@@ -45,7 +45,8 @@ builder.add_edge(START, "query_validator")
 # builder.add_edge("query_validator", "planner")
 builder.add_conditional_edges(
     "query_validator", lambda state: END if state.get("error") else "planner"  , ["planner", END])
-builder.add_edge("planner", "approval")
+builder.add_conditional_edges(
+    "planner", lambda state: END if state.get("error") else "approval", ["approval", END])
 # conditional node because if approved it goes to aggregator and if not approved it goes back to planner
 # also Langchain dosnt allow list[Send()] from normal nodes only allows state to be returned
 builder.add_conditional_edges(

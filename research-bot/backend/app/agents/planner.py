@@ -67,10 +67,10 @@ Revision rules:
 - Do not rewrite the entire plan unnecessarily.
 
 Return ONLY valid JSON:
-{
+{{
   "ps": "string",
   "sub_tasks": ["string"]
-}
+}}
 """)
 
 class ResearchPlan(BaseModel):
