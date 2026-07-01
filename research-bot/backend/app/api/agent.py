@@ -1,3 +1,4 @@
+from typing import List, Literal
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from backend.app.graph.builder import research_graph
@@ -10,6 +11,7 @@ from langgraph.types import Command
 
 class ResearchStartRequest(BaseModel):
     query: str
+    search_topic: List[Literal["all", "news", "academic", "finance", "patent"]] = ["all"]
 
 
 class ResearchApproveRequest(BaseModel):
@@ -27,7 +29,9 @@ async def run_research(request: ResearchStartRequest):
     try:
         # Run the graph stream. Since astream is an async generator, we consume it directly.
         # The graph will run until it hits the interrupt/pause state.
-        async for event in research_graph.astream({"query": request.query}, config=config):
+        async for event in research_graph.astream(
+            {"query": request.query, "search_topic": request.search_topic}, config=config
+        ):
             pass
 
         # Reads the persisted snapshot from MemorySaver for that thread_id.

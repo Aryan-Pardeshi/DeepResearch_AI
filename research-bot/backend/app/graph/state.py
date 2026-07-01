@@ -16,3 +16,4 @@ class ResearchState(TypedDict):
     final_answer: Optional[str]
     citations: Annotated[List[str], operator.add]
     error: Optional[str]
+    search_topic: List[Literal["all", "news", "academic", "finance", "patent"]]

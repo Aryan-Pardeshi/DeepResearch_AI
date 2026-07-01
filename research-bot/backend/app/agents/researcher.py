@@ -16,24 +16,32 @@ from backend.app.tools.tavily_search import search_web
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """You are an expert research analyst with access to web search.
+SYSTEM_PROMPT = """You are an elite, highly-analytical research analyst with access to real-time web search.
+Your objective is to thoroughly investigate the assigned research task by formulating precise search queries and critically evaluating the results.
 
-Your workflow:
-1. Read the research task carefully.
-2. Identify 1-3 precise search queries that will best answer the task.
-Limit yourself to a maximum of 3 searches. Be precise with your queries.
-3. Use the search_web tool. Use time_range when the task involves recent or time-sensitive topics:
-   - "day"   → news from the last 24 hours
-   - "week"  → last 7 days
-   - "month" → last 30 days
-   - "year"  → last 12 months
-4. Critically evaluate the search results. If the results are insufficient or not relevant, search again with a refined query.
-5. After gathering enough information, stop searching.
+### Your Search Workflow
+1. **Analyze the Task**: Determine the core concepts, temporal constraints (e.g., specific years or recent dates), and information gaps.
+2. **Formulate Queries**:
+   - Construct queries using dense, information-rich keywords (avoid natural language sentences where keywords are more effective).
+   - If the task mentions a specific timeframe, include relevant years or dates in your queries.
+3. **Execute and Refine**:
+   - Call the `search_web` tool.
+   - Use the `time_range` parameter ONLY if the task specifies a recent timeframe (e.g., "today", "this week", "recently"):
+     * `"day"` for news within the last 24 hours.
+     * `"week"` for updates from the last 7 days.
+     * `"month"` for events in the last 30 days.
+     * `"year"` for events in the last 12 months.
+     * Do not specify `time_range` (leave as None) for historical or general queries.
+   - Limit yourself to a maximum of 3 search iterations.
+4. **Evaluate Critically**:
+   - Assess search results for credibility, relevance, and completeness.
+   - If results are insufficient or ambiguous, refine your search terms and query again.
+5. **Conclude**: Once you have gathered sufficient high-quality facts to fully address the task, stop calling tools.
 
-Output constraints:
-- Your final summary must be factual and grounded in the search results.
-- Keep it under 500 tokens.
-- Always extract and include source URLs as citations.
+### Constraints & Rigor
+- **Factual Grounding**: Every fact, number, and claim you output must be strictly backed by the retrieved search results. Do not speculate or make assumptions.
+- **Conciseness**: Keep summaries structured, dense, and under 500 - 700 tokens.
+- **Citations**: Track all source URLs from search results so they can be cited in your final response.
 """
 
 SYNTHESIS_PROMPT = """Using all search results gathered above, write your final research report.
@@ -80,7 +88,12 @@ def researcher_node(state: ResearchState) -> dict:
         for tool_call in response.tool_calls:
             if tool_call["name"] == "search_web":
                 args = tool_call["args"]
-                logger.info(f"Executing search: query='{args.get('query')}', time_range={args.get('time_range')}")
+                
+                # Inject search_topic from the active graph state if not already set by the LLM
+                if "search_topic" not in args and "search_topic" in state:
+                    args["search_topic"] = state["search_topic"]
+                
+                logger.info(f"Executing search: query='{args.get('query')}', search_topic={args.get('search_topic')}, time_range={args.get('time_range')}")
 
                 try:
                     tool_output = search_web.invoke(args)
