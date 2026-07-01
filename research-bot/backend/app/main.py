@@ -10,6 +10,7 @@ if str(root_dir) not in sys.path:
     sys.path.insert(0, str(root_dir))
 
 from backend.app.api.agent import router as agent_router
+from backend.app.llm import llm as lazy_llm
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -79,7 +80,9 @@ def update_config(body: ConfigUpdate):
         for k in updated:
             os.environ[k] = body.model_dump()[k]
 
-        return {"ok": True, "updated": updated}
+        lazy_llm.reset()
+
+        return {"ok": True, "updated": updated, "message": "Applied"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

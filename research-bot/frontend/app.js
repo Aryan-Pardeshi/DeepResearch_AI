@@ -203,7 +203,7 @@ async function checkApiConfig() {
             banner.innerHTML = `
                 <i data-lucide="alert-triangle" style="width: 18px; height: 18px; flex-shrink: 0; color: var(--accent-yellow);"></i>
                 <div class="config-warning-text">
-                    <strong>API Configuration Incomplete</strong>
+                    <strong>API keys not configured</strong>
                     <div class="config-issues">${items}</div>
                 </div>
                 <button class="btn-primary config-configure-btn" id="config-configure-btn">Configure</button>
@@ -223,15 +223,40 @@ async function checkApiConfig() {
             dom.saveStatus.textContent = '';
             dom.planBtn.disabled = true;
             dom.planBtn.title = 'Set your API keys in settings first';
-            dom.statusText.innerText = 'Set your API keys';
+            dom.statusText.innerText = 'API keys required';
             dom.statusDot.className = 'status-dot error';
         }
     } catch (e) {}
 }
 
+// Theme toggle
+function initTheme() {
+    const isDark = localStorage.getItem('theme') !== 'light';
+    document.documentElement.classList.toggle('light-mode', !isDark);
+    document.documentElement.classList.toggle('dark-mode', isDark);
+    updateThemeIcon(isDark);
+}
+
+function toggleTheme() {
+    const isDark = !document.documentElement.classList.contains('dark-mode');
+    document.documentElement.classList.toggle('dark-mode', isDark);
+    document.documentElement.classList.toggle('light-mode', !isDark);
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    updateThemeIcon(isDark);
+}
+
+function updateThemeIcon(isDark) {
+    const icon = document.querySelector('#theme-toggle-btn [data-lucide]');
+    if (icon) {
+        icon.setAttribute('data-lucide', isDark ? 'moon' : 'sun');
+        lucide.createIcons();
+    }
+}
+
 // Initialize Icons
 document.addEventListener('DOMContentLoaded', () => {
     lucide.createIcons();
+    initTheme();
     initEventListeners();
     checkBackendHealth().then(ok => {
         if (ok) {
@@ -257,12 +282,12 @@ async function checkBackendHealth() {
         if (!response.ok) throw new Error('Not healthy');
         banner.style.display = 'none';
         setStatus('idle');
-        dom.statusText.innerText = 'Ready for query';
+        dom.statusText.innerText = 'Ready';
         return true;
     } catch {
         banner.style.display = 'flex';
         setStatus('error');
-        dom.statusText.innerText = 'Backend Offline';
+        dom.statusText.innerText = 'Backend is offline';
         return false;
     }
 }
@@ -342,6 +367,9 @@ function initEventListeners() {
         URL.revokeObjectURL(url);
     });
     
+    // Theme Toggle
+    document.getElementById('theme-toggle-btn').addEventListener('click', toggleTheme);
+
     // Settings Modal
     dom.settingsBtn.addEventListener('click', () => {
         dom.settingsModal.style.display = 'flex';
@@ -367,10 +395,14 @@ function initEventListeners() {
                 body: JSON.stringify(body)
             });
             if (!res.ok) throw new Error('Save failed');
-            dom.saveStatus.textContent = 'Saved! Restart backend to apply.';
+            dom.saveStatus.textContent = 'Applied!';
             dom.saveStatus.style.color = 'var(--accent-teal)';
             const banner = document.getElementById('config-warning-banner');
             if (banner) banner.remove();
+            dom.planBtn.disabled = false;
+            dom.planBtn.title = '';
+            dom.statusText.innerText = 'Ready';
+            dom.statusDot.className = 'status-dot';
         } catch (e) {
             dom.saveStatus.textContent = `Error: ${e.message}`;
             dom.saveStatus.style.color = 'var(--accent-red)';
@@ -378,19 +410,24 @@ function initEventListeners() {
     });
     
     // New Research Button
-    dom.newResearchBtn.addEventListener('click', () => {
-        activityMonitor.stop();
-        clearSession();
-        dom.queryInput.value = '';
-        resetLandingControls();
-        dom.reportOutput.innerHTML = '';
-        dom.workspaceSourcesContainer.innerHTML = '';
-        dom.workspaceSourcesSection.style.display = 'none';
-        dom.newResearchBtn.style.display = 'none';
-        dom.downloadMdBtn.style.display = 'none';
-        setStatus('idle');
-        showPanel('landing-panel');
-    });
+    dom.newResearchBtn.addEventListener('click', resetToLanding);
+
+    // Approval panel new conversation button
+    document.getElementById('approval-new-research-btn').addEventListener('click', resetToLanding);
+}
+
+function resetToLanding() {
+    activityMonitor.stop();
+    clearSession();
+    dom.queryInput.value = '';
+    resetLandingControls();
+    dom.reportOutput.innerHTML = '';
+    dom.workspaceSourcesContainer.innerHTML = '';
+    dom.workspaceSourcesSection.style.display = 'none';
+    dom.newResearchBtn.style.display = 'none';
+    dom.downloadMdBtn.style.display = 'none';
+    setStatus('idle');
+    showPanel('landing-panel');
 }
 
 function toggleFeedbackButtons() {
@@ -403,7 +440,7 @@ function toggleFeedbackButtons() {
 async function handleRevision() {
     const feedback = dom.feedbackInput.value.trim();
     if (!feedback) {
-        showToast('Please type your revisions request in the console.');
+        showToast('Type your revision instructions above.');
         return;
     }
 
@@ -485,38 +522,38 @@ function setStatus(status) {
     // Reset status badge classes
     dom.statusDot.className = 'status-dot';
     
-    let text = 'Ready for query';
+    let text = 'Ready';
     
     switch (status) {
         case 'idle':
-            text = 'Ready for query';
+            text = 'Ready';
             break;
         case 'validating':
             dom.statusDot.classList.add('planning');
-            text = 'Validating query...';
+            text = 'Validating...';
             break;
         case 'planning':
             dom.statusDot.classList.add('planning');
-            text = 'Designing research plan...';
+            text = 'Designing plan...';
             break;
         case 'awaiting_approval':
             dom.statusDot.classList.add('planning');
-            text = 'Awaiting design review';
+            text = 'Pending review';
             break;
         case 'researching':
             dom.statusDot.classList.add('researching');
-            text = 'Parallel researchers active';
+            text = 'Researching in parallel';
             break;
         case 'aggregating':
             dom.statusDot.classList.add('researching');
-            text = 'Synthesizing report...';
+            text = 'Synthesizing...';
             break;
         case 'completed':
-            text = 'Research completed';
+            text = 'Complete';
             break;
         case 'error':
             dom.statusDot.classList.add('error');
-            text = 'Execution error';
+            text = 'Error';
             break;
     }
     
@@ -545,7 +582,7 @@ function showToast(message) {
 async function handlePlanResearch() {
     const query = dom.queryInput.value.trim();
     if (!query) {
-        showToast('Please type a research query first.');
+        showToast('Enter a research query first.');
         return;
     }
     
@@ -579,7 +616,7 @@ async function handlePlanResearch() {
         const data = await response.json();
         
         if (data.status === 'error') {
-            showToast(data.error || 'Query validation failed. Please provide a specific topic.');
+            showToast(data.error || 'Could not validate query. Try a more specific topic.');
             resetLandingControls();
             setStatus('error');
             if (data.error && (data.error.toLowerCase().includes('api key') || data.error.toLowerCase().includes('settings'))) {

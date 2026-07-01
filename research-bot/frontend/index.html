@@ -15,7 +15,7 @@
     <!-- Header -->
     <header>
         <div class="logo-container">
-            <div class="logo-dot"></div>
+            <img class="logo-img" src="https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011" alt="Dolphin AI">
             <span class="logo-text">DEEPRESEARCH</span>
         </div>
         <div class="status-badge" id="app-status-badge">
@@ -23,6 +23,9 @@
             <span id="app-status-text">Ready for query</span>
         </div>
         <div class="header-actions">
+            <button class="btn-icon theme-toggle" id="theme-toggle-btn" title="Toggle theme">
+                <i data-lucide="moon" style="width: 18px; height: 18px;"></i>
+            </button>
             <button class="btn-icon" id="settings-btn" title="Configure API Keys">
                 <i data-lucide="settings" style="width: 18px; height: 18px;"></i>
             </button>
@@ -42,7 +45,7 @@
             </div>
             <div class="modal-body">
                 <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem;">
-                    Paste your API keys below. They will be saved to <code>.env</code> and used immediately.
+                    Enter your API keys below. They will be saved to <code>.env</code>.
                 </p>
                 <div class="form-group">
                     <label class="form-label" for="input-deepseek-key">DEEPSEEK_API_KEY</label>
@@ -68,7 +71,7 @@
     <!-- Backend Offline Banner -->
     <div class="backend-offline-banner" id="backend-offline-banner" style="display: none;">
         <i data-lucide="cloud-off" style="width: 18px; height: 18px; flex-shrink: 0;"></i>
-        <span>Backend server is not running at <strong>http://127.0.0.1:8000</strong>. Please start the backend to use this application.</span>
+        <span>Backend is offline at <strong>http://127.0.0.1:8000</strong>. Start the backend server to continue.</span>
     </div>
 
     <!-- Main Container -->
@@ -102,7 +105,13 @@
 
         <!-- View 2: Plan Approval / Revision Panel -->
         <section id="approval-panel" class="panel">
-            <h1 class="section-title">Research Design Console</h1>
+            <div class="approval-header">
+                <h1 class="section-title">Research Design Console</h1>
+                <button class="btn-secondary btn-new-research" id="approval-new-research-btn">
+                    <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+                    <span>New Conversation</span>
+                </button>
+            </div>
             
             <div class="original-query-banner">
                 <span>Researching: </span><strong id="approval-query-display">"..."</strong>
@@ -116,7 +125,7 @@
                         <h2 class="card-title">Problem Statement</h2>
                     </div>
                     <p class="problem-statement-text" id="approval-ps-text">
-                        Generating problem statement...
+                        Generating problem statement…
                     </p>
                 </div>
 
@@ -138,7 +147,7 @@
                         <h2 class="card-title">Revisions Console</h2>
                     </div>
                     <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
-                        If the plan needs refinement, describe your changes below and submit revisions. Otherwise, click "Approve & Run" to execute parallel web researchers.
+                        Need changes? Describe them below and submit revisions. Otherwise, click "Approve & Run" to start researching.
                     </p>
                     <textarea class="feedback-textarea" id="feedback-input" placeholder="Type instructions to modify the plan (e.g. 'replace task 2 with...', 'focus more on...')"></textarea>
                     
