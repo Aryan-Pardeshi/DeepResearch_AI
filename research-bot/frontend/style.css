@@ -895,6 +895,13 @@ main {
     padding-top: 2rem;
 }
 
+.sources-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
 .sources-title {
     font-family: var(--font-outfit);
     font-size: 1.15rem;

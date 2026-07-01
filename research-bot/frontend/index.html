@@ -157,10 +157,16 @@
 
                     <!-- Sources & References -->
                     <div class="sources-section" id="workspace-sources-section" style="display: none;">
-                        <h2 class="sources-title">
-                            <i data-lucide="link" style="width: 18px; height: 18px; color: var(--accent-purple);"></i>
-                            <span>Retrieved Sources</span>
-                        </h2>
+                        <div class="sources-header">
+                            <h2 class="sources-title">
+                                <i data-lucide="link" style="width: 18px; height: 18px; color: var(--accent-purple);"></i>
+                                <span>Retrieved Sources</span>
+                            </h2>
+                            <button class="btn-secondary btn-download" id="download-md-btn" style="display:none;">
+                                <i data-lucide="download" style="width: 16px; height: 16px;"></i>
+                                <span>Download .md</span>
+                            </button>
+                        </div>
                         <div class="sources-grid" id="workspace-sources-container">
                             <!-- Clickable citation cards -->
                         </div>

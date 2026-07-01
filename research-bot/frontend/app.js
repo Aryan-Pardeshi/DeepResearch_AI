@@ -108,7 +108,10 @@ const dom = {
     toastContainer: document.getElementById('toast-container'),
     
     // New Research
-    newResearchBtn: document.getElementById('new-research-btn')
+    newResearchBtn: document.getElementById('new-research-btn'),
+    
+    // Download
+    downloadMdBtn: document.getElementById('download-md-btn')
 };
 
 const STORAGE_KEY = 'deepresearch_session';
@@ -276,6 +279,17 @@ function initEventListeners() {
     // Toggle approve/revision buttons based on feedback input
     dom.feedbackInput.addEventListener('input', toggleFeedbackButtons);
     
+    // Download MD Button
+    dom.downloadMdBtn.addEventListener('click', () => {
+        const blob = new Blob([state.finalAnswer], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'research-report.md';
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+    
     // New Research Button
     dom.newResearchBtn.addEventListener('click', () => {
         activityMonitor.stop();
@@ -286,6 +300,7 @@ function initEventListeners() {
         dom.workspaceSourcesContainer.innerHTML = '';
         dom.workspaceSourcesSection.style.display = 'none';
         dom.newResearchBtn.style.display = 'none';
+        dom.downloadMdBtn.style.display = 'none';
         setStatus('idle');
         showPanel('landing-panel');
     });
@@ -691,6 +706,7 @@ function handleSSEEvent(data, isRevision = false) {
             // Render final markdown and citations
             renderReportFinal();
             renderCitations();
+            dom.downloadMdBtn.style.display = 'flex';
             saveSession();
             break;
             
