@@ -680,13 +680,10 @@ function showToast(message) {
 let planningTextInterval = null;
 function startPlanningLoader() {
     const messages = [
-        "Checking safety & topic...",
-        "Structuring plan outline...",
-        "Analyzing search parameters...",
-        "Drafting sub-tasks...",
-        "Refining strategic plan...",
-        "Patience, DeepSeek is thinking hard...",
-        "Almost there..."
+        "Analyzing safety...",
+        "Structuring plan...",
+        "DeepSeek is thinking...",
+        "Defining problem..."
     ];
     let index = 0;
     
@@ -705,7 +702,7 @@ function startPlanningLoader() {
     };
     
     updateText();
-    planningTextInterval = setInterval(updateText, 4000);
+    planningTextInterval = setInterval(updateText, 6000);
 }
 
 function stopPlanningLoader() {
