@@ -187,47 +187,17 @@
 
             <!-- Right Pane: Report Workspace -->
             <article class="report-workspace">
-                <!-- Visual progress map -->
-                <div class="progress-map-card" id="progress-map-card" style="display: none;">
-                    <div class="progress-map-title">
-                        <i data-lucide="git-branch" style="width: 16px; height: 16px; color: var(--accent-purple);"></i>
-                        <span>Research Graph Execution</span>
-                    </div>
-                    <div class="progress-nodes-container">
-                        <div class="progress-node pending" id="node-stage-planning">
-                            <div class="node-icon-wrapper">
-                                <i data-lucide="list-todo" style="width: 18px; height: 18px;"></i>
-                            </div>
-                            <span class="node-label">Plan Design</span>
-                        </div>
-                        
-                        <div class="node-connector pending" id="connector-1"></div>
-                        
-                        <div class="progress-node pending" id="node-stage-researching">
-                            <div class="node-icon-wrapper">
-                                <i data-lucide="search" style="width: 18px; height: 18px;"></i>
-                            </div>
-                            <span class="node-label">Researching</span>
-                            <span class="node-sublabel" id="research-progress-sublabel">0/0 done</span>
-                        </div>
-                        
-                        <div class="node-connector pending" id="connector-2"></div>
-                        
-                        <div class="progress-node pending" id="node-stage-aggregating">
-                            <div class="node-icon-wrapper">
-                                <i data-lucide="combine" style="width: 18px; height: 18px;"></i>
-                            </div>
-                            <span class="node-label">Synthesizing</span>
-                        </div>
-                        
-                        <div class="node-connector pending" id="connector-3"></div>
-                        
-                        <div class="progress-node pending" id="node-stage-completed">
-                            <div class="node-icon-wrapper">
-                                <i data-lucide="check-square" style="width: 18px; height: 18px;"></i>
-                            </div>
-                            <span class="node-label">Final Report</span>
-                        </div>
+                <div class="report-workspace-header">
+                    <h2 class="section-title" style="margin: 0;">Research Report</h2>
+                    <div class="report-actions" style="display: flex; gap: 0.5rem;">
+                        <button class="btn-secondary" id="copy-md-btn" style="display:none; gap: 0.35rem; align-items: center;">
+                            <i data-lucide="copy" style="width: 16px; height: 16px;"></i>
+                            <span>Copy Report</span>
+                        </button>
+                        <button class="btn-secondary btn-download" id="download-md-btn" style="display:none; gap: 0.35rem; align-items: center;">
+                            <i data-lucide="download" style="width: 16px; height: 16px;"></i>
+                            <span>Download .md</span>
+                        </button>
                     </div>
                 </div>
 
@@ -258,16 +228,6 @@
                                 <i data-lucide="link" style="width: 18px; height: 18px; color: var(--accent-purple);"></i>
                                 <span>Retrieved Sources</span>
                             </h2>
-                            <div class="report-actions" style="display: flex; gap: 0.5rem;">
-                                <button class="btn-secondary" id="copy-md-btn" style="display:none; gap: 0.35rem; align-items: center;">
-                                    <i data-lucide="copy" style="width: 16px; height: 16px;"></i>
-                                    <span>Copy Report</span>
-                                </button>
-                                <button class="btn-secondary btn-download" id="download-md-btn" style="display:none;">
-                                    <i data-lucide="download" style="width: 16px; height: 16px;"></i>
-                                    <span>Download .md</span>
-                                </button>
-                            </div>
                         </div>
                         <div class="sources-grid" id="workspace-sources-container">
                             <!-- Clickable citation cards -->
@@ -284,6 +244,6 @@
     <div class="toast-container" id="toast-container"></div>
 
     <!-- Application Script -->
-    <script src="app.js?v=1.0.4"></script>
+    <script src="app.js?v=1.0.5"></script>
 </body>
 </html>

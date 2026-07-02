@@ -34,21 +34,6 @@ const activityMonitor = {
         this.stop();
         this.lastEventTime = Date.now();
         this.warningsShown = {};
-        this.checkTimer = setInterval(() => {
-            const elapsed = Date.now() - this.lastEventTime;
-            if (elapsed > this.STALL_THRESHOLD && state.status === 'researching') {
-                const bucket = Math.floor(elapsed / 30000) * 30;
-                if (!this.warningsShown[bucket]) {
-                    this.warningsShown[bucket] = true;
-                    const stuckResearchers = Object.entries(state.workers)
-                        .filter(([, w]) => w.status === 'running')
-                        .map(([task]) => task);
-                    const msg = `No activity for ${Math.round(elapsed / 1000)}s. Stuck researchers: ${stuckResearchers.join(', ') || 'unknown'}`;
-                    showToast(msg);
-                    dom.statusText.innerText = `⚠ ${Math.round(elapsed / 1000)}s stall — ${stuckResearchers.length} researchers stuck`;
-                }
-            }
-        }, 10000);
     },
 
     stop() {
