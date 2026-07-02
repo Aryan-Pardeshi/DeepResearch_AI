@@ -10,6 +10,8 @@ services:
     env_file:
       - path: .env
         required: false
+    volumes:
+      - ./backend:/app/backend
     networks:
       - research-net
 
