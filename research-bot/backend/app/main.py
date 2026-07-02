@@ -2,6 +2,7 @@ import sys, os, re
 from pathlib import Path
 import uvicorn
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
@@ -10,7 +11,7 @@ if str(root_dir) not in sys.path:
     sys.path.insert(0, str(root_dir))
 
 from backend.app.api.agent import router as agent_router
-from backend.app.llm import llm as lazy_llm
+from backend.app.llm import reset_all_llms
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -27,6 +28,11 @@ app.add_middleware(
 )
 
 app.include_router(agent_router)
+
+# Mount static directory for serving charts
+static_path = Path(__file__).resolve().parent / "static"
+static_path.mkdir(parents=True, exist_ok=True)
+app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 
 @app.get("/")
 def read_root():
