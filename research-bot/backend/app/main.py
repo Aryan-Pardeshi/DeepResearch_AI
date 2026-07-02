@@ -11,7 +11,7 @@ if str(root_dir) not in sys.path:
     sys.path.insert(0, str(root_dir))
 
 from backend.app.api.agent import router as agent_router
-from backend.app.llm import reset_all_llms
+from backend.app.llm import llm as lazy_llm
 
 from fastapi.middleware.cors import CORSMiddleware
 
