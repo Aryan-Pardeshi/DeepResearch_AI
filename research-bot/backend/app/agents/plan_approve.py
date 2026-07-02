@@ -17,7 +17,14 @@ from langgraph.types import interrupt
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = ("Treat Problem statement based changes and plan based changes as same. Based on the User Response you must decide if the plan has to be approved or revised. You must respond in JSON format, setting the key 'plan_approved' to true if approved, or false if rejected/revisions are requested.")
+SYSTEM_PROMPT = ("""You are a plan approval classifier.
+Analyze the user's feedback to determine if they approved the current plan, or if they are requesting revisions or changes.
+
+Classification Rules:
+- If the user explicitly approves the plan (e.g., "looks good", "approve", "proceed", "go ahead", "run", "yes", "perfect", "ok"), set 'plan_approved' to true.
+- If the user requests any change, addition, deletion, modification, or feedback (e.g., "add trend analysis step", "remove step 2", "change X", "focus on Y"), set 'plan_approved' to false.
+- Be conservative: if they ask questions, provide suggestions, or demand adjustments, set 'plan_approved' to false.
+- Respond in JSON format matching the schema.""")
 
 class PlanState(BaseModel):
     plan_approved: bool = Field(description="Whether the plan is approved or not")
