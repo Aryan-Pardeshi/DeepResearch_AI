@@ -75,6 +75,7 @@ async def approve_plan(request: ResearchApproveRequest):
                 
                 researcher_tasks = {}
                 researcher_count = 0
+                researcher_run_to_task = {}
                 
                 # 2. # Stream the graph events using the astream_events engine
                 #For aggrigator node streaming
@@ -98,6 +99,8 @@ async def approve_plan(request: ResearchApproveRequest):
                                     researcher_count += 1
                                     researcher_tasks[query] = f"researcher_{researcher_count}"
                                 current_node_name = researcher_tasks[query]
+                                # Map the run ID to the research task query
+                                researcher_run_to_task[event["run_id"]] = query
                                 
                             payload = {
                                 "event": "node_start",
@@ -108,6 +111,34 @@ async def approve_plan(request: ResearchApproveRequest):
                             yield f"data: {json.dumps(payload)}\n\n"
                             await asyncio.sleep(0.01)
                     
+                    # Capture tool execution starts and ends
+                    elif event_type == "on_tool_start" and event.get("name") == "search_web":
+                        parent_run_id = event.get("parent_run_id") or event.get("metadata", {}).get("parent_run_id")
+                        task = researcher_run_to_task.get(parent_run_id)
+                        if task:
+                            tool_input = event["data"].get("input", {})
+                            search_query = tool_input.get("query")
+                            payload = {
+                                "event": "researcher_search",
+                                "task": task,
+                                "query": search_query,
+                                "status": "start"
+                            }
+                            yield f"data: {json.dumps(payload)}\n\n"
+                            await asyncio.sleep(0.01)
+
+                    elif event_type == "on_tool_end" and event.get("name") == "search_web":
+                        parent_run_id = event.get("parent_run_id") or event.get("metadata", {}).get("parent_run_id")
+                        task = researcher_run_to_task.get(parent_run_id)
+                        if task:
+                            payload = {
+                                "event": "researcher_search",
+                                "task": task,
+                                "status": "completed"
+                            }
+                            yield f"data: {json.dumps(payload)}\n\n"
+                            await asyncio.sleep(0.01)
+
                     # Stream individual LLM tokens 
                     elif event_type == "on_chat_model_stream":
                         metadata = event.get("metadata", {})
