@@ -152,6 +152,7 @@ const dom = {
     // Download
     downloadMdBtn: document.getElementById('download-md-btn'),
     copyMdBtn: document.getElementById('copy-md-btn'),
+    workspaceNewResearchBtn: document.getElementById('workspace-new-research-btn'),
     
     // Settings
     settingsBtn: document.getElementById('settings-btn'),
@@ -229,6 +230,7 @@ function restoreSession() {
             showPanel('workspace-panel');
             dom.downloadMdBtn.style.display = 'flex';
             if (dom.copyMdBtn) dom.copyMdBtn.style.display = 'flex';
+            if (dom.workspaceNewResearchBtn) dom.workspaceNewResearchBtn.style.display = 'flex';
             
             if (saved.researchTime !== undefined) {
                 researchTimer.elapsedSeconds = saved.researchTime;
@@ -435,6 +437,11 @@ function initEventListeners() {
             });
         });
     }
+
+    // Workspace New Research Button
+    if (dom.workspaceNewResearchBtn) {
+        dom.workspaceNewResearchBtn.addEventListener('click', resetToLanding);
+    }
     
     // Theme Toggle
     document.getElementById('theme-toggle-btn').addEventListener('click', toggleTheme);
@@ -509,6 +516,7 @@ function resetToLanding() {
     dom.newResearchBtn.style.display = 'none';
     dom.downloadMdBtn.style.display = 'none';
     if (dom.copyMdBtn) dom.copyMdBtn.style.display = 'none';
+    if (dom.workspaceNewResearchBtn) dom.workspaceNewResearchBtn.style.display = 'none';
     setStatus('idle');
     showPanel('landing-panel');
 }
@@ -1031,6 +1039,7 @@ function handleSSEEvent(data, isRevision = false) {
             renderCitations();
             dom.downloadMdBtn.style.display = 'flex';
             if (dom.copyMdBtn) dom.copyMdBtn.style.display = 'flex';
+            if (dom.workspaceNewResearchBtn) dom.workspaceNewResearchBtn.style.display = 'flex';
             
             // Reset scroll to top so user sees the header of the report
             try {
