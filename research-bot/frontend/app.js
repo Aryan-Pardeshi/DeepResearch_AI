@@ -732,6 +732,15 @@ async function handlePlanResearch() {
     try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 300000);
+
+        // --- Immediately navigate to approval panel with skeleton ---
+        dom.approvalQueryDisplay.innerText = `"${state.query}"`;
+        showSkeletonPlan();
+        showPanel('approval-panel');
+        // Disable action buttons while loading
+        dom.approvePlanBtn.disabled = true;
+        dom.submitFeedbackBtn.style.display = 'none';
+
         const response = await fetch(`${API_BASE_URL}/research/start`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -742,6 +751,7 @@ async function handlePlanResearch() {
             signal: controller.signal
         });
         clearTimeout(timeout);
+        stopPlanningLoader();
         
         if (!response.ok) {
             throw new Error(`Server returned code ${response.status}: ${response.statusText}`);
@@ -753,6 +763,7 @@ async function handlePlanResearch() {
             showToast(data.error || 'Could not validate query. Try a more specific topic.');
             resetLandingControls();
             setStatus('error');
+            showPanel('landing-panel');
             if (data.error && (data.error.toLowerCase().includes('api key') || data.error.toLowerCase().includes('settings'))) {
                 dom.settingsModal.style.display = 'flex';
                 dom.saveStatus.textContent = '';
@@ -776,18 +787,36 @@ async function handlePlanResearch() {
             };
         });
         
-        // Render View
-        stopPlanningLoader();
+        // Populate the approval panel with real data (replacing skeleton)
         renderApprovalPanel();
         setStatus('awaiting_approval');
-        showPanel('approval-panel');
         saveSession();
         
     } catch (e) {
+        stopPlanningLoader();
         showToast(`Failed to establish API connection: ${e.message}`);
         resetLandingControls();
         setStatus('error');
+        showPanel('landing-panel');
     }
+}
+
+function showSkeletonPlan() {
+    // Problem statement skeleton
+    dom.approvalPsText.innerHTML = `
+        <div class="thinking-badge"><span class="dot"></span> DeepSeek is thinking…</div>
+        <span class="skeleton skeleton-ps" style="width:95%"></span>
+        <span class="skeleton skeleton-ps" style="width:88%"></span>
+        <span class="skeleton skeleton-ps" style="width:75%"></span>
+        <span class="skeleton skeleton-ps" style="width:60%"></span>
+    `;
+    // Plan tasks skeleton
+    dom.approvalSubtasksContainer.innerHTML = `
+        <span class="skeleton skeleton-task" style="width:100%"></span>
+        <span class="skeleton skeleton-task" style="width:100%"></span>
+        <span class="skeleton skeleton-task" style="width:100%"></span>
+        <span class="skeleton skeleton-task" style="width:100%"></span>
+    `;
 }
 
 function resetLandingControls() {
