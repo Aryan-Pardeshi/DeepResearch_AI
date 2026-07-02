@@ -18,11 +18,9 @@ class _LazyLLM:
                     "Set it in the .env file or via the settings modal."
                 )
             self._instance = ChatOpenAI(
-                model="deepseek-chat",
+                model="deepseek-v4-flash",
                 openai_api_key=api_key,
-                openai_api_base=os.getenv("DEEPSEEK_BASE_URL"),
-                timeout=60,
-                max_retries=2,
+                openai_api_base=os.getenv("DEEPSEEK_BASE_URL")
             )
         return self._instance
 
@@ -34,14 +32,14 @@ class _LazyLLM:
 
 
 llm = _LazyLLM()
-# llm_fast = llm
+llm_fast = llm
 # llm_pro = llm
-llm_fast = ChatOpenAI(
-    model="deepseek-v4-flash",
-    openai_api_key=os.getenv("DEEPSEEK_API_KEY"),
-    openai_api_base=os.getenv("DEEPSEEK_BASE_URL"),
-    extra_body={"thinking": {"type": "disabled"}},
-)
+# llm_fast = ChatOpenAI(
+#     model="deepseek-v4-flash",
+#     openai_api_key=os.getenv("DEEPSEEK_API_KEY"),
+#     openai_api_base=os.getenv("DEEPSEEK_BASE_URL"),
+#     extra_body={"thinking": {"type": "disabled"}},
+# )
 
 llm_pro = ChatOpenAI(
     model="deepseek-v4-pro",
