@@ -1026,6 +1026,12 @@ function handleSSEEvent(data, isRevision = false) {
             renderCitations();
             dom.downloadMdBtn.style.display = 'flex';
             if (dom.copyMdBtn) dom.copyMdBtn.style.display = 'flex';
+            
+            // Reset scroll to top so user sees the header of the report
+            try {
+                dom.reportOutput.closest('.report-container').scrollTop = 0;
+            } catch (e) {}
+            
             saveSession();
             break;
             
