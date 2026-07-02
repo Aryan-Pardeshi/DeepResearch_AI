@@ -30,7 +30,8 @@ async def aggregator_node(state: ResearchState) -> dict:
             "5. **Sources**: List the provided source URLs cleanly at the bottom as references.\n\n"
             "Guidelines:\n"
             "- Use professional typography, bullet points, and bold text for key metrics.\n"
-            "- Do not invent any facts or source links. Only use what is present in the research sections."
+            "- Do not invent any facts or source links. Only use what is present in the research sections.\n"
+            "- You have a matplotlib chart generation tool. Look at the data inside the Research Sections. If there are numerical comparisons, historical trends, or statistical data, you MUST call the generate_matplotlib_chart tool to generate 1 or 2 visual graphs (e.g. line chart, bar chart) and embed them as markdown images in your report's sections."
         )),
 
         HumanMessage(content=(
@@ -43,7 +44,39 @@ async def aggregator_node(state: ResearchState) -> dict:
     ]
 
     try:
-        final = await llm_pro.ainvoke(messages)
+        from backend.app.tools.matplotlib_tool import generate_matplotlib_chart
+        from langchain_core.messages import ToolMessage
+        
+        llm_with_tools = llm_pro.bind_tools([generate_matplotlib_chart])
+        
+        messages_history = list(messages)
+        final_content = ""
+        
+        # Max 4 turns to support tool calling and final output synthesis
+        for i in range(4):
+            response = await llm_with_tools.ainvoke(messages_history)
+            messages_history.append(response)
+            
+            if response.tool_calls:
+                for tool_call in response.tool_calls:
+                    if tool_call["name"] == "generate_matplotlib_chart":
+                        # Execute the tool
+                        result_md_image = generate_matplotlib_chart.invoke(tool_call["args"])
+                        
+                        tool_message = ToolMessage(
+                            content=result_md_image,
+                            tool_call_id=tool_call["id"],
+                            name=tool_call["name"]
+                        )
+                        messages_history.append(tool_message)
+                continue
+            else:
+                final_content = response.content
+                break
+                
+        if not final_content:
+            final_content = messages_history[-1].content
+            
     except Exception as e:
         error_msg = str(e).lower()
         logger.error(f"Error in aggregator: {e}", exc_info=True)
@@ -51,5 +84,5 @@ async def aggregator_node(state: ResearchState) -> dict:
             return {"status": "error", "error": "API key is missing or invalid. Open settings to configure your API keys."}
         return {"status": "error", "error": f"Synthesis failed: {str(e)}"}
     
-    #update the state with the final answer and set status to completed (do not return citations to avoid duplicating them via the operator.add reducer)
-    return {"final_answer": final.content, "status": "completed"}
+    #update the state with the final answer and set status to completed
+    return {"final_answer": final_content, "status": "completed"}

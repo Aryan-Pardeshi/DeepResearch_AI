@@ -10,3 +10,4 @@ langgraph==1.2.6
 langgraph-checkpoint==4.1.1
 tavily-python==0.7.26
 httpx==0.28.1
+matplotlib==3.8.2
