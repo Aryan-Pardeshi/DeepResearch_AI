@@ -17,6 +17,7 @@ document.head.appendChild(cursorStyle);
 
 // Configuration
 const API_BASE_URL = 'http://localhost:8000';
+let activeResearchController = null;
 
 // Activity Monitor — detects stalls in SSE/researcher activity
 const activityMonitor = {
@@ -54,6 +55,59 @@ const activityMonitor = {
         if (this.checkTimer) {
             clearInterval(this.checkTimer);
             this.checkTimer = null;
+        }
+    }
+};
+
+// Research Timer Control
+const researchTimer = {
+    startTime: null,
+    timerId: null,
+    elapsedSeconds: 0,
+    isPaused: false,
+
+    start() {
+        this.stop();
+        this.startTime = Date.now() - (this.elapsedSeconds * 1000);
+        this.isPaused = false;
+        this.updateDisplay();
+        
+        this.timerId = setInterval(() => {
+            if (!this.isPaused) {
+                this.elapsedSeconds = Math.floor((Date.now() - this.startTime) / 1000);
+                this.updateDisplay();
+            }
+        }, 1000);
+    },
+
+    pause() {
+        this.isPaused = true;
+        this.stop();
+    },
+
+    stop() {
+        if (this.timerId) {
+            clearInterval(this.timerId);
+            this.timerId = null;
+        }
+    },
+
+    reset() {
+        this.stop();
+        this.startTime = null;
+        this.elapsedSeconds = 0;
+        this.isPaused = false;
+        this.updateDisplay();
+    },
+
+    updateDisplay() {
+        const timerEl = document.getElementById('research-timer');
+        if (timerEl) {
+            const minutes = Math.floor(this.elapsedSeconds / 60);
+            const seconds = this.elapsedSeconds % 60;
+            const displayMin = String(minutes).padStart(2, '0');
+            const displaySec = String(seconds).padStart(2, '0');
+            timerEl.textContent = `${displayMin}:${displaySec}`;
         }
     }
 };
@@ -112,6 +166,7 @@ const dom = {
     
     // Download
     downloadMdBtn: document.getElementById('download-md-btn'),
+    copyMdBtn: document.getElementById('copy-md-btn'),
     
     // Settings
     settingsBtn: document.getElementById('settings-btn'),
@@ -135,7 +190,8 @@ function saveSession() {
             ps: state.ps,
             plan: state.plan,
             finalAnswer: state.finalAnswer,
-            citations: state.citations
+            citations: state.citations,
+            researchTime: researchTimer.elapsedSeconds
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
         dom.newResearchBtn.style.display = state.threadId ? 'flex' : 'none';
@@ -186,6 +242,13 @@ function restoreSession() {
             renderCitations();
             setStatus('completed');
             showPanel('workspace-panel');
+            dom.downloadMdBtn.style.display = 'flex';
+            if (dom.copyMdBtn) dom.copyMdBtn.style.display = 'flex';
+            
+            if (saved.researchTime !== undefined) {
+                researchTimer.elapsedSeconds = saved.researchTime;
+                researchTimer.updateDisplay();
+            }
         }
     } catch (e) {}
 }
@@ -366,6 +429,22 @@ function initEventListeners() {
         a.click();
         URL.revokeObjectURL(url);
     });
+
+    // Copy MD Button
+    if (dom.copyMdBtn) {
+        dom.copyMdBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(state.finalAnswer).then(() => {
+                const span = dom.copyMdBtn.querySelector('span');
+                const originalText = span.innerText;
+                span.innerText = 'Copied!';
+                setTimeout(() => {
+                    span.innerText = originalText;
+                }, 2000);
+            }).catch(err => {
+                showToast(`Failed to copy: ${err}`);
+            });
+        });
+    }
     
     // Theme Toggle
     document.getElementById('theme-toggle-btn').addEventListener('click', toggleTheme);
@@ -417,7 +496,19 @@ function initEventListeners() {
 }
 
 function resetToLanding() {
+    if (activeResearchController) {
+        activeResearchController.abort();
+        activeResearchController = null;
+    }
+    if (state.threadId) {
+        fetch(`${API_BASE_URL}/research/cancel`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ thread_id: state.threadId })
+        }).catch(err => console.error("Error cancelling research:", err));
+    }
     activityMonitor.stop();
+    researchTimer.reset();
     clearSession();
     dom.queryInput.value = '';
     resetLandingControls();
@@ -426,6 +517,7 @@ function resetToLanding() {
     dom.workspaceSourcesSection.style.display = 'none';
     dom.newResearchBtn.style.display = 'none';
     dom.downloadMdBtn.style.display = 'none';
+    if (dom.copyMdBtn) dom.copyMdBtn.style.display = 'none';
     setStatus('idle');
     showPanel('landing-panel');
 }
@@ -454,13 +546,15 @@ async function handleRevision() {
     lucide.createIcons();
 
     try {
+        activeResearchController = new AbortController();
         const response = await fetch(`${API_BASE_URL}/research/approve`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 thread_id: state.threadId,
                 message: feedback
-            })
+            }),
+            signal: activeResearchController.signal
         });
 
         if (!response.ok) {
@@ -494,9 +588,12 @@ async function handleRevision() {
             }
         }
     } catch (e) {
-        showToast(`Revision request failed: ${e.message}`);
-        setStatus('error');
+        if (e.name !== 'AbortError') {
+            showToast(`Revision request failed: ${e.message}`);
+            setStatus('error');
+        }
     } finally {
+        activeResearchController = null;
         btn.innerHTML = originalHTML;
         btn.disabled = false;
         dom.approvePlanBtn.disabled = false;
@@ -558,6 +655,7 @@ function setStatus(status) {
     }
     
     dom.statusText.innerText = text;
+    updateProgressMap();
 }
 
 // Show Toast Error Notification
@@ -699,18 +797,22 @@ async function submitPlanApproval(feedbackMessage) {
     renderWorkers();
     showPanel('workspace-panel');
     activityMonitor.start();
+    researchTimer.reset();
+    researchTimer.start();
     
     // Clear controls on approval panel
     dom.feedbackInput.value = '';
     
     try {
+        activeResearchController = new AbortController();
         const response = await fetch(`${API_BASE_URL}/research/approve`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 thread_id: state.threadId,
                 message: feedbackMessage
-            })
+            }),
+            signal: activeResearchController.signal
         });
         
         if (!response.ok) {
@@ -745,9 +847,13 @@ async function submitPlanApproval(feedbackMessage) {
         }
         
     } catch (e) {
-        showToast(`SSE Connection broken: ${e.message}`);
-        setStatus('error');
-        activityMonitor.stop();
+        if (e.name !== 'AbortError') {
+            showToast(`SSE Connection broken: ${e.message}`);
+            setStatus('error');
+            activityMonitor.stop();
+        }
+    } finally {
+        activeResearchController = null;
     }
 }
 
@@ -790,6 +896,9 @@ function handleSSEEvent(data, isRevision = false) {
                     state.workers[workerTask].status = 'running';
                     renderWorkers();
                 }
+                if (!researchTimer.timerId) {
+                    researchTimer.start();
+                }
             } else if (workerNode === 'aggregator') {
                 setStatus('aggregating');
                 dom.workspaceProgressBar.classList.add('active');
@@ -814,6 +923,33 @@ function handleSSEEvent(data, isRevision = false) {
             }
             break;
             
+        case 'researcher_search':
+            {
+                const searchTask = data.task;
+                const searchQuery = data.query;
+                const searchStatus = data.status;
+                if (state.workers[searchTask]) {
+                    if (!state.workers[searchTask].logs) {
+                        state.workers[searchTask].logs = [];
+                    }
+                    if (searchStatus === 'start') {
+                        if (!state.workers[searchTask].logs.some(l => l.query === searchQuery)) {
+                            state.workers[searchTask].logs.push({
+                                query: searchQuery,
+                                status: 'running'
+                            });
+                        }
+                    } else {
+                        const lastLog = state.workers[searchTask].logs.filter(l => l.status === 'running').pop();
+                        if (lastLog) {
+                            lastLog.status = 'completed';
+                        }
+                    }
+                    renderWorkers();
+                }
+                break;
+            }
+            
         case 'aggregator_token':
             // Stream token to final report
             state.finalAnswer += data.token;
@@ -830,11 +966,13 @@ function handleSSEEvent(data, isRevision = false) {
             dom.workspaceProgressBar.classList.remove('active');
             dom.reportStreamingIndicator.style.display = 'none';
             activityMonitor.stop();
+            researchTimer.pause();
             
             // Render final markdown and citations
             renderReportFinal();
             renderCitations();
             dom.downloadMdBtn.style.display = 'flex';
+            if (dom.copyMdBtn) dom.copyMdBtn.style.display = 'flex';
             saveSession();
             break;
             
@@ -869,6 +1007,7 @@ function handleSSEEvent(data, isRevision = false) {
                 dom.reportStreamingIndicator.style.display = 'none';
                 dom.workspaceProgressBar.classList.remove('active');
                 activityMonitor.stop();
+                researchTimer.pause();
                 if (msg.toLowerCase().includes('api key') || msg.toLowerCase().includes('settings')) {
                     dom.settingsModal.style.display = 'flex';
                     dom.saveStatus.textContent = '';
@@ -899,6 +1038,20 @@ function renderWorkers() {
             detailText = `<span class="worker-search-count"><i data-lucide="link-2" style="width: 12px; height: 12px;"></i> ${worker.citations.length} sources found</span>`;
         }
         
+        let logsHtml = '';
+        if (worker.logs && worker.logs.length > 0) {
+            logsHtml = `
+                <div class="worker-search-logs">
+                    ${worker.logs.map(log => `
+                        <div class="search-log-item ${log.status}">
+                            <i data-lucide="${log.status === 'running' ? 'loader-2' : 'check'}" class="log-icon"></i>
+                            <span class="log-query">Search: "${log.query || 'Refining search...'}"</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
         card.innerHTML = `
             <div class="worker-header">
                 <span class="worker-title">${task}</span>
@@ -909,6 +1062,7 @@ function renderWorkers() {
                 <span>•</span>
                 <span>${detailText}</span>
             </div>
+            ${logsHtml}
             <div class="worker-card-toggle" data-index="${index}">
                 <span>View Findings</span>
                 <i data-lucide="chevron-down" style="width: 12px; height: 12px;"></i>
@@ -991,5 +1145,89 @@ function renderCitations() {
     });
     
     dom.workspaceSourcesSection.style.display = 'block';
+    lucide.createIcons();
+}
+
+// Progress Map UI synchronizer
+function updateProgressMap() {
+    const mapCard = document.getElementById('progress-map-card');
+    if (!mapCard) return;
+
+    if (state.status === 'idle' || state.status === 'validating' || state.status === 'planning' || state.status === 'awaiting_approval') {
+        mapCard.style.display = 'none';
+        return;
+    }
+
+    mapCard.style.display = 'block';
+
+    const setNodeStatus = (nodeId, status) => {
+        const el = document.getElementById(nodeId);
+        if (el) {
+            el.className = `progress-node ${status}`;
+        }
+    };
+
+    const setConnectorStatus = (connId, status) => {
+        if (!connId) return;
+        const el = document.getElementById(connId);
+        if (el) {
+            el.className = `node-connector ${status}`;
+        }
+    };
+
+    // Calculate current progress
+    const totalWorkers = state.plan.length;
+    const completedWorkers = Object.values(state.workers).filter(w => w.status === 'completed').length;
+    
+    const sublabel = document.getElementById('research-progress-sublabel');
+    if (sublabel) {
+        sublabel.innerText = `${completedWorkers}/${totalWorkers} done`;
+    }
+
+    // Set statuses based on current state.status
+    if (state.status === 'researching') {
+        setNodeStatus('node-stage-planning', 'completed');
+        setConnectorStatus('connector-1', 'completed');
+        
+        setNodeStatus('node-stage-researching', 'active');
+        setConnectorStatus('connector-2', 'pending');
+        
+        setNodeStatus('node-stage-aggregating', 'pending');
+        setConnectorStatus('connector-3', 'pending');
+        
+        setNodeStatus('node-stage-completed', 'pending');
+    } else if (state.status === 'aggregating') {
+        setNodeStatus('node-stage-planning', 'completed');
+        setConnectorStatus('connector-1', 'completed');
+        
+        setNodeStatus('node-stage-researching', 'completed');
+        setConnectorStatus('connector-2', 'completed');
+        
+        setNodeStatus('node-stage-aggregating', 'active');
+        setConnectorStatus('connector-3', 'pending');
+        
+        setNodeStatus('node-stage-completed', 'pending');
+    } else if (state.status === 'completed') {
+        setNodeStatus('node-stage-planning', 'completed');
+        setConnectorStatus('connector-1', 'completed');
+        
+        setNodeStatus('node-stage-researching', 'completed');
+        setConnectorStatus('connector-2', 'completed');
+        
+        setNodeStatus('node-stage-aggregating', 'completed');
+        setConnectorStatus('connector-3', 'completed');
+        
+        setNodeStatus('node-stage-completed', 'completed');
+    } else {
+        // e.g. error, reset all to pending or active error
+        setNodeStatus('node-stage-planning', 'completed');
+        setConnectorStatus('connector-1', 'completed');
+        setNodeStatus('node-stage-researching', 'pending');
+        setConnectorStatus('connector-2', 'pending');
+        setNodeStatus('node-stage-aggregating', 'pending');
+        setConnectorStatus('connector-3', 'pending');
+        setNodeStatus('node-stage-completed', 'pending');
+    }
+
     lucide.createIcons();
 }
