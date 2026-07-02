@@ -1758,3 +1758,21 @@ main {
     }
 }
 
+/* Report Markdown Images styling */
+.report-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--card-border);
+    margin: 1.5rem auto;
+    display: block;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    transition: var(--transition-smooth);
+}
+
+.report-content img:hover {
+    transform: scale(1.01);
+    box-shadow: 0 6px 25px rgba(99, 102, 241, 0.15);
+    border-color: var(--accent-purple);
+}
+
