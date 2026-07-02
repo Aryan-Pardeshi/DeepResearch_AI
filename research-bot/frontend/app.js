@@ -234,6 +234,11 @@ function restoreSession() {
                 researchTimer.elapsedSeconds = saved.researchTime;
                 researchTimer.updateDisplay();
             }
+            
+            // Force scroll to top on reload
+            try {
+                dom.reportOutput.closest('.report-container').scrollTop = 0;
+            } catch (e) {}
         }
     } catch (e) {}
 }
