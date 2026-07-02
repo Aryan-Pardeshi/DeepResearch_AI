@@ -1,6 +1,7 @@
 # Planner agent
 import sys
 from pathlib import Path
+
 # Add workspace root to sys.path so 'backend' is importable
 root_dir = Path(__file__).resolve().parent.parent.parent.parent
 if str(root_dir) not in sys.path:
@@ -11,11 +12,11 @@ from langchain_core.prompts import ChatPromptTemplate
 from backend.app.graph.state import ResearchState
 from typing import List, Optional
 from pydantic import BaseModel, Field
-from backend.app.llm import llm_pro
+from backend.app.llm import llm
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = ("""You are a strategic research planner.
+SYSTEM_PROMPT = """You are a strategic research planner.
 
 Given a research query, create a structured research plan.
 
@@ -71,50 +72,72 @@ Return ONLY valid JSON:
   "ps": "string",
   "sub_tasks": ["string"]
 }}
-""")
+"""
+
 
 class ResearchPlan(BaseModel):
-    ps: Optional[str] = Field(default=None, description="Detailed Problem Statement of the research plan. Omit if not revising.")
+    ps: Optional[str] = Field(
+        default=None,
+        description="Detailed Problem Statement of the research plan. Omit if not revising.",
+    )
     sub_tasks: Optional[List[str]] = Field(
         default=None,
         description="Ordered list of independent research sub-tasks. Omit if not revising.",
         min_length=1,
-        max_length=5
+        max_length=5,
     )
 
-def planner_node(state: ResearchState) -> dict:
-    planner_llm = llm_pro.with_structured_output(ResearchPlan, method="json_mode")
 
-    user_content = f"Create a Problem statement (ps) and a research plan for: {state['query']}"
+def planner_node(state: ResearchState) -> dict:
+    planner_llm = llm.with_structured_output(ResearchPlan, method="json_mode")
+
+    user_content = (
+        f"Create a Problem statement (ps) and a research plan for: {state['query']}"
+    )
     if state.get("user_feedback"):
         user_content += f"\n\nUser feedback on previous ps and plan : {state['user_feedback']}\nPrevious ps: {state.get('ps', '')}\nPrevious plan: {state.get('plan', [])}"
 
-    prompt = ChatPromptTemplate([
-        ("system", SYSTEM_PROMPT),
-        ("user", user_content)
-    ])
+    prompt = ChatPromptTemplate([("system", SYSTEM_PROMPT), ("user", user_content)])
     messages = prompt.format_messages()
-    
+
     try:
         result = planner_llm.invoke(messages)
-        new_ps = result.ps if result.ps is not None else state.get('ps', '')
-        new_plan = result.sub_tasks if result.sub_tasks is not None else state.get('plan', [])
-        logger.info(f"Planner generated {len(new_plan)} sub-tasks for query: {state['query']}")
+        new_ps = result.ps if result.ps is not None else state.get("ps", "")
+        new_plan = (
+            result.sub_tasks if result.sub_tasks is not None else state.get("plan", [])
+        )
+        logger.info(
+            f"Planner generated {len(new_plan)} sub-tasks for query: {state['query']}"
+        )
         return {"ps": new_ps, "plan": new_plan, "status": "awaiting_approval"}
     except Exception as e:
         error_msg = str(e)
         logger.error(f"Error generating research plan: {e}", exc_info=True)
-        
+
         error_lower = error_msg.lower()
-        if any(kw in error_lower for kw in ["violates safety", "safety", "inappropriate", "restricted"]):
+        if any(
+            kw in error_lower
+            for kw in ["violates safety", "safety", "inappropriate", "restricted"]
+        ):
             friendly_error = "Query contains inappropriate or restricted content."
-        elif any(kw in error_lower for kw in ["api key", "authentication", "unauthorized", "401", "403", "invalid key", "missing credentials", "not set"]):
+        elif any(
+            kw in error_lower
+            for kw in [
+                "api key",
+                "authentication",
+                "unauthorized",
+                "401",
+                "403",
+                "invalid key",
+                "missing credentials",
+                "not set",
+            ]
+        ):
             friendly_error = "API key is missing or invalid. Open settings to configure your API keys."
         else:
             friendly_error = f"Failed to generate research plan: {error_msg}"
-            
-        return {"status": "error", "error": friendly_error}
 
+        return {"status": "error", "error": friendly_error}
 
 
 if __name__ == "__main__":
@@ -126,7 +149,7 @@ if __name__ == "__main__":
         "status": "planning",
         "results": [],
         "final_answer": None,
-        "citations": []
+        "citations": [],
     }
     print("Testing planner_node...")
     output = planner_node(test_state)

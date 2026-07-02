@@ -44,7 +44,7 @@ llm_fast = ChatOpenAI(
 )
 
 llm_pro = ChatOpenAI(
-    model="deepseek-v4-flash",
+    model="deepseek-v4-pro",
     openai_api_key=os.getenv("DEEPSEEK_API_KEY"),
     openai_api_base=os.getenv("DEEPSEEK_BASE_URL"),
 )
