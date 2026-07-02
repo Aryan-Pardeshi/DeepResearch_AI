@@ -2,7 +2,7 @@
 import logging
 from backend.app.llm import llm_pro
 from backend.app.graph.state import ResearchState
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ async def aggregator_node(state: ResearchState) -> dict:
             f"Problem Statement (ps): {state.get('ps', '')}\n\n"
             f"Research Sections:\n{combined}\n\n"
             f"Citations:\n" + "\n".join(f"- {url}" for url in citations) + "\n\n"
-            "Write the final synthesized markdown report. Remember to call `generate_matplotlib_chart` to generate between 1 and 5 charts based on the research findings data."
+            "Write the final synthesized markdown report. Remember to call `generate_matplotlib_chart` to generate between 1 and 3 charts based on the research findings data."
         ))
     ]
 
@@ -54,7 +54,6 @@ async def aggregator_node(state: ResearchState) -> dict:
         llm_with_tools = llm_pro.bind_tools([generate_matplotlib_chart])
         
         messages_history = list(messages)
-        final_content = ""
         
         while True:
             response = await llm_with_tools.ainvoke(messages_history)
@@ -74,11 +73,12 @@ async def aggregator_node(state: ResearchState) -> dict:
                         messages_history.append(tool_message)
                 continue
             else:
-                final_content = response.content
                 break
                 
-        if not final_content:
-            final_content = messages_history[-1].content
+        # Reconstruct the entire final report from all assistant turns (since intermediate turns have tool calls and partial text)
+        final_content = "".join(
+            msg.content for msg in messages_history if isinstance(msg, AIMessage)
+        )
             
     except Exception as e:
         error_msg = str(e).lower()

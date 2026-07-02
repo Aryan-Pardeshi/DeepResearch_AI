@@ -2,6 +2,8 @@
 
 An AI-powered multi-agent research assistant that turns a query into a structured, cited research report — with human-in-the-loop plan approval and real-time streaming.
 
+<video src="vids/2026-07-02 16-05-52.mp4" width="100%" controls></video>
+
 ---
 
 ## How It Works
