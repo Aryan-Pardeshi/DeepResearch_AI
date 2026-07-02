@@ -185,7 +185,7 @@ main {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     width: 100%;
     max-width: 1400px;
     margin: 0 auto;
@@ -973,6 +973,13 @@ main {
     background: linear-gradient(90deg, var(--accent-purple), var(--accent-teal));
     width: 50%;
     animation: loading-bar 2s ease-in-out infinite alternate;
+}
+
+.report-workspace-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
 }
 
 .report-container {

@@ -8,30 +8,29 @@ logger = logging.getLogger(__name__)
 
 
 async def aggregator_node(state: ResearchState) -> dict:
-    #combine the results of all the sub agents
+    # Combine the results of all the sub-agents
     combined = "\n\n".join(
         f"Research Section {i+1}:\n{result}" 
         for i, result in enumerate(state["results"])
     )
 
-    #combine the citations
-    # citations is already a flat List[str] — no flattening needed
-    citations = list(dict.fromkeys(state.get("citations", [])))  # deduplicate, preserve order
+    # Combine and deduplicate the citations
+    citations = list(dict.fromkeys(state.get("citations", [])))
 
     messages = [
         SystemMessage(content=(
             "You are a Principal Research Analyst and Writer.\n\n"
-            "Your task is to synthesize the provided raw research sections into a cohesive, publication-ready markdown report.\n"
-            "You MUST structure the final report with the following exact markdown headers:\n"
-            "1. **Problem Statement**: Directly incorporate the provided Problem Statement (ps).\n"
-            "2. **Aim**: Outline the main target/objective of the research based on the User Query.\n"
-            "3. **Overview**: Provide a high-level summary overview of the findings.\n"
-            "4. **Detailed Findings** (use custom section & sub-section headers based on the query): Divide this into various sections and small sub-sections as needed to thoroughly explain the topic.\n"
-            "5. **Sources**: List the provided source URLs cleanly at the bottom as references.\n\n"
+            "Your task is to synthesize the provided raw research findings into a cohesive, publication-ready research report in markdown format.\n\n"
+            "Structure requirements:\n"
+            "- Use a single, clean markdown title for the report.\n"
+            "- Provide a clear Executive Summary / Overview at the beginning.\n"
+            "- Organically group the findings into logical sections based on the research content. Do not create an excessive number of short sections; keep it concise, flow naturally, and focus on details and facts.\n"
+            "- Incorporate the Problem Statement naturally into the intro/executive summary section.\n"
+            "- List all the provided source URLs cleanly under a 'Sources & References' section at the end.\n\n"
             "Guidelines:\n"
-            "- Use professional typography, bullet points, and bold text for key metrics.\n"
-            "- Do not invent any facts or source links. Only use what is present in the research sections.\n"
-            "- You have a matplotlib chart generation tool. Look at the data inside the Research Sections. If there are numerical comparisons, historical trends, or statistical data, you MUST call the generate_matplotlib_chart tool to generate 1 or 2 visual graphs (e.g. line chart, bar chart) and embed them as markdown images in your report's sections."
+            "- Keep the tone formal, objective, and analytical.\n"
+            "- Present data in well-formatted markdown tables or bullet points where appropriate.\n"
+            "- Strictly stick to the facts provided. Do not extrapolate, invent metrics, or fabricate URLs."
         )),
 
         HumanMessage(content=(
@@ -39,44 +38,13 @@ async def aggregator_node(state: ResearchState) -> dict:
             f"Problem Statement (ps): {state.get('ps', '')}\n\n"
             f"Research Sections:\n{combined}\n\n"
             f"Citations:\n" + "\n".join(f"- {url}" for url in citations) + "\n\n"
-            "Write the final structured markdown report."
+            "Write the final synthesized markdown report."
         ))
     ]
 
     try:
-        from backend.app.tools.matplotlib_tool import generate_matplotlib_chart
-        from langchain_core.messages import ToolMessage
-        
-        llm_with_tools = llm_pro.bind_tools([generate_matplotlib_chart])
-        
-        messages_history = list(messages)
-        final_content = ""
-        
-        # Max 4 turns to support tool calling and final output synthesis
-        for i in range(4):
-            response = await llm_with_tools.ainvoke(messages_history)
-            messages_history.append(response)
-            
-            if response.tool_calls:
-                for tool_call in response.tool_calls:
-                    if tool_call["name"] == "generate_matplotlib_chart":
-                        # Execute the tool
-                        result_md_image = generate_matplotlib_chart.invoke(tool_call["args"])
-                        
-                        tool_message = ToolMessage(
-                            content=result_md_image,
-                            tool_call_id=tool_call["id"],
-                            name=tool_call["name"]
-                        )
-                        messages_history.append(tool_message)
-                continue
-            else:
-                final_content = response.content
-                break
-                
-        if not final_content:
-            final_content = messages_history[-1].content
-            
+        response = await llm_pro.ainvoke(messages)
+        final_content = response.content
     except Exception as e:
         error_msg = str(e).lower()
         logger.error(f"Error in aggregator: {e}", exc_info=True)
@@ -84,5 +52,5 @@ async def aggregator_node(state: ResearchState) -> dict:
             return {"status": "error", "error": "API key is missing or invalid. Open settings to configure your API keys."}
         return {"status": "error", "error": f"Synthesis failed: {str(e)}"}
     
-    #update the state with the final answer and set status to completed
+    # Update the state with the final answer and set status to completed
     return {"final_answer": final_content, "status": "completed"}
