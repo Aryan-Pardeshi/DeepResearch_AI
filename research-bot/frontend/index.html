@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Deep Research Assistant</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Marked.js for markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Lucide icons -->
+    <script src="https://cdn.jsdelivr.net/npm/lucide/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="logo-container">
+            <img class="logo-img" src="https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011" alt="Dolphin AI">
+            <span class="logo-text">DEEPRESEARCH</span>
+        </div>
+        <div class="status-badge" id="app-status-badge">
+            <div class="status-dot" id="app-status-dot"></div>
+            <span id="app-status-text">Ready for query</span>
+        </div>
+        <div class="header-actions">
+            <button class="btn-icon theme-toggle" id="theme-toggle-btn" title="Toggle theme">
+                <i data-lucide="moon" style="width: 18px; height: 18px;"></i>
+            </button>
+            <button class="btn-icon" id="settings-btn" title="Configure API Keys">
+                <i data-lucide="settings" style="width: 18px; height: 18px;"></i>
+            </button>
+            <button class="btn-secondary btn-new-research" id="new-research-btn" style="display:none;">
+                <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+                <span>New Research</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settings-modal" style="display:none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">API Configuration</h2>
+                <button class="modal-close" id="settings-modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem;">
+                    Enter your API keys below. They will be saved to <code>.env</code>.
+                </p>
+                <div class="form-group">
+                    <label class="form-label" for="input-deepseek-key">DEEPSEEK_API_KEY</label>
+                    <input type="password" class="form-input" id="input-deepseek-key" placeholder="sk-...">
+                    <a class="form-hint" href="https://platform.deepseek.com/api_keys" target="_blank">Get a DeepSeek API key</a>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="input-tavily-key">TAVILY_API_KEY</label>
+                    <input type="password" class="form-input" id="input-tavily-key" placeholder="tvly-...">
+                    <a class="form-hint" href="https://app.tavily.com/home" target="_blank">Get a Tavily API key</a>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <span class="save-status" id="save-status"></span>
+                <button class="btn-primary" id="save-config-btn">
+                    <i data-lucide="check" style="width: 16px; height: 16px;"></i>
+                    <span>Save & Apply</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backend Offline Banner -->
+    <div class="backend-offline-banner" id="backend-offline-banner" style="display: none;">
+        <i data-lucide="cloud-off" style="width: 18px; height: 18px; flex-shrink: 0;"></i>
+        <span>Backend is offline at <strong>http://127.0.0.1:8000</strong>. Start the backend server to continue.</span>
+    </div>
+
+    <!-- Main Container -->
+    <main>
+        
+        <!-- View 1: Landing / Query Input Panel -->
+        <section id="landing-panel" class="panel active">
+            <h1 class="hero-title">Ask anything. We will plan, research, and synthesize.</h1>
+            <p class="hero-subtitle">A focused, single-run research workspace driven by deep agentic loops.</p>
+            
+            <div class="search-box-container">
+                <textarea class="search-input" id="query-input" placeholder="What would you like to research today?"></textarea>
+                <div class="search-controls">
+                    <div class="filter-group">
+                        <span class="filter-label">Tavily Filters:</span>
+                        <div class="chips-container" id="filter-chips">
+                            <span class="chip active" data-topic="all">All</span>
+                            <span class="chip" data-topic="news">News</span>
+                            <span class="chip" data-topic="academic">Academic</span>
+                            <span class="chip" data-topic="finance">Finance</span>
+                            <span class="chip" data-topic="patent">Patent</span>
+                        </div>
+                    </div>
+                    <button class="btn-primary" id="plan-research-btn">
+                        <span>Plan Research</span>
+                        <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- View 2: Plan Approval / Revision Panel -->
+        <section id="approval-panel" class="panel">
+            <div class="approval-header">
+                <h1 class="section-title">Research Design Console</h1>
+                <button class="btn-secondary btn-new-research" id="approval-new-research-btn">
+                    <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+                    <span>New Conversation</span>
+                </button>
+            </div>
+            
+            <div class="original-query-banner">
+                <span>Researching: </span><strong id="approval-query-display">"..."</strong>
+            </div>
+
+            <div class="approval-grid">
+                <!-- Problem Statement Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="card-icon" data-lucide="book-open" style="width: 20px; height: 20px;"></i>
+                        <h2 class="card-title">Problem Statement</h2>
+                    </div>
+                    <p class="problem-statement-text" id="approval-ps-text">
+                        Generating problem statement…
+                    </p>
+                </div>
+
+                <!-- Sub-tasks / Research Plan Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="card-icon" data-lucide="list-todo" style="width: 20px; height: 20px;"></i>
+                        <h2 class="card-title">Proposed Research Plan</h2>
+                    </div>
+                    <div class="subtasks-list" id="approval-subtasks-container">
+                        <!-- Subtasks injected dynamically -->
+                    </div>
+                </div>
+
+                <!-- Action / Revision Console Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="card-icon" data-lucide="edit-3" style="width: 20px; height: 20px;"></i>
+                        <h2 class="card-title">Revisions Console</h2>
+                    </div>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        Need changes? Describe them below and submit revisions. Otherwise, click "Approve & Run" to start researching.
+                    </p>
+                    <textarea class="feedback-textarea" id="feedback-input" placeholder="Type instructions to modify the plan (e.g. 'replace task 2 with...', 'focus more on...')"></textarea>
+                    
+                    <div class="feedback-controls">
+                        <button class="btn-secondary" id="submit-feedback-btn" style="display: none;">
+                            <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i>
+                            <span>Request Revision</span>
+                        </button>
+                        <button class="btn-primary" id="approve-plan-btn">
+                            <i data-lucide="play" style="width: 16px; height: 16px;"></i>
+                            <span>Approve & Run Research</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- View 3: Execution Workspace Panel -->
+        <section id="workspace-panel" class="panel">
+            
+            <!-- Left Pane: Workers Status -->
+            <aside class="workers-sidebar">
+                <h2 class="sidebar-title">
+                    <i data-lucide="cpu" style="width: 20px; height: 20px; color: var(--accent-purple);"></i>
+                    <span>Parallel Researchers</span>
+                </h2>
+                <div class="workers-list" id="workers-list-container">
+                    <!-- Dynamic worker cards -->
+                </div>
+            </aside>
+
+            <!-- Right Pane: Report Workspace -->
+            <article class="report-workspace">
+                <div class="aggregator-progress-bar" id="workspace-progress-bar">
+                    <div class="aggregator-progress-fill"></div>
+                </div>
+
+                <div class="report-container">
+                    <!-- Streaming Aggregator Output -->
+                    <div class="report-content" id="report-output">
+                        <!-- Final Markdown Report rendered here -->
+                    </div>
+
+                    <!-- Streaming dots indicator -->
+                    <div class="streaming-loader" id="report-streaming-indicator" style="display: none;">
+                        <div class="streaming-dots">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                        <span>Synthesizing final research report...</span>
+                    </div>
+
+                    <!-- Sources & References -->
+                    <div class="sources-section" id="workspace-sources-section" style="display: none;">
+                        <div class="sources-header">
+                            <h2 class="sources-title">
+                                <i data-lucide="link" style="width: 18px; height: 18px; color: var(--accent-purple);"></i>
+                                <span>Retrieved Sources</span>
+                            </h2>
+                            <button class="btn-secondary btn-download" id="download-md-btn" style="display:none;">
+                                <i data-lucide="download" style="width: 16px; height: 16px;"></i>
+                                <span>Download .md</span>
+                            </button>
+                        </div>
+                        <div class="sources-grid" id="workspace-sources-container">
+                            <!-- Clickable citation cards -->
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+        </section>
+
+    </main>
+
+    <!-- Floating Toasts for Errors -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Application Script -->
+    <script src="app.js"></script>
+</body>
+</html>
