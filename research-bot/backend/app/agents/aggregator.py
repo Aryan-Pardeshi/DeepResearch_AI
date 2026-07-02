@@ -30,7 +30,7 @@ async def aggregator_node(state: ResearchState) -> dict:
             "Matplotlib Chart Tool instructions:\n"
             "- You have access to a matplotlib chart generation tool (`generate_matplotlib_chart`).\n"
             "- Analyze the research sections. If there are numerical data, comparisons, statistics, or historical trends, you MUST call this tool to generate charts.\n"
-            "- You are REQUIRED to generate a minimum of 1 chart, and a maximum of 3 to 5 charts (e.g., bar chart, line plot, pie chart, scatter plot).\n"
+            "- You are REQUIRED to generate a minimum of 1 chart, and a maximum of 3 charts (e.g., bar chart, line plot, pie chart, scatter plot).\n"
             "- Embed the markdown image links returned by the tool directly inside the corresponding sections of your report.\n\n"
             "Guidelines:\n"
             "- Keep the tone formal, objective, and analytical.\n"
@@ -56,8 +56,7 @@ async def aggregator_node(state: ResearchState) -> dict:
         messages_history = list(messages)
         final_content = ""
         
-        # Support up to 6 turns for multiple tool calling and final output synthesis
-        for i in range(6):
+        while True:
             response = await llm_with_tools.ainvoke(messages_history)
             messages_history.append(response)
             
