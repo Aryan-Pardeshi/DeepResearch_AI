@@ -1227,6 +1227,67 @@ main {
     to { transform: rotate(360deg); }
 }
 
+/* Skeleton shimmer for plan loading */
+@keyframes shimmer {
+    0%   { background-position: -600px 0; }
+    100% { background-position: 600px 0; }
+}
+
+.skeleton {
+    background: linear-gradient(
+        90deg,
+        rgba(255,255,255,0.04) 25%,
+        rgba(255,255,255,0.12) 50%,
+        rgba(255,255,255,0.04) 75%
+    );
+    background-size: 600px 100%;
+    animation: shimmer 1.6s infinite linear;
+    border-radius: 6px;
+    display: block;
+}
+
+.skeleton-ps {
+    height: 14px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+}
+
+.skeleton-ps:last-child { width: 60%; }
+
+.skeleton-task {
+    height: 40px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+/* Thinking indicator for DeepSeek */
+.thinking-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    color: var(--accent-purple);
+    font-weight: 500;
+    padding: 4px 10px;
+    background: rgba(99,102,241,0.1);
+    border-radius: 20px;
+    border: 1px solid rgba(99,102,241,0.2);
+    margin-bottom: 1rem;
+}
+
+.thinking-badge .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-purple);
+    animation: pulse-dot 1s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.3; transform: scale(0.6); }
+}
+
 @keyframes pulse-glow {
     from {
         box-shadow: 0 0 4px var(--accent-purple-glow);
