@@ -24,9 +24,14 @@ async def aggregator_node(state: ResearchState) -> dict:
             "Structure requirements:\n"
             "- Use a single, clean markdown title for the report.\n"
             "- Provide a clear Executive Summary / Overview at the beginning.\n"
-            "- Organically group the findings into logical sections based on the research content. Do not create an excessive number of short sections; keep it concise, flow naturally, and focus on details and facts.\n"
+            "- Organically group the findings into logical sections based on the research content.\n"
             "- Incorporate the Problem Statement naturally into the intro/executive summary section.\n"
             "- List all the provided source URLs cleanly under a 'Sources & References' section at the end.\n\n"
+            "Matplotlib Chart Tool instructions:\n"
+            "- You have access to a matplotlib chart generation tool (`generate_matplotlib_chart`).\n"
+            "- Analyze the research sections. If there are numerical data, comparisons, statistics, or historical trends, you MUST call this tool to generate charts.\n"
+            "- You are REQUIRED to generate a minimum of 1 chart, and a maximum of 3 to 5 charts (e.g., bar chart, line plot, pie chart, scatter plot).\n"
+            "- Embed the markdown image links returned by the tool directly inside the corresponding sections of your report.\n\n"
             "Guidelines:\n"
             "- Keep the tone formal, objective, and analytical.\n"
             "- Present data in well-formatted markdown tables or bullet points where appropriate.\n"
@@ -38,13 +43,44 @@ async def aggregator_node(state: ResearchState) -> dict:
             f"Problem Statement (ps): {state.get('ps', '')}\n\n"
             f"Research Sections:\n{combined}\n\n"
             f"Citations:\n" + "\n".join(f"- {url}" for url in citations) + "\n\n"
-            "Write the final synthesized markdown report."
+            "Write the final synthesized markdown report. Remember to call `generate_matplotlib_chart` to generate between 1 and 5 charts based on the research findings data."
         ))
     ]
 
     try:
-        response = await llm_pro.ainvoke(messages)
-        final_content = response.content
+        from backend.app.tools.matplotlib_tool import generate_matplotlib_chart
+        from langchain_core.messages import ToolMessage
+        
+        llm_with_tools = llm_pro.bind_tools([generate_matplotlib_chart])
+        
+        messages_history = list(messages)
+        final_content = ""
+        
+        # Support up to 6 turns for multiple tool calling and final output synthesis
+        for i in range(6):
+            response = await llm_with_tools.ainvoke(messages_history)
+            messages_history.append(response)
+            
+            if response.tool_calls:
+                for tool_call in response.tool_calls:
+                    if tool_call["name"] == "generate_matplotlib_chart":
+                        # Execute the tool
+                        result_md_image = generate_matplotlib_chart.invoke(tool_call["args"])
+                        
+                        tool_message = ToolMessage(
+                            content=result_md_image,
+                            tool_call_id=tool_call["id"],
+                            name=tool_call["name"]
+                        )
+                        messages_history.append(tool_message)
+                continue
+            else:
+                final_content = response.content
+                break
+                
+        if not final_content:
+            final_content = messages_history[-1].content
+            
     except Exception as e:
         error_msg = str(e).lower()
         logger.error(f"Error in aggregator: {e}", exc_info=True)
