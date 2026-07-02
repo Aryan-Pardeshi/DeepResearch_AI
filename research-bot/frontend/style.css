@@ -69,6 +69,7 @@ body {
     display: flex;
     flex-direction: column;
     overflow-x: hidden;
+    padding-top: 80px; /* Offset fixed header */
 }
 
 /* Custom Scrollbar */
@@ -107,16 +108,18 @@ body {
 /* Navigation Header */
 header {
     width: 100%;
-    padding: 1.5rem 2.5rem;
+    height: 80px;
+    padding: 0 2.5rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid var(--card-border);
     backdrop-filter: blur(12px);
-    position: sticky;
+    position: fixed;
     top: 0;
-    z-index: 50;
-    background-color: rgba(9, 9, 11, 0.8);
+    left: 0;
+    z-index: 1000;
+    background-color: rgba(9, 9, 11, 0.9);
 }
 
 .logo-container {
