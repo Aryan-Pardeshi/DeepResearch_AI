@@ -509,6 +509,7 @@ function resetToLanding() {
     }
     activityMonitor.stop();
     researchTimer.reset();
+    stopPlanningLoader();
     clearSession();
     dom.queryInput.value = '';
     resetLandingControls();
@@ -676,6 +677,44 @@ function showToast(message) {
     }, 5000);
 }
 
+let planningTextInterval = null;
+function startPlanningLoader() {
+    const messages = [
+        "Checking safety & topic...",
+        "Structuring plan outline...",
+        "Analyzing search parameters...",
+        "Drafting sub-tasks...",
+        "Refining strategic plan...",
+        "Patience, DeepSeek is thinking hard...",
+        "Almost there..."
+    ];
+    let index = 0;
+    
+    if (planningTextInterval) clearInterval(planningTextInterval);
+    
+    const updateText = () => {
+        const text = messages[index % messages.length];
+        if (dom.planBtn) {
+            dom.planBtn.innerHTML = `<i data-lucide="loader-2" class="revising-spinner" style="width: 16px; height: 16px;"></i><span>${text}</span>`;
+            lucide.createIcons();
+        }
+        if (dom.statusText) {
+            dom.statusText.innerText = text;
+        }
+        index++;
+    };
+    
+    updateText();
+    planningTextInterval = setInterval(updateText, 4000);
+}
+
+function stopPlanningLoader() {
+    if (planningTextInterval) {
+        clearInterval(planningTextInterval);
+        planningTextInterval = null;
+    }
+}
+
 // Action: POST to Start Research
 async function handlePlanResearch() {
     const query = dom.queryInput.value.trim();
@@ -691,7 +730,7 @@ async function handlePlanResearch() {
     // Lock controls
     dom.queryInput.disabled = true;
     dom.planBtn.disabled = true;
-    dom.planBtn.querySelector('span').innerText = 'Validating...';
+    startPlanningLoader();
     
     try {
         const controller = new AbortController();
@@ -741,6 +780,7 @@ async function handlePlanResearch() {
         });
         
         // Render View
+        stopPlanningLoader();
         renderApprovalPanel();
         setStatus('awaiting_approval');
         showPanel('approval-panel');
@@ -756,7 +796,9 @@ async function handlePlanResearch() {
 function resetLandingControls() {
     dom.queryInput.disabled = false;
     dom.planBtn.disabled = false;
-    dom.planBtn.querySelector('span').innerText = 'Plan Research';
+    stopPlanningLoader();
+    dom.planBtn.innerHTML = `<span>Plan Research</span><i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>`;
+    lucide.createIcons();
 }
 
 // Render Approval Screen
