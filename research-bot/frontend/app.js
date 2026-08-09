@@ -268,8 +268,10 @@ function cacheDomElements() {
         rmPaperOutput: document.getElementById('rm-paper-output'),
         rmCopyPaperBtn: document.getElementById('rm-copy-paper-btn'),
         rmExportPdfBtn: document.getElementById('rm-export-pdf-btn'),
+        rmExportDropdown: document.getElementById('rm-export-dropdown'),
 
         toastContainer: document.getElementById('toast-container')
+
     };
 }
 
@@ -1003,8 +1005,9 @@ function renderRMPaperLive() {
 
 function renderRMPaperFinal() {
     renderRMPaperLive();
-    dom.rmCopyPaperBtn.style.display = 'inline-flex';
-    dom.rmExportPdfBtn.style.display = 'inline-flex';
+    if (dom.rmCopyPaperBtn) dom.rmCopyPaperBtn.style.display = 'inline-flex';
+    if (dom.rmExportDropdown) dom.rmExportDropdown.style.display = 'inline-flex';
+    if (dom.rmExportPdfBtn) dom.rmExportPdfBtn.style.display = 'inline-flex';
     showToast('Academic Paper Synthesis Completed!', 'success');
 }
 
@@ -1030,26 +1033,53 @@ function getPaperMarkdown() {
     return md;
 }
 
-async function handleRMExportPDF() {
+
+function toggleExportMenu(event) {
+    if (event) event.stopPropagation();
+    const menu = document.getElementById("rm-export-menu");
+    if (menu) {
+        menu.classList.toggle("show");
+    }
+}
+
+document.addEventListener("click", () => {
+    const menu = document.getElementById("rm-export-menu");
+    if (menu && menu.classList.contains("show")) {
+        menu.classList.remove("show");
+    }
+});
+
+async function exportReport(format = 'pdf') {
     if (!state.rm.threadId) return;
+    const menu = document.getElementById("rm-export-menu");
+    if (menu) menu.classList.remove("show");
+
+    const endpoint = format === 'docx' 
+        ? `${API_BASE_URL}/research-mode/export/docx/${state.rm.threadId}` 
+        : `${API_BASE_URL}/research-mode/export/${state.rm.threadId}`;
+    const ext = format === 'docx' ? 'docx' : 'pdf';
+
     try {
-        const res = await fetch(`${API_BASE_URL}/research-mode/export/${state.rm.threadId}`, { method: 'POST' });
+        const res = await fetch(endpoint, { method: 'POST' });
         if (res.ok) {
             const blob = await res.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `academic_paper_${state.rm.threadId.slice(0, 8)}.pdf`;
+            a.download = `academic_paper_${state.rm.threadId.slice(0, 8)}.${ext}`;
             document.body.appendChild(a);
             a.click();
             a.remove();
+            window.URL.revokeObjectURL(url);
+            showToast(`Exported ${ext.toUpperCase()} successfully!`, 'success');
         } else {
-            showToast('Failed to export PDF.', 'error');
+            showToast(`Failed to export ${ext.toUpperCase()}.`, 'error');
         }
     } catch (e) {
-        showToast('Error exporting PDF: ' + e.message, 'error');
+        showToast(`Error exporting ${ext.toUpperCase()}: ` + e.message, 'error');
     }
 }
+
 
 
 /* ==========================================================================
