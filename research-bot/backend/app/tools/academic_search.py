@@ -72,6 +72,9 @@ async def fetch_openalex_papers(client: httpx.AsyncClient, keyword: str, max_res
                 year = item.get("publication_year")
                 doi = _normalize_doi(item.get("doi"))
                 landing_page = item.get("doi") or (item.get("primary_location") or {}).get("landing_page_url") or ""
+                oa_info = item.get("open_access") or {}
+                best_oa = item.get("best_oa_location") or {}
+                pdf_url = oa_info.get("oa_url") or best_oa.get("pdf_url") or ""
                 
                 papers.append({
                     "title": title.strip(),
@@ -80,6 +83,7 @@ async def fetch_openalex_papers(client: httpx.AsyncClient, keyword: str, max_res
                     "year": year or "n.d.",
                     "doi": doi,
                     "url": landing_page,
+                    "pdf_url": pdf_url,
                     "source": "openalex",
                     "citation_count": item.get("cited_by_count", 0)
                 })
@@ -123,6 +127,7 @@ async def fetch_semantic_scholar_papers(client: httpx.AsyncClient, keyword: str,
                     "year": year or "n.d.",
                     "doi": doi,
                     "url": paper_url,
+                    "pdf_url": pdf_url or "",
                     "source": "semantic_scholar",
                     "citation_count": item.get("citationCount", 0)
                 })
@@ -157,9 +162,11 @@ async def fetch_arxiv_papers(client: httpx.AsyncClient, keyword: str, max_result
                     "year": year,
                     "doi": doi or arxiv_id.split("/")[-1],
                     "url": arxiv_id,
+                    "pdf_url": arxiv_id.replace("/abs/", "/pdf/") if arxiv_id else "",
                     "source": "arxiv",
                     "citation_count": 0
                 })
+
     except Exception as e:
         logger.warning(f"ArXiv search skipped for '{keyword}': {e}")
     return papers

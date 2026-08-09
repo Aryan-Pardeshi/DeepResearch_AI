@@ -11,6 +11,8 @@ class ResearchModeState(TypedDict, total=False):
     raw_papers: List[Dict[str, Any]]  # title, abstract, authors, year, doi, url, source
     screened_papers: List[Dict[str, Any]]
     literature_review: str
+    unverified_citations: List[str]
+
     research_gap: str
     conceptual_framework: str
     hypotheses: List[str]

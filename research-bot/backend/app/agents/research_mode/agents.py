@@ -3,10 +3,12 @@ import re
 import json
 import logging
 import asyncio
-from typing import Dict, Any, List
+import time
+from typing import Dict, Any, List, Tuple
 from backend.app.graph.research_mode_state import ResearchModeState
 from backend.app.llm import get_llm
 from backend.app.tools.academic_search import search_academic_papers, screen_papers, format_apa
+from backend.app.tools.fulltext_fetcher import fetch_fulltext_excerpts, FULLTEXT_TOP_N
 
 logger = logging.getLogger(__name__)
 
@@ -234,6 +236,30 @@ async def paper_screener_agent(state: ResearchModeState) -> Dict[str, Any]:
     }
 
 
+async def fulltext_fetcher_agent(state: ResearchModeState) -> Dict[str, Any]:
+    """3b. Fetches full-text excerpts for top-ranked papers."""
+    logger.info("Running fulltext_fetcher_agent...")
+    start_time = time.time()
+    screened_papers = state.get("screened_papers", [])
+
+    excerpts_map = await fetch_fulltext_excerpts(screened_papers)
+
+    updated_papers = []
+    for idx, p in enumerate(screened_papers):
+        p_copy = dict(p)
+        title = p_copy.get("title", "")
+        if idx < FULLTEXT_TOP_N and title in excerpts_map:
+            p_copy["content_excerpt"] = excerpts_map[title]
+        else:
+            abstract = p_copy.get("abstract") or ""
+            p_copy["content_excerpt"] = abstract[:250]
+        updated_papers.append(p_copy)
+
+    elapsed = time.time() - start_time
+    logger.info(f"fulltext_fetcher_agent completed in {elapsed:.2f}s")
+    return {"screened_papers": updated_papers}
+
+
 async def literature_review_agent(state: ResearchModeState) -> Dict[str, Any]:
     """4. Synthesizes screened papers into a themed literature review with inline citations."""
     logger.info("Running literature_review_agent...")
@@ -244,7 +270,7 @@ async def literature_review_agent(state: ResearchModeState) -> Dict[str, Any]:
     llm = get_llm(role="aggregator")
     
     papers_summary = "\n".join(
-        f"- [{idx+1}] {p.get('authors', ['Anon'])[0] if p.get('authors') else 'Anon'} et al. ({p.get('year', 'n.d.')}). {p.get('title')}: {p.get('abstract')[:250]}"
+        f"- [{idx+1}] {p.get('authors', ['Anon'])[0] if p.get('authors') else 'Anon'} et al. ({p.get('year', 'n.d.')}). {p.get('title')}: {p.get('content_excerpt') if p.get('content_excerpt') else (p.get('abstract') or '')[:250]}"
         for idx, p in enumerate(papers[:30])
     )
 
@@ -263,6 +289,95 @@ Do NOT include markdown title headers (# Literature Review); output only section
 
     text = await _safe_invoke_llm(llm, prompt, f"Literature review examining {ps}.")
     return {"literature_review": text}
+
+
+def verify_citations(text: str, papers: List[Dict[str, Any]]) -> Tuple[str, List[str]]:
+    """Verifies inline parenthetical citations in text against paper metadata.
+
+    Replaces unmatched citations with '(citation unverified)' via string substitution.
+    """
+    lookup_set = set()
+    for paper in papers:
+        authors = paper.get("authors") or []
+        year = paper.get("year")
+        if authors and len(authors) > 0 and authors[0]:
+            first_author = str(authors[0]).strip()
+            tokens = first_author.split()
+            if tokens:
+                surname = tokens[-1].lower()
+                year_str = str(year).strip()
+                lookup_set.add((surname, year_str))
+
+    unverified_citations: List[str] = []
+    replacements: Dict[str, str] = {}
+
+    for match in re.finditer(r'\(([^()\n]+)\)', text):
+        full_paren = match.group(0)
+        inner_content = match.group(1)
+
+        items = [it.strip() for it in inner_content.split(";") if it.strip()]
+        unverified_items = []
+        new_items = []
+
+        for item_str in items:
+            y_match = re.search(r'\b(\d{4}|n\.d\.)\b', item_str)
+            if not y_match:
+                new_items.append(item_str)
+                continue
+
+            year_str = y_match.group(1)
+            if year_str == "n.d.":
+                new_items.append(item_str)
+                continue
+
+            prefix = re.split(r',\s*|\s+et\s+al\.?|\s+&|\s+and', item_str)[0]
+            cap_match = re.search(r'\b([A-Z][a-zA-Z\-]+)\b', prefix)
+
+            if not cap_match:
+                new_items.append(item_str)
+                continue
+
+            surname = cap_match.group(1).lower()
+
+            if (surname, year_str) in lookup_set:
+                new_items.append(item_str)
+            else:
+                unverified_items.append(item_str)
+                flagged_str = full_paren if len(items) == 1 else f"({item_str})"
+                unverified_citations.append(flagged_str)
+                new_items.append("citation unverified")
+
+        if unverified_items:
+            if len(items) == 1 or len(unverified_items) == len(items):
+                replacements[full_paren] = "(citation unverified)"
+            else:
+                replacements[full_paren] = f"({'; '.join(new_items)})"
+
+    modified_text = text
+    for orig_str, rep_str in replacements.items():
+        modified_text = modified_text.replace(orig_str, rep_str)
+
+    return modified_text, unverified_citations
+
+
+async def citation_verifier_agent(state: ResearchModeState) -> Dict[str, Any]:
+    """Verifies inline citations in literature review without LLM calls."""
+    logger.info("Running citation_verifier_agent...")
+    lit_review = state.get("literature_review", "")
+    papers = state.get("screened_papers", [])
+
+    modified_review, unverified = verify_citations(lit_review, papers)
+
+    if unverified:
+        logger.warning(f"citation_verifier: {len(unverified)} unverified citation(s) flagged: {unverified}")
+    else:
+        logger.info("citation_verifier: 0 unverified citation(s) flagged.")
+
+    return {
+        "literature_review": modified_review,
+        "unverified_citations": unverified
+    }
+
 
 
 async def gap_analysis_agent(state: ResearchModeState) -> Dict[str, Any]:
