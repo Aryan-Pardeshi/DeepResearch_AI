@@ -18,45 +18,91 @@ document.head.appendChild(cursorStyle);
 // Configuration
 const API_BASE_URL = 'http://localhost:8000';
 let activeResearchController = null;
+let activeRMController = null;
 
-// Activity Monitor — detects stalls in SSE/researcher activity
-const activityMonitor = {
-    lastEventTime: Date.now(),
-    warningsShown: {},
-    checkTimer: null,
-    STALL_THRESHOLD: 45000,
-
-    markActivity() {
-        this.lastEventTime = Date.now();
-    },
-
-    start() {
-        this.stop();
-        this.lastEventTime = Date.now();
-        this.warningsShown = {};
-    },
-
-    stop() {
-        if (this.checkTimer) {
-            clearInterval(this.checkTimer);
-            this.checkTimer = null;
-        }
+// Application State
+const state = {
+    mode: 'deepsearch', // 'deepsearch' | 'researchmode'
+    threadId: null,
+    status: 'idle', 
+    query: '',
+    searchTopic: ['all'],
+    ps: '',
+    plan: [],
+    workers: {},
+    finalAnswer: '',
+    citations: [],
+    error: null,
+    
+    // Research Mode State
+    rm: {
+        threadId: null,
+        status: 'idle',
+        hitlCheckpoint: null,
+        problemStatement: '',
+        researchObjectives: [],
+        researchQuestions: [],
+        keywords: [],
+        rawPapersCount: 0,
+        screenedPapersCount: 0,
+        literatureReview: '',
+        researchGap: '',
+        conceptualFramework: '',
+        hypotheses: [],
+        researchDesign: '',
+        dataCollectionPlan: '',
+        dataAnalysisPlan: '',
+        results: '',
+        discussion: '',
+        implications: '',
+        limitations: '',
+        conclusion: '',
+        futureScope: [],
+        references: [],
+        introduction: '',
+        abstract: '',
+        title: '',
+        activeStage: 'keyword_extractor'
     }
 };
 
-// Research Timer Control
+// Research Mode Pipeline 18 Stages Metadata
+const RM_STAGES = [
+    { id: 'keyword_extractor', name: '1. Keywords', role: 'extractor' },
+    { id: 'checkpoint_1', name: 'HITL Checkpoint 1', hitl: true },
+    { id: 'paper_fetcher', name: '2. Paper Fetcher', role: 'fetcher' },
+    { id: 'paper_screener', name: '3. Paper Screener', role: 'screener' },
+    { id: 'literature_review', name: '4. Lit Review', role: 'synthesizer' },
+    { id: 'gap_analysis', name: '5. Gap Analysis', role: 'analyst' },
+    { id: 'framework', name: '6. Framework', role: 'architect' },
+    { id: 'checkpoint_2', name: 'HITL Checkpoint 2', hitl: true },
+    { id: 'hypotheses', name: '7. Hypotheses', role: 'formulator' },
+    { id: 'checkpoint_3', name: 'HITL Checkpoint 3', hitl: true },
+    { id: 'methodology', name: '8. Methodology', role: 'methodologist' },
+    { id: 'checkpoint_4', name: 'HITL Checkpoint 4', hitl: true },
+    { id: 'results', name: '9. Results', role: 'synthesizer' },
+    { id: 'discussion', name: '10. Discussion', role: 'interpreter' },
+    { id: 'implications', name: '11. Implications', role: 'evaluator' },
+    { id: 'limitations', name: '12. Limitations', role: 'critic' },
+    { id: 'conclusion', name: '13. Conclusion', role: 'summarizer' },
+    { id: 'future_scope', name: '14. Future Scope', role: 'visionary' },
+    { id: 'references', name: '15. References', role: 'indexer' },
+    { id: 'introduction', name: '16. Introduction', role: 'framer' },
+    { id: 'abstract', name: '17. Abstract', role: 'summarizer' },
+    { id: 'title', name: '18. Title', role: 'finalizer' }
+];
+
+// Activity & Timer Monitors
 const researchTimer = {
     startTime: null,
     timerId: null,
     elapsedSeconds: 0,
     isPaused: false,
-
     start() {
         this.stop();
         this.startTime = Date.now() - (this.elapsedSeconds * 1000);
         this.isPaused = false;
         this.updateDisplay();
-        
         this.timerId = setInterval(() => {
             if (!this.isPaused) {
                 this.elapsedSeconds = Math.floor((Date.now() - this.startTime) / 1000);
@@ -64,501 +110,478 @@ const researchTimer = {
             }
         }, 1000);
     },
-
-    pause() {
-        this.isPaused = true;
-        this.stop();
-    },
-
     stop() {
-        if (this.timerId) {
-            clearInterval(this.timerId);
-            this.timerId = null;
-        }
+        if (this.timerId) { clearInterval(this.timerId); this.timerId = null; }
     },
-
     reset() {
-        this.stop();
-        this.startTime = null;
-        this.elapsedSeconds = 0;
-        this.isPaused = false;
-        this.updateDisplay();
+        this.stop(); this.startTime = null; this.elapsedSeconds = 0; this.updateDisplay();
     },
-
     updateDisplay() {
         const timerEl = document.getElementById('research-timer');
         if (timerEl) {
             const minutes = Math.floor(this.elapsedSeconds / 60);
             const seconds = this.elapsedSeconds % 60;
-            const displayMin = String(minutes).padStart(2, '0');
-            const displaySec = String(seconds).padStart(2, '0');
-            timerEl.textContent = `${displayMin}:${displaySec}`;
+            timerEl.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
         }
     }
-};
-
-// Application State
-const state = {
-    threadId: null,
-    status: 'idle', // 'idle' | 'validating' | 'planning' | 'awaiting_approval' | 'researching' | 'aggregating' | 'completed' | 'error'
-    query: '',
-    searchTopic: ['all'], // array of selected topics: 'all', 'news', 'academic', 'finance', 'patent'
-    ps: '',
-    plan: [],
-    workers: {}, // Maps query -> { id, status: 'pending'|'running'|'completed', result, citations: [] }
-    finalAnswer: '',
-    citations: [],
-    error: null
 };
 
 // DOM Cache
-const dom = {
-    // Header
-    statusDot: document.getElementById('app-status-dot'),
-    statusText: document.getElementById('app-status-text'),
-    
-    // Panels
-    landingPanel: document.getElementById('landing-panel'),
-    approvalPanel: document.getElementById('approval-panel'),
-    workspacePanel: document.getElementById('workspace-panel'),
-    
-    // Views - Landing
-    queryInput: document.getElementById('query-input'),
-    filterChips: document.getElementById('filter-chips'),
-    planBtn: document.getElementById('plan-research-btn'),
-    
-    // Views - Approval
-    approvalQueryDisplay: document.getElementById('approval-query-display'),
-    approvalPsText: document.getElementById('approval-ps-text'),
-    approvalSubtasksContainer: document.getElementById('approval-subtasks-container'),
-    feedbackInput: document.getElementById('feedback-input'),
-    submitFeedbackBtn: document.getElementById('submit-feedback-btn'),
-    approvePlanBtn: document.getElementById('approve-plan-btn'),
-    
-    // Views - Workspace
-    workersListContainer: document.getElementById('workers-list-container'),
-    workspaceProgressBar: document.getElementById('workspace-progress-bar'),
-    reportOutput: document.getElementById('report-output'),
-    reportStreamingIndicator: document.getElementById('report-streaming-indicator'),
-    workspaceSourcesSection: document.getElementById('workspace-sources-section'),
-    workspaceSourcesContainer: document.getElementById('workspace-sources-container'),
-    
-    // Toast Container
-    toastContainer: document.getElementById('toast-container'),
-    
-    // New Research
-    newResearchBtn: document.getElementById('new-research-btn'),
-    
-    // Download
-    downloadMdBtn: document.getElementById('download-md-btn'),
-    copyMdBtn: document.getElementById('copy-md-btn'),
-    workspaceNewResearchBtn: document.getElementById('workspace-new-research-btn'),
-    
-    // Settings
-    settingsBtn: document.getElementById('settings-btn'),
-    settingsModal: document.getElementById('settings-modal'),
-    settingsClose: document.getElementById('settings-modal-close'),
-    saveConfigBtn: document.getElementById('save-config-btn'),
-    inputDeepseek: document.getElementById('input-deepseek-key'),
-    inputTavily: document.getElementById('input-tavily-key'),
-    saveStatus: document.getElementById('save-status')
-};
+let dom = {};
 
-const STORAGE_KEY = 'deepresearch_session';
+document.addEventListener('DOMContentLoaded', () => {
+    cacheDomElements();
+    initTheme();
+    setupEventListeners();
+    checkBackendHealth();
+    checkConfigGate();
+    renderRMPipelineTracker();
+});
 
-function saveSession() {
-    try {
-        const data = {
-            threadId: state.threadId,
-            status: state.status,
-            query: state.query,
-            searchTopic: state.searchTopic,
-            ps: state.ps,
-            plan: state.plan,
-            finalAnswer: state.finalAnswer,
-            citations: state.citations,
-            researchTime: researchTimer.elapsedSeconds
-        };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-        dom.newResearchBtn.style.display = state.threadId ? 'flex' : 'none';
-    } catch (e) {}
+function cacheDomElements() {
+    dom = {
+        // App header & settings
+        statusBadge: document.getElementById('app-status-badge'),
+        statusDot: document.getElementById('app-status-dot'),
+        statusText: document.getElementById('app-status-text'),
+        themeToggleBtn: document.getElementById('theme-toggle-btn'),
+        settingsBtn: document.getElementById('settings-btn'),
+        newResearchBtn: document.getElementById('new-research-btn'),
+        settingsModal: document.getElementById('settings-modal'),
+        settingsClose: document.getElementById('settings-modal-close'),
+        saveConfigBtn: document.getElementById('save-config-btn'),
+        saveStatus: document.getElementById('save-status'),
+        backendOfflineBanner: document.getElementById('backend-offline-banner'),
+        
+        // Mode Tabs
+        tabDeepSearch: document.getElementById('tab-deepsearch'),
+        tabResearchMode: document.getElementById('tab-researchmode'),
+
+        // Setup Gate Modal
+        setupGateModal: document.getElementById('setup-gate-modal'),
+        gateLlmBaseUrl: document.getElementById('gate-llm-base-url'),
+        gateLlmApiKey: document.getElementById('gate-llm-api-key'),
+        gateModelPlanner: document.getElementById('gate-llm-model-planner'),
+        gateModelResearcher: document.getElementById('gate-llm-model-researcher'),
+        gateModelAggregator: document.getElementById('gate-llm-model-aggregator'),
+        gateTavilyKey: document.getElementById('gate-tavily-key'),
+        gateOpenalexEmail: document.getElementById('gate-openalex-email'),
+        gateSemanticScholar: document.getElementById('gate-semantic-scholar'),
+        gateSubmitBtn: document.getElementById('gate-submit-btn'),
+        gateSaveStatus: document.getElementById('gate-save-status'),
+
+        // Panels
+        landingPanel: document.getElementById('landing-panel'),
+        approvalPanel: document.getElementById('approval-panel'),
+        workspacePanel: document.getElementById('workspace-panel'),
+        rmInputPanel: document.getElementById('rm-input-panel'),
+        rmWorkspacePanel: document.getElementById('rm-workspace-panel'),
+
+        // DeepSearch Inputs & Elements
+        queryInput: document.getElementById('query-input'),
+        planResearchBtn: document.getElementById('plan-research-btn'),
+        filterChips: document.getElementById('filter-chips'),
+        approvalQueryDisplay: document.getElementById('approval-query-display'),
+        approvalPsText: document.getElementById('approval-ps-text'),
+        approvalSubtasksContainer: document.getElementById('approval-subtasks-container'),
+        feedbackInput: document.getElementById('feedback-input'),
+        submitFeedbackBtn: document.getElementById('submit-feedback-btn'),
+        approvePlanBtn: document.getElementById('approve-plan-btn'),
+        approvalNewResearchBtn: document.getElementById('approval-new-research-btn'),
+        workersListContainer: document.getElementById('workers-list-container'),
+        reportOutput: document.getElementById('report-output'),
+        reportStreamingIndicator: document.getElementById('report-streaming-indicator'),
+        workspaceProgressBar: document.getElementById('workspace-progress-bar'),
+        workspaceSourcesSection: document.getElementById('workspace-sources-section'),
+        workspaceSourcesContainer: document.getElementById('workspace-sources-container'),
+        copyMdBtn: document.getElementById('copy-md-btn'),
+        downloadMdBtn: document.getElementById('download-md-btn'),
+        workspaceNewResearchBtn: document.getElementById('workspace-new-research-btn'),
+
+        // Research Mode Elements
+        rmPsInput: document.getElementById('rm-ps-input'),
+        rmObjsInput: document.getElementById('rm-objs-input'),
+        rmRqsInput: document.getElementById('rm-rqs-input'),
+        rmStartBtn: document.getElementById('rm-start-btn'),
+        rmPipelineStepsGrid: document.getElementById('rm-pipeline-steps-grid'),
+        rmPipelineStatusTag: document.getElementById('rm-pipeline-status-tag'),
+        rmHitlPanel: document.getElementById('rm-hitl-panel'),
+        rmHitlTitle: document.getElementById('rm-hitl-title'),
+        rmHitlBadge: document.getElementById('rm-hitl-checkpoint-badge'),
+        rmHitlBody: document.getElementById('rm-hitl-body'),
+        rmHitlFeedbackInput: document.getElementById('rm-hitl-feedback-input'),
+        rmHitlReviseBtn: document.getElementById('rm-hitl-revise-btn'),
+        rmHitlApproveBtn: document.getElementById('rm-hitl-approve-btn'),
+        rmPaperTitle: document.getElementById('rm-paper-title'),
+        rmPaperOutput: document.getElementById('rm-paper-output'),
+        rmCopyPaperBtn: document.getElementById('rm-copy-paper-btn'),
+        rmExportPdfBtn: document.getElementById('rm-export-pdf-btn'),
+
+        toastContainer: document.getElementById('toast-container')
+    };
 }
 
-function clearSession() {
-    localStorage.removeItem(STORAGE_KEY);
-    state.threadId = null;
-    state.status = 'idle';
-    state.query = '';
-    state.plan = [];
-    state.workers = {};
-    state.finalAnswer = '';
-    state.citations = [];
-    state.ps = '';
-}
-
-function restoreSession() {
+// System Environment Setup Gate Check
+async function checkConfigGate() {
     try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return;
-        const saved = JSON.parse(raw);
-        if (!saved.threadId) return;
-
-        state.threadId = saved.threadId;
-        state.query = saved.query || '';
-        state.searchTopic = saved.searchTopic || ['all'];
-        state.ps = saved.ps || '';
-        state.plan = saved.plan || [];
-        state.finalAnswer = saved.finalAnswer || '';
-        state.citations = saved.citations || [];
-
-        state.workers = {};
-        state.plan.forEach(task => {
-            state.workers[task] = { id: null, status: 'pending', result: null, citations: [] };
-        });
-
-        dom.queryInput.value = state.query;
-
-        if (saved.status === 'awaiting_approval') {
-            renderApprovalPanel();
-            setStatus('awaiting_approval');
-            showPanel('approval-panel');
-        } else if (saved.status === 'completed') {
-            renderWorkers();
-            renderReportFinal();
-            renderCitations();
-            setStatus('completed');
-            showPanel('workspace-panel');
-            dom.downloadMdBtn.style.display = 'flex';
-            if (dom.copyMdBtn) dom.copyMdBtn.style.display = 'flex';
-            if (dom.workspaceNewResearchBtn) dom.workspaceNewResearchBtn.style.display = 'flex';
-            
-            if (saved.researchTime !== undefined) {
-                researchTimer.elapsedSeconds = saved.researchTime;
-                researchTimer.updateDisplay();
-            }
-            
-            // Force scroll to top on reload
-            try {
-                dom.reportOutput.closest('.report-container').scrollTop = 0;
-            } catch (e) {}
-        }
-    } catch (e) {}
-}
-
-async function checkApiConfig() {
-    try {
-        const res = await fetch(`${API_BASE_URL}/health/config`);
+        const res = await fetch(`${API_BASE_URL}/config/status`);
         if (!res.ok) return;
-        const config = await res.json();
-        if (!config.ok) {
-            const banner = document.createElement('div');
-            banner.className = 'config-warning-banner';
-            banner.id = 'config-warning-banner';
-            const items = config.issues.map(i => `<span>• ${i}</span>`).join('');
-            banner.innerHTML = `
-                <i data-lucide="alert-triangle" style="width: 18px; height: 18px; flex-shrink: 0; color: var(--accent-yellow);"></i>
-                <div class="config-warning-text">
-                    <strong>API keys not configured</strong>
-                    <div class="config-issues">${items}</div>
-                </div>
-                <button class="btn-primary config-configure-btn" id="config-configure-btn">Configure</button>
-                <button class="config-dismiss" id="config-dismiss-btn">&times;</button>
-            `;
-            const header = document.querySelector('header');
-            header.parentNode.insertBefore(banner, header.nextSibling);
-            lucide.createIcons();
-            document.getElementById('config-dismiss-btn').addEventListener('click', () => {
-                banner.remove();
-            });
-            document.getElementById('config-configure-btn').addEventListener('click', () => {
-                dom.settingsModal.style.display = 'flex';
-                dom.saveStatus.textContent = '';
-            });
-            dom.settingsModal.style.display = 'flex';
-            dom.saveStatus.textContent = '';
-            dom.planBtn.disabled = true;
-            dom.planBtn.title = 'Set your API keys in settings first';
-            dom.statusText.innerText = 'API keys required';
-            dom.statusDot.className = 'status-dot error';
+        const data = await res.json();
+        
+        if (!data.ok || (data.missing_required && data.missing_required.length > 0)) {
+            // Populate form defaults if present
+            if (dom.gateLlmBaseUrl) dom.gateLlmBaseUrl.value = data.llm_base_url || 'https://api.deepseek.com';
+            if (dom.gateModelPlanner) dom.gateModelPlanner.value = data.llm_model_planner || 'deepseek-chat';
+            if (dom.gateModelResearcher) dom.gateModelResearcher.value = data.llm_model_researcher || 'deepseek-chat';
+            if (dom.gateModelAggregator) dom.gateModelAggregator.value = data.llm_model_aggregator || 'deepseek-chat';
+            if (dom.gateOpenalexEmail) dom.gateOpenalexEmail.value = data.openalex_email || '';
+            
+            dom.setupGateModal.style.display = 'flex';
         }
-    } catch (e) {}
+    } catch (e) {
+        console.warn('Config check failed:', e);
+    }
 }
 
-// Theme toggle
+// Mode Switcher Handler
+function switchMode(newMode) {
+    state.mode = newMode;
+    if (newMode === 'deepsearch') {
+        dom.tabDeepSearch.classList.add('active');
+        dom.tabResearchMode.classList.remove('active');
+        switchPanel(dom.landingPanel);
+    } else {
+        dom.tabResearchMode.classList.add('active');
+        dom.tabDeepSearch.classList.remove('active');
+        switchPanel(dom.rmInputPanel);
+    }
+}
+
+// Setup Event Listeners
+function setupEventListeners() {
+    // Mode tabs
+    dom.tabDeepSearch?.addEventListener('click', () => switchMode('deepsearch'));
+    dom.tabResearchMode?.addEventListener('click', () => switchMode('researchmode'));
+
+    // Theme toggle
+    dom.themeToggleBtn?.addEventListener('click', toggleTheme);
+
+    // Settings Modal
+    dom.settingsBtn?.addEventListener('click', () => dom.settingsModal.style.display = 'flex');
+    dom.settingsClose?.addEventListener('click', () => dom.settingsModal.style.display = 'none');
+    dom.saveConfigBtn?.addEventListener('click', saveSettingsModal);
+
+    // Gate Modal Submit
+    dom.gateSubmitBtn?.addEventListener('click', submitSetupGate);
+
+    // DeepSearch Filters & Actions
+    dom.filterChips?.addEventListener('click', (e) => {
+        if (e.target.classList.contains('chip')) {
+            document.querySelectorAll('#filter-chips .chip').forEach(c => c.classList.remove('active'));
+            e.target.classList.add('active');
+            state.searchTopic = [e.target.dataset.topic];
+        }
+    });
+
+    dom.planResearchBtn?.addEventListener('click', handlePlanResearch);
+    dom.feedbackInput?.addEventListener('input', () => {
+        const val = dom.feedbackInput.value.strip ? dom.feedbackInput.value.strip() : dom.feedbackInput.value.trim();
+        dom.submitFeedbackBtn.style.display = val ? 'flex' : 'none';
+        dom.approvePlanBtn.style.display = val ? 'none' : 'flex';
+    });
+
+    dom.submitFeedbackBtn?.addEventListener('click', handleRevision);
+    dom.approvePlanBtn?.addEventListener('click', submitPlanApproval);
+    dom.approvalNewResearchBtn?.addEventListener('click', resetToLanding);
+    dom.workspaceNewResearchBtn?.addEventListener('click', resetToLanding);
+    dom.newResearchBtn?.addEventListener('click', resetToLanding);
+
+    dom.copyMdBtn?.addEventListener('click', () => copyToClipboard(state.finalAnswer, dom.copyMdBtn));
+    dom.downloadMdBtn?.addEventListener('click', downloadMarkdownReport);
+
+    // Research Mode Actions
+    dom.rmStartBtn?.addEventListener('click', handleRMStart);
+    dom.rmHitlReviseBtn?.addEventListener('click', () => handleRMApprove(dom.rmHitlFeedbackInput.value));
+    dom.rmHitlApproveBtn?.addEventListener('click', () => handleRMApprove('approve'));
+    dom.rmCopyPaperBtn?.addEventListener('click', () => copyToClipboard(getPaperMarkdown(), dom.rmCopyPaperBtn));
+    dom.rmExportPdfBtn?.addEventListener('click', handleRMExportPDF);
+}
+
+// Setup Gate Submit
+async function submitSetupGate() {
+    const payload = {
+        LLM_BASE_URL: dom.gateLlmBaseUrl.value.trim(),
+        LLM_API_KEY: dom.gateLlmApiKey.value.trim(),
+        LLM_MODEL_PLANNER: dom.gateModelPlanner.value.trim(),
+        LLM_MODEL_RESEARCHER: dom.gateModelResearcher.value.trim(),
+        LLM_MODEL_AGGREGATOR: dom.gateModelAggregator.value.trim(),
+        TAVILY_API_KEY: dom.gateTavilyKey.value.trim(),
+        OPENALEX_EMAIL: dom.gateOpenalexEmail.value.trim(),
+        SEMANTIC_SCHOLAR_API_KEY: dom.gateSemanticScholar.value.trim()
+    };
+
+    dom.gateSaveStatus.textContent = 'Saving configuration locally...';
+    try {
+        const res = await fetch(`${API_BASE_URL}/config/setup`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.ok) {
+            dom.gateSaveStatus.textContent = 'Configuration saved!';
+            setTimeout(() => {
+                dom.setupGateModal.style.display = 'none';
+                showToast('Environment successfully configured!', 'success');
+            }, 800);
+        } else {
+            dom.gateSaveStatus.textContent = data.detail || 'Failed to save.';
+        }
+    } catch (e) {
+        dom.gateSaveStatus.textContent = 'Error connecting to backend.';
+    }
+}
+
+// Save Settings Modal
+async function saveSettingsModal() {
+    const payload = {
+        LLM_BASE_URL: document.getElementById('input-llm-base-url')?.value.trim(),
+        LLM_API_KEY: document.getElementById('input-deepseek-key')?.value.trim(),
+        TAVILY_API_KEY: document.getElementById('input-tavily-key')?.value.trim(),
+        OPENALEX_EMAIL: document.getElementById('input-openalex-email')?.value.trim()
+    };
+
+    dom.saveStatus.textContent = 'Saving...';
+    try {
+        const res = await fetch(`${API_BASE_URL}/health/config`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+            dom.saveStatus.textContent = 'Saved successfully!';
+            setTimeout(() => dom.settingsModal.style.display = 'none', 1000);
+        }
+    } catch (e) {
+        dom.saveStatus.textContent = 'Error saving settings.';
+    }
+}
+
+// Theme handling
 function initTheme() {
-    const isDark = localStorage.getItem('theme') !== 'light';
-    document.documentElement.classList.toggle('light-mode', !isDark);
-    document.documentElement.classList.toggle('dark-mode', isDark);
-    updateThemeIcon(isDark);
+    const theme = localStorage.getItem('deepresearch_theme') || 'dark';
+    if (theme === 'light') document.documentElement.classList.add('light-mode');
 }
 
 function toggleTheme() {
-    const isDark = !document.documentElement.classList.contains('dark-mode');
-    document.documentElement.classList.toggle('dark-mode', isDark);
-    document.documentElement.classList.toggle('light-mode', !isDark);
-    localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    updateThemeIcon(isDark);
+    document.documentElement.classList.toggle('light-mode');
+    const isLight = document.documentElement.classList.contains('light-mode');
+    localStorage.setItem('deepresearch_theme', isLight ? 'light' : 'dark');
 }
 
-function updateThemeIcon(isDark) {
-    const icon = document.querySelector('#theme-toggle-btn [data-lucide]');
-    if (icon) {
-        icon.setAttribute('data-lucide', isDark ? 'moon' : 'sun');
-        lucide.createIcons();
-    }
+function switchPanel(targetPanel) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    targetPanel.classList.add('active');
 }
 
-// Initialize Icons
-document.addEventListener('DOMContentLoaded', () => {
-    lucide.createIcons();
-    initTheme();
-    initEventListeners();
-    checkBackendHealth().then(ok => {
-        if (ok) {
-            checkApiConfig();
-            restoreSession();
-        } else {
-            startHealthPolling();
-        }
-    });
-});
-
-// Backend Health Check
+// Health Check
 async function checkBackendHealth() {
-    const banner = document.getElementById('backend-offline-banner');
     try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 5000);
-        const response = await fetch(`${API_BASE_URL}/`, {
-            method: 'GET',
-            signal: controller.signal
-        });
-        clearTimeout(timeout);
-        if (!response.ok) throw new Error('Not healthy');
-        banner.style.display = 'none';
-        setStatus('idle');
-        dom.statusText.innerText = 'Ready';
-        return true;
-    } catch {
-        banner.style.display = 'flex';
-        setStatus('error');
-        dom.statusText.innerText = 'Backend is offline';
-        return false;
-    }
-}
-
-// Poll until backend is reachable
-let healthCheckInterval = null;
-function startHealthPolling() {
-    if (healthCheckInterval) return;
-    healthCheckInterval = setInterval(async () => {
-        const ok = await checkBackendHealth();
-        if (ok) {
-            clearInterval(healthCheckInterval);
-            healthCheckInterval = null;
-        }
-    }, 5000);
-}
-
-// Event Listeners Binding
-function initEventListeners() {
-    // Tavily Filter Chips Multi-select
-    dom.filterChips.addEventListener('click', (e) => {
-        const chip = e.target.closest('.chip');
-        if (!chip) return;
-        
-        const topic = chip.dataset.topic;
-        
-        if (topic === 'all') {
-            // Select 'all', clear others
-            state.searchTopic = ['all'];
-            Array.from(dom.filterChips.children).forEach(el => {
-                if (el.dataset.topic === 'all') el.classList.add('active');
-                else el.classList.remove('active');
-            });
+        const res = await fetch(`${API_BASE_URL}/`);
+        if (res.ok) {
+            dom.backendOfflineBanner.style.display = 'none';
         } else {
-            // Select other chips, remove 'all'
-            const allChip = dom.filterChips.querySelector('[data-topic="all"]');
-            allChip.classList.remove('active');
-            state.searchTopic = state.searchTopic.filter(t => t !== 'all');
-            
-            if (chip.classList.contains('active')) {
-                chip.classList.remove('active');
-                state.searchTopic = state.searchTopic.filter(t => t !== topic);
-                // If nothing selected, default back to 'all'
-                if (state.searchTopic.length === 0) {
-                    state.searchTopic = ['all'];
-                    allChip.classList.add('active');
-                }
-            } else {
-                chip.classList.add('active');
-                state.searchTopic.push(topic);
-            }
+            dom.backendOfflineBanner.style.display = 'flex';
+        }
+    } catch (e) {
+        dom.backendOfflineBanner.style.display = 'flex';
+    }
+}
+
+
+/* ==========================================================================
+   RESEARCH MODE PIPELINE LOGIC
+   ========================================================================== */
+
+function renderRMPipelineTracker() {
+    if (!dom.rmPipelineStepsGrid) return;
+    dom.rmPipelineStepsGrid.innerHTML = '';
+
+    RM_STAGES.forEach((stage, idx) => {
+        const stepEl = document.createElement('div');
+        stepEl.className = 'pipeline-step';
+        stepEl.id = `rm-step-${stage.id}`;
+
+        if (stage.hitl) {
+            stepEl.classList.add('hitl');
+        }
+
+        stepEl.innerHTML = `
+            <span class="step-number">${stage.hitl ? 'REVIEW' : `STEP ${idx + 1}`}</span>
+            <span class="step-label">${stage.name}</span>
+        `;
+        dom.rmPipelineStepsGrid.appendChild(stepEl);
+    });
+}
+
+function updateRMPipelineTracker(activeStageId, completedStages = []) {
+    RM_STAGES.forEach(stage => {
+        const el = document.getElementById(`rm-step-${stage.id}`);
+        if (!el) return;
+
+        el.classList.remove('active', 'completed');
+        if (completedStages.includes(stage.id)) {
+            el.classList.add('completed');
+        } else if (stage.id === activeStageId) {
+            el.classList.add('active');
         }
     });
 
-    // Start Research / Plan Button
-    dom.planBtn.addEventListener('click', handlePlanResearch);
-    
-    // Suggest Revision Button
-    dom.submitFeedbackBtn.addEventListener('click', handleRevision);
-    
-    // Approve Plan Button
-    dom.approvePlanBtn.addEventListener('click', () => {
-        submitPlanApproval('Looks good, run the research!');
-    });
-    
-    // Toggle approve/revision buttons based on feedback input
-    dom.feedbackInput.addEventListener('input', toggleFeedbackButtons);
-    
-    // Download MD Button
-    dom.downloadMdBtn.addEventListener('click', () => {
-        const blob = new Blob([state.finalAnswer], { type: 'text/markdown' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'research-report.md';
-        a.click();
-        URL.revokeObjectURL(url);
-    });
-
-    // Copy MD Button
-    if (dom.copyMdBtn) {
-        dom.copyMdBtn.addEventListener('click', () => {
-            navigator.clipboard.writeText(state.finalAnswer).then(() => {
-                const span = dom.copyMdBtn.querySelector('span');
-                const originalText = span.innerText;
-                span.innerText = 'Copied!';
-                setTimeout(() => {
-                    span.innerText = originalText;
-                }, 2000);
-            }).catch(err => {
-                showToast(`Failed to copy: ${err}`);
-            });
-        });
+    if (dom.rmPipelineStatusTag) {
+        const current = RM_STAGES.find(s => s.id === activeStageId);
+        dom.rmPipelineStatusTag.textContent = current ? `Active: ${current.name}` : 'Pipeline Running';
     }
-
-    // Workspace New Research Button
-    if (dom.workspaceNewResearchBtn) {
-        dom.workspaceNewResearchBtn.addEventListener('click', resetToLanding);
-    }
-    
-    // Theme Toggle
-    document.getElementById('theme-toggle-btn').addEventListener('click', toggleTheme);
-
-    // Settings Modal
-    dom.settingsBtn.addEventListener('click', () => {
-        dom.settingsModal.style.display = 'flex';
-        dom.saveStatus.textContent = '';
-    });
-    dom.settingsClose.addEventListener('click', () => {
-        dom.settingsModal.style.display = 'none';
-    });
-    dom.settingsModal.addEventListener('click', (e) => {
-        if (e.target === dom.settingsModal) dom.settingsModal.style.display = 'none';
-    });
-    dom.saveConfigBtn.addEventListener('click', async () => {
-        const body = {};
-        if (dom.inputDeepseek.value.trim()) body.DEEPSEEK_API_KEY = dom.inputDeepseek.value.trim();
-        if (dom.inputTavily.value.trim()) body.TAVILY_API_KEY = dom.inputTavily.value.trim();
-        if (!Object.keys(body).length) return;
-        dom.saveStatus.textContent = 'Saving...';
-        dom.saveStatus.style.color = 'var(--text-secondary)';
-        try {
-            const res = await fetch(`${API_BASE_URL}/health/config`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            });
-            if (!res.ok) throw new Error('Save failed');
-            dom.saveStatus.textContent = 'Applied!';
-            dom.saveStatus.style.color = 'var(--accent-teal)';
-            const banner = document.getElementById('config-warning-banner');
-            if (banner) banner.remove();
-            dom.planBtn.disabled = false;
-            dom.planBtn.title = '';
-            dom.statusText.innerText = 'Ready';
-            dom.statusDot.className = 'status-dot';
-        } catch (e) {
-            dom.saveStatus.textContent = `Error: ${e.message}`;
-            dom.saveStatus.style.color = 'var(--accent-red)';
-        }
-    });
-    
-    // New Research Button
-    dom.newResearchBtn.addEventListener('click', resetToLanding);
-
-    // Approval panel new conversation button
-    document.getElementById('approval-new-research-btn').addEventListener('click', resetToLanding);
 }
 
-function resetToLanding() {
-    if (activeResearchController) {
-        activeResearchController.abort();
-        activeResearchController = null;
-    }
-    if (state.threadId) {
-        fetch(`${API_BASE_URL}/research/cancel`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ thread_id: state.threadId })
-        }).catch(err => console.error("Error cancelling research:", err));
-    }
-    activityMonitor.stop();
-    researchTimer.reset();
-    stopPlanningLoader();
-    clearSession();
-    dom.queryInput.value = '';
-    resetLandingControls();
-    dom.reportOutput.innerHTML = '';
-    dom.workspaceSourcesContainer.innerHTML = '';
-    dom.workspaceSourcesSection.style.display = 'none';
-    dom.newResearchBtn.style.display = 'none';
-    dom.downloadMdBtn.style.display = 'none';
-    if (dom.copyMdBtn) dom.copyMdBtn.style.display = 'none';
-    if (dom.workspaceNewResearchBtn) dom.workspaceNewResearchBtn.style.display = 'none';
-    setStatus('idle');
-    showPanel('landing-panel');
-}
-
-function toggleFeedbackButtons() {
-    const hasText = dom.feedbackInput.value.trim().length > 0;
-    dom.submitFeedbackBtn.style.display = hasText ? '' : 'none';
-    dom.approvePlanBtn.style.display = hasText ? 'none' : '';
-}
-
-// Handle Revision Submission (stays on approval panel)
-async function handleRevision() {
-    const feedback = dom.feedbackInput.value.trim();
-    if (!feedback) {
-        showToast('Type your revision instructions above.');
+async function handleRMStart() {
+    const ps = dom.rmPsInput.value.trim();
+    if (!ps) {
+        showToast('Please enter a core Problem Statement to start Research Mode.', 'warning');
         return;
     }
 
-    const btn = dom.submitFeedbackBtn;
-    const originalHTML = btn.innerHTML;
-    btn.innerHTML = '<i data-lucide="loader-2" class="revising-spinner" style="width: 16px; height: 16px;"></i><span>Revising...</span>';
-    btn.disabled = true;
-    dom.approvePlanBtn.disabled = true;
-    dom.feedbackInput.disabled = true;
-    dom.approvalPsText.closest('.card').classList.add('revising');
-    lucide.createIcons();
+    const objs = dom.rmObjsInput.value.split('\n').map(s => s.trim()).filter(Boolean);
+    const rqs = dom.rmRqsInput.value.split('\n').map(s => s.trim()).filter(Boolean);
+
+    dom.rmStartBtn.disabled = true;
+    dom.rmStartBtn.innerHTML = '<div class="spinner-ring sm"></div><span>Initializing Academic Agents...</span>';
 
     try {
-        activeResearchController = new AbortController();
-        const response = await fetch(`${API_BASE_URL}/research/approve`, {
+        const res = await fetch(`${API_BASE_URL}/research-mode/start`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                thread_id: state.threadId,
-                message: feedback
-            }),
-            signal: activeResearchController.signal
+            body: JSON.stringify({ problem_statement: ps, research_objectives: objs, research_questions: rqs })
         });
 
-        if (!response.ok) {
-            throw new Error(`Server returned code ${response.status}: ${response.statusText}`);
+        const data = await res.json();
+        if (data.error || data.status === 'error') {
+            showToast(data.error || 'Failed to start Research Mode.', 'error');
+            dom.rmStartBtn.disabled = false;
+            dom.rmStartBtn.innerHTML = '<span>Launch Autonomous Academic Pipeline</span>';
+            return;
         }
+
+        state.rm.threadId = data.thread_id;
+        state.rm.problemStatement = data.problem_statement;
+        state.rm.researchObjectives = data.research_objectives || [];
+        state.rm.researchQuestions = data.research_questions || [];
+        state.rm.keywords = data.keywords || [];
+        state.rm.hitlCheckpoint = data.hitl_checkpoint;
+
+        switchPanel(dom.rmWorkspacePanel);
+        updateRMPipelineTracker('keyword_extractor', ['keyword_extractor']);
+        renderRMHitlPanel('checkpoint_1');
+
+    } catch (e) {
+        showToast('Error connecting to Research Mode service: ' + e.message, 'error');
+    } finally {
+        dom.rmStartBtn.disabled = false;
+        dom.rmStartBtn.innerHTML = '<span>Launch Autonomous Academic Pipeline</span>';
+    }
+}
+
+function renderRMHitlPanel(checkpoint) {
+    dom.rmHitlPanel.style.display = 'block';
+    dom.rmHitlBody.innerHTML = '';
+    dom.rmHitlFeedbackInput.value = '';
+
+    if (checkpoint === 'checkpoint_1') {
+        dom.rmHitlTitle.textContent = 'Checkpoint 1: Problem Statement & Keywords Review';
+        dom.rmHitlBadge.textContent = 'Checkpoint 1 of 4';
+
+        dom.rmHitlBody.innerHTML = `
+            <div class="form-group">
+                <label class="form-label">Problem Statement</label>
+                <div class="problem-statement-text">${state.rm.problemStatement}</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Extracted Academic Keywords (6-10)</label>
+                <div class="chips-container">
+                    ${state.rm.keywords.map(kw => `<span class="chip active">${kw}</span>`).join('')}
+                </div>
+            </div>
+        `;
+    } else if (checkpoint === 'checkpoint_2') {
+        dom.rmHitlTitle.textContent = 'Checkpoint 2: Literature Review & Framework Review';
+        dom.rmHitlBadge.textContent = 'Checkpoint 2 of 4';
+
+        dom.rmHitlBody.innerHTML = `
+            <div class="form-group">
+                <label class="form-label">Synthesized Literature Review Snippet</label>
+                <div class="problem-statement-text">${(state.rm.literatureReview || '').slice(0, 400)}...</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Identified Research Gap</label>
+                <div class="problem-statement-text">${state.rm.researchGap}</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Proposed Conceptual Framework</label>
+                <div class="problem-statement-text">${state.rm.conceptualFramework}</div>
+            </div>
+        `;
+    } else if (checkpoint === 'checkpoint_3') {
+        dom.rmHitlTitle.textContent = 'Checkpoint 3: Hypotheses Review';
+        dom.rmHitlBadge.textContent = 'Checkpoint 3 of 4';
+
+        dom.rmHitlBody.innerHTML = `
+            <div class="form-group">
+                <label class="form-label">Formulated Research Hypotheses</label>
+                <div class="subtasks-list">
+                    ${(state.rm.hypotheses || []).map((h, i) => `
+                        <div class="subtask-item">
+                            <span class="subtask-number">H${i+1}</span>
+                            <span class="subtask-content">${h}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    } else if (checkpoint === 'checkpoint_4') {
+        dom.rmHitlTitle.textContent = 'Checkpoint 4: Research Methodology Review';
+        dom.rmHitlBadge.textContent = 'Checkpoint 4 of 4';
+
+        dom.rmHitlBody.innerHTML = `
+            <div class="form-group">
+                <label class="form-label">Research Design</label>
+                <div class="problem-statement-text">${state.rm.researchDesign}</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Data Collection Plan</label>
+                <div class="problem-statement-text">${state.rm.dataCollectionPlan}</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Data Analysis Plan</label>
+                <div class="problem-statement-text">${state.rm.dataAnalysisPlan}</div>
+            </div>
+        `;
+    }
+}
+
+async function handleRMApprove(feedback) {
+    if (!state.rm.threadId) return;
+
+    dom.rmHitlPanel.style.display = 'none';
+
+    if (activeRMController) activeRMController.abort();
+    activeRMController = new AbortController();
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/research-mode/approve`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ thread_id: state.rm.threadId, message: feedback || '' }),
+            signal: activeRMController.signal
+        });
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder('utf-8');
@@ -567,740 +590,316 @@ async function handleRevision() {
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
-
             buffer += decoder.decode(value, { stream: true });
-            const parts = buffer.split('\n\n');
-            buffer = parts.pop();
 
-            for (const part of parts) {
-                if (part.startsWith('data: ')) {
-                    const dataStr = part.slice(6).trim();
-                    if (dataStr) {
-                        try {
-                            const data = JSON.parse(dataStr);
-                            handleSSEEvent(data, true);
-                        } catch (e) {
-                            console.error('Failed to parse SSE data stream packet:', e);
-                        }
+            const events = buffer.split('\n\n');
+            buffer = events.pop();
+
+            for (const rawEvent of events) {
+                if (rawEvent.startsWith('data: ')) {
+                    try {
+                        const data = JSON.parse(rawEvent.slice(6));
+                        processRMSEEvent(data);
+                    } catch (e) {
+                        console.warn('RM SSE parse error:', e);
                     }
                 }
             }
         }
     } catch (e) {
         if (e.name !== 'AbortError') {
-            showToast(`Revision request failed: ${e.message}`);
-            setStatus('error');
+            showToast('Error streaming Research Mode pipeline: ' + e.message, 'error');
         }
-    } finally {
-        activeResearchController = null;
-        btn.innerHTML = originalHTML;
-        btn.disabled = false;
-        dom.approvePlanBtn.disabled = false;
-        dom.feedbackInput.disabled = false;
-        dom.approvalPsText.closest('.card').classList.remove('revising');
-        lucide.createIcons();
     }
 }
 
-// Show Panel Helper
-function showPanel(panelId) {
-    dom.landingPanel.classList.remove('active');
-    dom.approvalPanel.classList.remove('active');
-    dom.workspacePanel.classList.remove('active');
-    
-    document.getElementById(panelId).classList.add('active');
-}
-
-// Update Status Badge Helper
-function setStatus(status) {
-    state.status = status;
-    
-    // Reset status badge classes
-    dom.statusDot.className = 'status-dot';
-    
-    let text = 'Ready';
-    
-    switch (status) {
-        case 'idle':
-            text = 'Ready';
-            break;
-        case 'validating':
-            dom.statusDot.classList.add('planning');
-            text = 'Validating...';
-            break;
-        case 'planning':
-            dom.statusDot.classList.add('planning');
-            text = 'Designing plan...';
-            break;
-        case 'awaiting_approval':
-            dom.statusDot.classList.add('planning');
-            text = 'Pending review';
-            break;
-        case 'researching':
-            dom.statusDot.classList.add('researching');
-            text = 'Researching in parallel';
-            break;
-        case 'aggregating':
-            dom.statusDot.classList.add('researching');
-            text = 'Synthesizing...';
-            break;
-        case 'completed':
-            text = 'Complete';
-            break;
-        case 'error':
-            dom.statusDot.classList.add('error');
-            text = 'Error';
-            break;
-    }
-    
-    dom.statusText.innerText = text;
-    updateProgressMap();
-}
-
-// Show Toast Error Notification
-function showToast(message) {
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.innerHTML = `
-        <i data-lucide="alert-triangle" class="toast-icon" style="width: 20px; height: 20px;"></i>
-        <span class="toast-message">${message}</span>
-    `;
-    dom.toastContainer.appendChild(toast);
-    lucide.createIcons();
-    
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateY(20px)';
-        setTimeout(() => toast.remove(), 300);
-    }, 5000);
-}
-
-let planningTextInterval = null;
-function startPlanningLoader() {
-    const messages = [
-        "Analyzing safety...",
-        "Structuring plan...",
-        "DeepSeek is thinking...",
-        "Defining problem..."
-    ];
-    let index = 0;
-    
-    if (planningTextInterval) clearInterval(planningTextInterval);
-    
-    const updateText = () => {
-        const text = messages[index % messages.length];
-        if (dom.planBtn) {
-            dom.planBtn.innerHTML = `<i data-lucide="loader-2" class="revising-spinner" style="width: 16px; height: 16px;"></i><span>${text}</span>`;
-            lucide.createIcons();
-        }
-        if (dom.statusText) {
-            dom.statusText.innerText = text;
-        }
-        index++;
-    };
-    
-    updateText();
-    planningTextInterval = setInterval(updateText, 6000);
-}
-
-function stopPlanningLoader() {
-    if (planningTextInterval) {
-        clearInterval(planningTextInterval);
-        planningTextInterval = null;
+function processRMSEEvent(data) {
+    if (data.event === 'node_start') {
+        updateRMPipelineTracker(data.node);
+    } else if (data.event === 'node_update') {
+        const out = data.data || {};
+        Object.assign(state.rm, {
+            literatureReview: out.literature_review || state.rm.literatureReview,
+            researchGap: out.research_gap || state.rm.researchGap,
+            conceptualFramework: out.conceptual_framework || state.rm.conceptualFramework,
+            hypotheses: out.hypotheses || state.rm.hypotheses,
+            researchDesign: out.research_design || state.rm.researchDesign,
+            dataCollectionPlan: out.data_collection_plan || state.rm.dataCollectionPlan,
+            dataAnalysisPlan: out.data_analysis_plan || state.rm.dataAnalysisPlan,
+            results: out.results || state.rm.results,
+            discussion: out.discussion || state.rm.discussion,
+            implications: out.implications || state.rm.implications,
+            limitations: out.limitations || state.rm.limitations,
+            conclusion: out.conclusion || state.rm.conclusion,
+            futureScope: out.future_scope || state.rm.futureScope,
+            references: out.references || state.rm.references,
+            introduction: out.introduction || state.rm.introduction,
+            abstract: out.abstract || state.rm.abstract,
+            title: out.title || state.rm.title
+        });
+        renderRMPaperLive();
+    } else if (data.event === 'checkpoint') {
+        const cp = data.hitl_checkpoint || 'checkpoint_1';
+        state.rm.hitlCheckpoint = cp;
+        if (data.state) Object.assign(state.rm, data.state);
+        renderRMHitlPanel(cp);
+    } else if (data.event === 'completed') {
+        if (data.state) Object.assign(state.rm, data.state);
+        updateRMPipelineTracker('title', RM_STAGES.map(s => s.id));
+        renderRMPaperFinal();
+    } else if (data.event === 'error') {
+        showToast(data.message || 'Pipeline error occurred.', 'error');
     }
 }
 
-// Action: POST to Start Research
+function renderRMPaperLive() {
+    if (dom.rmPaperTitle) dom.rmPaperTitle.textContent = state.rm.title || 'Synthesizing Academic Paper...';
+    if (dom.rmPaperOutput) {
+        dom.rmPaperOutput.innerHTML = marked.parse(getPaperMarkdown());
+    }
+}
+
+function renderRMPaperFinal() {
+    renderRMPaperLive();
+    dom.rmCopyPaperBtn.style.display = 'inline-flex';
+    dom.rmExportPdfBtn.style.display = 'inline-flex';
+    showToast('Academic Paper Synthesis Completed!', 'success');
+}
+
+function getPaperMarkdown() {
+    const s = state.rm;
+    let md = `# ${s.title || 'Academic Research Report'}\n\n`;
+    if (s.abstract) md += `## Abstract\n${s.abstract}\n\n`;
+    if (s.introduction) md += `## 1. Introduction\n${s.introduction}\n\n`;
+    if (s.literatureReview) md += `## 2. Literature Review\n${s.literatureReview}\n\n`;
+    if (s.conceptualFramework) md += `## 3. Research Gap & Conceptual Framework\n### Research Gap\n${s.researchGap}\n\n### Conceptual Framework\n${s.conceptualFramework}\n\n`;
+    if (s.hypotheses && s.hypotheses.length) md += `## 4. Hypotheses\n${s.hypotheses.map((h, i) => `- **H${i+1}**: ${h}`).join('\n')}\n\n`;
+    if (s.researchDesign) md += `## 5. Methodology\n**Design**: ${s.researchDesign}\n\n**Data Collection**: ${s.dataCollectionPlan}\n\n**Data Analysis**: ${s.dataAnalysisPlan}\n\n`;
+    if (s.results) md += `## 6. Results\n${s.results}\n\n`;
+    if (s.discussion) md += `## 7. Discussion\n${s.discussion}\n\n`;
+    if (s.implications) md += `## 8. Implications\n${s.implications}\n\n`;
+    if (s.limitations) md += `## 9. Limitations\n${s.limitations}\n\n`;
+    if (s.conclusion) md += `## 10. Conclusion & Future Scope\n${s.conclusion}\n\n### Future Directions\n${Array.isArray(s.futureScope) ? s.futureScope.map(f => `- ${f}`).join('\n') : s.futureScope}\n\n`;
+    if (s.references && s.references.length) md += `## References\n${s.references.map(r => `- ${r}`).join('\n')}\n\n`;
+    return md;
+}
+
+async function handleRMExportPDF() {
+    if (!state.rm.threadId) return;
+    try {
+        const res = await fetch(`${API_BASE_URL}/research-mode/export/${state.rm.threadId}`, { method: 'POST' });
+        if (res.ok) {
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `academic_paper_${state.rm.threadId.slice(0, 8)}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        } else {
+            showToast('Failed to export PDF.', 'error');
+        }
+    } catch (e) {
+        showToast('Error exporting PDF: ' + e.message, 'error');
+    }
+}
+
+
+/* ==========================================================================
+   DEEPSEARCH MODE HANDLERS & HELPERS
+   ========================================================================== */
+
 async function handlePlanResearch() {
     const query = dom.queryInput.value.trim();
     if (!query) {
-        showToast('Enter a research query first.');
+        showToast('Please enter a research query.', 'warning');
         return;
     }
-    
-    clearSession();
+
     state.query = query;
-    setStatus('validating');
-    
-    // Lock controls
-    dom.queryInput.disabled = true;
-    dom.planBtn.disabled = true;
-    startPlanningLoader();
-    
+    dom.approvalQueryDisplay.textContent = `"${query}"`;
+    switchPanel(dom.approvalPanel);
+
+    dom.approvalPsText.textContent = 'Generating Problem Statement...';
+    dom.approvalSubtasksContainer.innerHTML = '<div class="spinner-ring"></div>';
+
     try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 300000);
-
-        // --- Immediately navigate to approval panel with skeleton ---
-        dom.approvalQueryDisplay.innerText = `"${state.query}"`;
-        showSkeletonPlan();
-        showPanel('approval-panel');
-        // Disable action buttons while loading
-        dom.approvePlanBtn.disabled = true;
-        dom.submitFeedbackBtn.style.display = 'none';
-
-        const response = await fetch(`${API_BASE_URL}/research/start`, {
+        const res = await fetch(`${API_BASE_URL}/research/start`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                query: state.query,
-                search_topic: state.searchTopic
-            }),
-            signal: controller.signal
+            body: JSON.stringify({ query: state.query, search_topic: state.searchTopic })
         });
-        clearTimeout(timeout);
-        stopPlanningLoader();
-        
-        if (!response.ok) {
-            throw new Error(`Server returned code ${response.status}: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        
+        const data = await res.json();
         if (data.status === 'error') {
-            showToast(data.error || 'Could not validate query. Try a more specific topic.');
-            resetLandingControls();
-            setStatus('error');
-            showPanel('landing-panel');
-            if (data.error && (data.error.toLowerCase().includes('api key') || data.error.toLowerCase().includes('settings'))) {
-                dom.settingsModal.style.display = 'flex';
-                dom.saveStatus.textContent = '';
-            }
+            showToast(data.error || 'Failed to create plan.', 'error');
             return;
         }
-        
-        // Save plan data
+
         state.threadId = data.thread_id;
-        state.ps = data.ps || '';
+        state.ps = data.ps;
         state.plan = data.plan || [];
-        
-        // Setup initial workers list
-        state.workers = {};
-        state.plan.forEach(task => {
-            state.workers[task] = {
-                id: null,
-                status: 'pending',
-                result: null,
-                citations: []
-            };
-        });
-        
-        // Populate the approval panel with real data (replacing skeleton)
         renderApprovalPanel();
-        setStatus('awaiting_approval');
-        saveSession();
-        
+
     } catch (e) {
-        stopPlanningLoader();
-        showToast(`Failed to establish API connection: ${e.message}`);
-        resetLandingControls();
-        setStatus('error');
-        showPanel('landing-panel');
+        showToast('Error planning research: ' + e.message, 'error');
     }
 }
 
-function showSkeletonPlan() {
-    // Problem statement skeleton
-    dom.approvalPsText.innerHTML = `
-        <div class="thinking-badge"><span class="dot"></span> DeepSeek is thinking…</div>
-        <span class="skeleton skeleton-ps" style="width:95%"></span>
-        <span class="skeleton skeleton-ps" style="width:88%"></span>
-        <span class="skeleton skeleton-ps" style="width:75%"></span>
-        <span class="skeleton skeleton-ps" style="width:60%"></span>
-    `;
-    // Plan tasks skeleton
-    dom.approvalSubtasksContainer.innerHTML = `
-        <span class="skeleton skeleton-task" style="width:100%"></span>
-        <span class="skeleton skeleton-task" style="width:100%"></span>
-        <span class="skeleton skeleton-task" style="width:100%"></span>
-        <span class="skeleton skeleton-task" style="width:100%"></span>
-    `;
-}
-
-function resetLandingControls() {
-    dom.queryInput.disabled = false;
-    dom.planBtn.disabled = false;
-    stopPlanningLoader();
-    dom.planBtn.innerHTML = `<span>Plan Research</span><i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>`;
-    lucide.createIcons();
-}
-
-// Render Approval Screen
 function renderApprovalPanel() {
-    dom.approvalQueryDisplay.innerText = `"${state.query}"`;
-    dom.approvalPsText.innerText = state.ps;
-    
+    dom.approvalPsText.textContent = state.ps;
     dom.approvalSubtasksContainer.innerHTML = '';
-    state.plan.forEach((task, index) => {
+    state.plan.forEach((task, idx) => {
         const item = document.createElement('div');
         item.className = 'subtask-item';
         item.innerHTML = `
-            <div class="subtask-number">${index + 1}</div>
+            <div class="subtask-number">${idx + 1}</div>
             <div class="subtask-content">${task}</div>
         `;
         dom.approvalSubtasksContainer.appendChild(item);
     });
-    
-    // Clear feedback input
-    dom.feedbackInput.value = '';
-    toggleFeedbackButtons();
 }
 
-// Action: Approve & Stream SSE
-async function submitPlanApproval(feedbackMessage) {
-    setStatus('researching');
-    
-    // If we're executing, initialize Workspace Panel state
-    dom.reportOutput.innerHTML = '';
-    dom.workspaceProgressBar.classList.remove('active');
-    dom.reportStreamingIndicator.style.display = 'none';
-    dom.workspaceSourcesSection.style.display = 'none';
-    dom.workspaceSourcesContainer.innerHTML = '';
-    state.finalAnswer = '';
-    state.citations = [];
-    
-    // Render initial workspace workers sidebar
-    renderWorkers();
-    showPanel('workspace-panel');
-    activityMonitor.start();
-    researchTimer.reset();
+async function handleRevision() {
+    const feedback = dom.feedbackInput.value.trim();
+    if (!feedback) return;
+
+    dom.approvalSubtasksContainer.innerHTML = '<div class="spinner-ring"></div>';
+    await submitPlanApprovalWithMessage(feedback);
+}
+
+async function submitPlanApproval() {
+    await submitPlanApprovalWithMessage('approve');
+}
+
+async function submitPlanApprovalWithMessage(message) {
+    if (!state.threadId) return;
+
+    switchPanel(dom.workspacePanel);
     researchTimer.start();
-    
-    // Clear controls on approval panel
-    dom.feedbackInput.value = '';
-    
+
     try {
-        activeResearchController = new AbortController();
         const response = await fetch(`${API_BASE_URL}/research/approve`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                thread_id: state.threadId,
-                message: feedbackMessage
-            }),
-            signal: activeResearchController.signal
+            body: JSON.stringify({ thread_id: state.threadId, message: message })
         });
-        
-        if (!response.ok) {
-            throw new Error(`Server returned code ${response.status}: ${response.statusText}`);
-        }
-        
+
         const reader = response.body.getReader();
         const decoder = new TextDecoder('utf-8');
         let buffer = '';
-        
+
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
-            
             buffer += decoder.decode(value, { stream: true });
-            const parts = buffer.split('\n\n');
-            buffer = parts.pop();
-            
-            for (const part of parts) {
-                if (part.startsWith('data: ')) {
-                    const dataStr = part.slice(6).trim();
-                    if (dataStr) {
-                        try {
-                            const data = JSON.parse(dataStr);
-                            handleSSEEvent(data);
-                        } catch (e) {
-                            console.error('Failed to parse SSE data stream packet:', e);
-                        }
-                    }
+
+            const events = buffer.split('\n\n');
+            buffer = events.pop();
+
+            for (const rawEvent of events) {
+                if (rawEvent.startsWith('data: ')) {
+                    try {
+                        const data = JSON.parse(rawEvent.slice(6));
+                        processDeepSearchSSEEvent(data);
+                    } catch (e) {}
                 }
             }
         }
-        
     } catch (e) {
-        if (e.name !== 'AbortError') {
-            showToast(`SSE Connection broken: ${e.message}`);
-            setStatus('error');
-            activityMonitor.stop();
+        showToast('SSE Error: ' + e.message, 'error');
+    }
+}
+
+function processDeepSearchSSEEvent(data) {
+    if (data.event === 'node_start') {
+        if (data.node.startsWith('researcher')) {
+            state.workers[data.node] = { task: data.task, status: 'running', logs: [] };
+            renderWorkers();
         }
-    } finally {
-        activeResearchController = null;
+    } else if (data.event === 'researcher_search') {
+        const wKey = Object.keys(state.workers).find(k => state.workers[k].task === data.task);
+        if (wKey) {
+            state.workers[wKey].logs.push(data.query);
+            renderWorkers();
+        }
+    } else if (data.event === 'aggregator_token') {
+        dom.reportStreamingIndicator.style.display = 'flex';
+        state.finalAnswer += data.token;
+        dom.reportOutput.innerHTML = marked.parse(state.finalAnswer) + '<span class="streaming-cursor">|</span>';
+    } else if (data.event === 'completed') {
+        researchTimer.stop();
+        dom.reportStreamingIndicator.style.display = 'none';
+        state.finalAnswer = data.final_answer || state.finalAnswer;
+        dom.reportOutput.innerHTML = marked.parse(state.finalAnswer);
+        dom.copyMdBtn.style.display = 'inline-flex';
+        dom.downloadMdBtn.style.display = 'inline-flex';
+        dom.workspaceNewResearchBtn.style.display = 'inline-flex';
+        if (data.citations) renderCitations(data.citations);
     }
 }
 
-// SSE Events Dispatcher
-function handleSSEEvent(data, isRevision = false) {
-    console.log("SSE Event Received:", data);
-    activityMonitor.markActivity();
-    
-    switch (data.event) {
-        case 'resume':
-            if (isRevision) {
-                setStatus('planning');
-            } else {
-                setStatus('researching');
-            }
-            break;
-            
-        case 'node_start':
-            const workerNode = data.node;
-            const workerTask = data.task;
-            
-            // Map node_start for research workers
-            if (workerNode.startsWith('researcher_') && workerTask) {
-                // Transition to workspace if still on approval panel
-                if (!dom.workspacePanel.classList.contains('active')) {
-                    dom.reportOutput.innerHTML = '';
-                    dom.workspaceProgressBar.classList.remove('active');
-                    dom.reportStreamingIndicator.style.display = 'none';
-                    dom.workspaceSourcesSection.style.display = 'none';
-                    dom.workspaceSourcesContainer.innerHTML = '';
-                    state.finalAnswer = '';
-                    state.citations = [];
-                    renderWorkers();
-                    showPanel('workspace-panel');
-                    dom.feedbackInput.value = '';
-                    toggleFeedbackButtons();
-                }
-                if (state.workers[workerTask]) {
-                    state.workers[workerTask].id = workerNode;
-                    state.workers[workerTask].status = 'running';
-                    renderWorkers();
-                }
-                if (!researchTimer.timerId) {
-                    researchTimer.start();
-                }
-            } else if (workerNode === 'aggregator') {
-                setStatus('aggregating');
-                dom.workspaceProgressBar.classList.add('active');
-                dom.reportStreamingIndicator.style.display = 'flex';
-            } else if (workerNode === 'planner') {
-                setStatus('planning');
-            }
-            break;
-            
-        case 'node_update':
-            const updateNode = data.node;
-            const updateTask = data.task;
-            const updateData = data.data;
-            
-            if (updateNode.startsWith('researcher_') && updateTask && updateData) {
-                if (state.workers[updateTask]) {
-                    state.workers[updateTask].status = 'completed';
-                    state.workers[updateTask].result = updateData.results ? updateData.results[0] : '';
-                    state.workers[updateTask].citations = updateData.citations || [];
-                    renderWorkers();
-                }
-            }
-            break;
-            
-        case 'researcher_search':
-            {
-                const searchTask = data.task;
-                const searchQuery = data.query;
-                const searchStatus = data.status;
-                if (state.workers[searchTask]) {
-                    if (!state.workers[searchTask].logs) {
-                        state.workers[searchTask].logs = [];
-                    }
-                    if (searchStatus === 'start') {
-                        if (!state.workers[searchTask].logs.some(l => l.query === searchQuery)) {
-                            state.workers[searchTask].logs.push({
-                                query: searchQuery,
-                                status: 'running'
-                            });
-                        }
-                    } else {
-                        const lastLog = state.workers[searchTask].logs.filter(l => l.status === 'running').pop();
-                        if (lastLog) {
-                            lastLog.status = 'completed';
-                        }
-                    }
-                    renderWorkers();
-                }
-                break;
-            }
-            
-        case 'aggregator_token':
-            // Stream token to final report
-            state.finalAnswer += data.token;
-            renderReportStreaming();
-            dom.reportOutput.closest('.report-container').scrollTop = dom.reportOutput.closest('.report-container').scrollHeight;
-            saveSession();
-            break;
-            
-        case 'completed':
-            setStatus('completed');
-            state.finalAnswer = data.final_answer || '';
-            state.citations = data.citations || [];
-            
-            dom.workspaceProgressBar.classList.remove('active');
-            dom.reportStreamingIndicator.style.display = 'none';
-            activityMonitor.stop();
-            researchTimer.pause();
-            
-            // Render final markdown and citations
-            renderReportFinal();
-            renderCitations();
-            dom.downloadMdBtn.style.display = 'flex';
-            if (dom.copyMdBtn) dom.copyMdBtn.style.display = 'flex';
-            if (dom.workspaceNewResearchBtn) dom.workspaceNewResearchBtn.style.display = 'flex';
-            
-            // Reset scroll to top so user sees the header of the report
-            try {
-                dom.reportOutput.closest('.report-container').scrollTop = 0;
-            } catch (e) {}
-            
-            saveSession();
-            break;
-            
-        case 'awaiting_approval':
-            // The plan classification looped back due to feedback revision
-            state.plan = data.plan || [];
-            state.ps = data.ps || '';
-            
-            // Reinitialize workers dictionary
-            state.workers = {};
-            state.plan.forEach(task => {
-                state.workers[task] = {
-                    id: null,
-                    status: 'pending',
-                    result: null,
-                    citations: []
-                };
-            });
-            
-            renderApprovalPanel();
-            setStatus('awaiting_approval');
-            showPanel('approval-panel');
-            activityMonitor.stop();
-            saveSession();
-            break;
-            
-        case 'error':
-            {
-                const msg = data.message || '';
-                showToast(`Execution failure: ${msg}`);
-                setStatus('error');
-                dom.reportStreamingIndicator.style.display = 'none';
-                dom.workspaceProgressBar.classList.remove('active');
-                activityMonitor.stop();
-                researchTimer.pause();
-                if (msg.toLowerCase().includes('api key') || msg.toLowerCase().includes('settings')) {
-                    dom.settingsModal.style.display = 'flex';
-                    dom.saveStatus.textContent = '';
-                }
-                break;
-            }
-    }
-}
-
-// Render Workers Sidebar
 function renderWorkers() {
     dom.workersListContainer.innerHTML = '';
-    
-    state.plan.forEach((task, index) => {
-        const worker = state.workers[task] || { status: 'pending', citations: [] };
-        
+    Object.entries(state.workers).forEach(([id, w]) => {
         const card = document.createElement('div');
-        card.className = `worker-card ${worker.status}`;
-        
-        let statusIcon = '<i data-lucide="circle-dashed" class="worker-status-icon pending" style="width: 18px; height: 18px;"></i>';
-        let detailText = 'Queue pending...';
-        
-        if (worker.status === 'running') {
-            statusIcon = '<i data-lucide="loader-2" class="worker-status-icon running" style="width: 18px; height: 18px;"></i>';
-            detailText = 'Retrieving web insights...';
-        } else if (worker.status === 'completed') {
-            statusIcon = '<i data-lucide="check-circle" class="worker-status-icon completed" style="width: 18px; height: 18px;"></i>';
-            detailText = `<span class="worker-search-count"><i data-lucide="link-2" style="width: 12px; height: 12px;"></i> ${worker.citations.length} sources found</span>`;
-        }
-        
-        let logsHtml = '';
-        if (worker.logs && worker.logs.length > 0) {
-            logsHtml = `
-                <div class="worker-search-logs">
-                    ${worker.logs.map(log => `
-                        <div class="search-log-item ${log.status}">
-                            <i data-lucide="${log.status === 'running' ? 'loader-2' : 'check'}" class="log-icon"></i>
-                            <span class="log-query">Search: "${log.query || 'Refining search...'}"</span>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        }
-
+        card.className = 'worker-card';
         card.innerHTML = `
             <div class="worker-header">
-                <span class="worker-title">${task}</span>
-                ${statusIcon}
+                <strong>${id}</strong>
+                <span class="worker-status ${w.status}">${w.status}</span>
             </div>
-            <div class="worker-details">
-                <span>Researcher #${index + 1}</span>
-                <span>•</span>
-                <span>${detailText}</span>
-            </div>
-            ${logsHtml}
-            <div class="worker-card-toggle" data-index="${index}">
-                <span>View Findings</span>
-                <i data-lucide="chevron-down" style="width: 12px; height: 12px;"></i>
-            </div>
-            <div class="worker-preview-content" id="worker-preview-${index}">
-                ${worker.result || ''}
-            </div>
+            <div class="worker-task">${w.task}</div>
         `;
-        
         dom.workersListContainer.appendChild(card);
     });
-    
-    // Bind Worker toggles
-    dom.workersListContainer.querySelectorAll('.worker-card-toggle').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const index = btn.dataset.index;
-            const preview = document.getElementById(`worker-preview-${index}`);
-            const icon = btn.querySelector('[data-lucide]');
-            
-            if (preview.classList.contains('expanded')) {
-                preview.classList.remove('expanded');
-                btn.querySelector('span').innerText = 'View Findings';
-                icon.style.transform = 'rotate(0deg)';
-            } else {
-                preview.classList.add('expanded');
-                btn.querySelector('span').innerText = 'Hide Findings';
-                icon.style.transform = 'rotate(180deg)';
-            }
-        });
-    });
-    
-    lucide.createIcons();
 }
 
-// Render Streaming Text
-function renderReportStreaming() {
-    // Basic Markdown streaming view (append a blinking cursor)
-    const cursor = '<span class="streaming-cursor">|</span>';
-    dom.reportOutput.innerHTML = marked.parse(state.finalAnswer) + cursor;
-}
-
-// Render Final Report
-function renderReportFinal() {
-    dom.reportOutput.innerHTML = marked.parse(state.finalAnswer);
-}
-
-// Render Citations
-function renderCitations() {
-    if (!state.citations || state.citations.length === 0) {
-        dom.workspaceSourcesSection.style.display = 'none';
-        return;
-    }
-    
+function renderCitations(citations) {
     dom.workspaceSourcesContainer.innerHTML = '';
-    
-    // Deduplicate citations
-    const uniqueCitations = [...new Set(state.citations)];
-    
-    uniqueCitations.forEach(url => {
-        let domain = 'Web Source';
-        try {
-            const urlObj = new URL(url);
-            domain = urlObj.hostname.replace('www.', '');
-        } catch (e) {}
-        
+    citations.forEach(url => {
         const card = document.createElement('a');
         card.className = 'source-card';
         card.href = url;
         card.target = '_blank';
-        card.innerHTML = `
-            <div class="source-icon">
-                <i data-lucide="globe" style="width: 16px; height: 16px;"></i>
-            </div>
-            <div class="source-info">
-                <span class="source-domain">${domain}</span>
-                <span class="source-url">${url}</span>
-            </div>
-        `;
+        card.innerHTML = `<i data-lucide="link"></i><span>${url}</span>`;
         dom.workspaceSourcesContainer.appendChild(card);
     });
-    
     dom.workspaceSourcesSection.style.display = 'block';
     lucide.createIcons();
 }
 
-// Progress Map UI synchronizer
-function updateProgressMap() {
-    const mapCard = document.getElementById('progress-map-card');
-    if (!mapCard) return;
+function resetToLanding() {
+    researchTimer.reset();
+    state.threadId = null;
+    state.finalAnswer = '';
+    state.workers = {};
+    dom.queryInput.value = '';
+    switchPanel(dom.landingPanel);
+}
 
-    if (state.status === 'idle' || state.status === 'validating' || state.status === 'planning' || state.status === 'awaiting_approval') {
-        mapCard.style.display = 'none';
-        return;
-    }
+function copyToClipboard(text, btnEl) {
+    navigator.clipboard.writeText(text);
+    const orig = btnEl.innerHTML;
+    btnEl.innerHTML = '<span>Copied!</span>';
+    setTimeout(() => btnEl.innerHTML = orig, 2000);
+}
 
-    mapCard.style.display = 'block';
+function downloadMarkdownReport() {
+    const blob = new Blob([state.finalAnswer], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `research_report_${state.threadId ? state.threadId.slice(0,8) : 'export'}.md`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+}
 
-    const setNodeStatus = (nodeId, status) => {
-        const el = document.getElementById(nodeId);
-        if (el) {
-            el.className = `progress-node ${status}`;
-        }
-    };
-
-    const setConnectorStatus = (connId, status) => {
-        if (!connId) return;
-        const el = document.getElementById(connId);
-        if (el) {
-            el.className = `node-connector ${status}`;
-        }
-    };
-
-    // Calculate current progress
-    const totalWorkers = state.plan.length;
-    const completedWorkers = Object.values(state.workers).filter(w => w.status === 'completed').length;
-    
-    const sublabel = document.getElementById('research-progress-sublabel');
-    if (sublabel) {
-        sublabel.innerText = `${completedWorkers}/${totalWorkers} done`;
-    }
-
-    // Set statuses based on current state.status
-    if (state.status === 'researching') {
-        setNodeStatus('node-stage-planning', 'completed');
-        setConnectorStatus('connector-1', 'completed');
-        
-        setNodeStatus('node-stage-researching', 'active');
-        setConnectorStatus('connector-2', 'pending');
-        
-        setNodeStatus('node-stage-aggregating', 'pending');
-        setConnectorStatus('connector-3', 'pending');
-        
-        setNodeStatus('node-stage-completed', 'pending');
-    } else if (state.status === 'aggregating') {
-        setNodeStatus('node-stage-planning', 'completed');
-        setConnectorStatus('connector-1', 'completed');
-        
-        setNodeStatus('node-stage-researching', 'completed');
-        setConnectorStatus('connector-2', 'completed');
-        
-        setNodeStatus('node-stage-aggregating', 'active');
-        setConnectorStatus('connector-3', 'pending');
-        
-        setNodeStatus('node-stage-completed', 'pending');
-    } else if (state.status === 'completed') {
-        setNodeStatus('node-stage-planning', 'completed');
-        setConnectorStatus('connector-1', 'completed');
-        
-        setNodeStatus('node-stage-researching', 'completed');
-        setConnectorStatus('connector-2', 'completed');
-        
-        setNodeStatus('node-stage-aggregating', 'completed');
-        setConnectorStatus('connector-3', 'completed');
-        
-        setNodeStatus('node-stage-completed', 'completed');
-    } else {
-        // e.g. error, reset all to pending or active error
-        setNodeStatus('node-stage-planning', 'completed');
-        setConnectorStatus('connector-1', 'completed');
-        setNodeStatus('node-stage-researching', 'pending');
-        setConnectorStatus('connector-2', 'pending');
-        setNodeStatus('node-stage-aggregating', 'pending');
-        setConnectorStatus('connector-3', 'pending');
-        setNodeStatus('node-stage-completed', 'pending');
-    }
-
-    lucide.createIcons();
+function showToast(msg, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = msg;
+    dom.toastContainer.appendChild(toast);
+    setTimeout(() => toast.remove(), 4000);
 }
