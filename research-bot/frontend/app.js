@@ -846,49 +846,76 @@ async function handleRMApprove(feedback) {
     if (activeRMController) activeRMController.abort();
     activeRMController = new AbortController();
 
-    try {
-        const reqPayload = { thread_id: state.rm.threadId, message: feedback || '' };
-        if (state.rm.lastSeq !== undefined && state.rm.lastSeq !== null) {
-            reqPayload.from_seq = state.rm.lastSeq;
-        }
-        const reqHeaders = { 'Content-Type': 'application/json' };
-        if (state.rm.lastSeq !== undefined && state.rm.lastSeq !== null) {
-            reqHeaders['Last-Event-ID'] = String(state.rm.lastSeq);
-        }
+    let attempt = 0;
+    const maxRetries = 5;
+    let isTerminal = false;
 
-        const response = await fetch(`${API_BASE_URL}/research-mode/approve`, {
-            method: 'POST',
-            headers: reqHeaders,
-            body: JSON.stringify(reqPayload),
-            signal: activeRMController.signal
-        });
+    while (attempt <= maxRetries && !isTerminal) {
+        try {
+            const reqMessage = attempt === 0 ? (feedback || '') : '';
+            const reqPayload = { thread_id: state.rm.threadId, message: reqMessage };
+            if (state.rm.lastSeq !== undefined && state.rm.lastSeq !== null) {
+                reqPayload.from_seq = state.rm.lastSeq;
+            }
+            const reqHeaders = { 'Content-Type': 'application/json' };
+            if (state.rm.lastSeq !== undefined && state.rm.lastSeq !== null) {
+                reqHeaders['Last-Event-ID'] = String(state.rm.lastSeq);
+            }
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder('utf-8');
-        let buffer = '';
+            const response = await fetch(`${API_BASE_URL}/research-mode/approve`, {
+                method: 'POST',
+                headers: reqHeaders,
+                body: JSON.stringify(reqPayload),
+                signal: activeRMController.signal
+            });
 
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
 
-            const events = buffer.split('\n\n');
-            buffer = events.pop();
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let buffer = '';
 
-            for (const rawEvent of events) {
-                if (rawEvent.startsWith('data: ')) {
-                    try {
-                        const data = JSON.parse(rawEvent.slice(6));
-                        processRMSEEvent(data);
-                    } catch (e) {
-                        console.warn('RM SSE parse error:', e);
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+
+                const events = buffer.split('\n\n');
+                buffer = events.pop();
+
+                for (const rawEvent of events) {
+                    if (rawEvent.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(rawEvent.slice(6));
+                            const evt = processRMSEEvent(data);
+                            if (evt === 'checkpoint' || evt === 'completed' || evt === 'error') {
+                                isTerminal = true;
+                            }
+                            attempt = 0;
+                        } catch (e) {
+                            console.warn('RM SSE parse error:', e);
+                        }
                     }
                 }
             }
-        }
-    } catch (e) {
-        if (e.name !== 'AbortError') {
-            showToast('Error streaming Research Mode pipeline: ' + e.message, 'error');
+
+            if (isTerminal) break;
+            break;
+
+        } catch (e) {
+            if (e.name === 'AbortError') {
+                console.log('RM SSE stream aborted by user.');
+                break;
+            }
+            attempt++;
+            if (attempt > maxRetries) {
+                showToast('Connection lost. Auto-reconnect failed: ' + e.message, 'error');
+                break;
+            }
+            showToast(`Connection dropped. Auto-reconnecting (attempt ${attempt}/${maxRetries})...`, 'warning');
+            await new Promise(res => setTimeout(res, 1000 * Math.pow(1.5, attempt - 1)));
         }
     }
 }
@@ -917,6 +944,7 @@ function processRMSEEvent(data) {
     } else if (data.event === 'error') {
         showToast(data.message || 'Pipeline error occurred.', 'error');
     }
+    return data.event;
 }
 
 function renderRMPaperLive() {
