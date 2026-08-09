@@ -1,8 +1,8 @@
 from contextlib import asynccontextmanager
-import sys, os, re
+import sys, os, re, secrets
 from pathlib import Path
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -22,6 +22,35 @@ from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 ENV_PATH = root_dir / ".env"
+
+
+def _config_api_token() -> str:
+    return os.getenv("CONFIG_API_TOKEN", "").strip()
+
+
+def _config_api_is_open() -> bool:
+    return os.getenv("ALLOW_OPEN_CONFIG_API", "").strip().lower() in {"1", "true", "yes"}
+
+
+def _authorize_config_write(token: str | None) -> None:
+    """Guards the endpoints that rewrite .env.
+
+    This API can overwrite LLM_API_KEY and repoint LLM_BASE_URL, so it fails closed:
+    without CONFIG_API_TOKEN set, or ALLOW_OPEN_CONFIG_API opted in for local work,
+    it stays shut. A public deployment that forgets to configure anything is locked,
+    not wide open.
+    """
+    expected = _config_api_token()
+    if expected:
+        if not token or not secrets.compare_digest(token, expected):
+            raise HTTPException(status_code=401, detail="Invalid or missing X-Config-Token header")
+        return
+    if _config_api_is_open():
+        return
+    raise HTTPException(
+        status_code=403,
+        detail="Configuration API is disabled. Set CONFIG_API_TOKEN, or ALLOW_OPEN_CONFIG_API=1 for local use."
+    )
 
 
 @asynccontextmanager
@@ -84,7 +113,11 @@ def _get_config_status():
         "llm_model_planner": os.getenv("LLM_MODEL_PLANNER", "deepseek-chat"),
         "llm_model_researcher": os.getenv("LLM_MODEL_RESEARCHER", "deepseek-chat"),
         "llm_model_aggregator": os.getenv("LLM_MODEL_AGGREGATOR", "deepseek-chat"),
-        "openalex_email": openalex_email or "",
+        # Only echoed back when the config API is locally open; on a public
+        # deployment this is somebody's personal address.
+        "openalex_email": (openalex_email or "") if _config_api_is_open() else "",
+        "config_writable": _config_api_is_open() or bool(_config_api_token()),
+        "config_requires_token": bool(_config_api_token()),
         "semantic_scholar_api_key_configured": bool(os.getenv("SEMANTIC_SCHOLAR_API_KEY")),
         "core_api_key_configured": bool(os.getenv("CORE_API_KEY")),
         "missing_required": missing_required,
@@ -143,7 +176,8 @@ def _apply_config_update(body: ConfigUpdate):
 
 @app.post("/config/setup")
 @app.post("/health/config")
-def update_config(body: ConfigUpdate):
+def update_config(body: ConfigUpdate, x_config_token: str | None = Header(None, alias="X-Config-Token")):
+    _authorize_config_write(x_config_token)
     return _apply_config_update(body)
 
 
