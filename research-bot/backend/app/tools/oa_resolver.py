@@ -69,9 +69,10 @@ async def resolve_europe_pmc(client: httpx.AsyncClient, paper: dict) -> str:
                 first = results[0]
                 is_oa = str(first.get("isOpenAccess", "")).upper() == "Y"
                 pmcid = first.get("pmcid", "").strip()
-                if pmcid:
-                    # Europe PMC or NCBI PMC direct PDF URL
-                    return f"https://www.ebi.ac.uk/europepmc/webservices/rest/{pmcid}/fullTextPDF"
+                if pmcid and is_oa:
+                    # The fullTextPDF endpoint 404s for these records; fullTextXML is
+                    # the one Europe PMC actually serves, and it carries the whole body.
+                    return f"https://www.ebi.ac.uk/europepmc/webservices/rest/{pmcid}/fullTextXML"
     except Exception as e:
         logger.debug(f"Europe PMC resolver error for DOI {doi}: {e}")
     return ""
