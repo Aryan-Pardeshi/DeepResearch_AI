@@ -46,10 +46,16 @@ LATIN1_SUBSTITUTIONS = {
 }
 
 
-# Page geometry, in mm. 25mm ~= the 1 inch margin expected of a manuscript.
-MARGIN = 25
-BODY_SIZE = 11
-BODY_LEADING = 5.6
+# Page geometry follows the single-column arXiv/NeurIPS preprint style: US Letter,
+# 1 inch margins, 10pt body. Measurements are mm (1 in = 25.4 mm).
+MARGIN = 25.4
+BODY_SIZE = 10
+BODY_LEADING = 4.9
+ABSTRACT_INSET = 10      # extra indent each side of the abstract block
+TITLE_SIZE = 17
+SECTION_SIZE = 12
+SUBSECTION_SIZE = 11
+REFERENCE_SIZE = 9
 
 
 def _register_fonts(pdf: FPDF) -> Optional[str]:
@@ -127,27 +133,17 @@ def generate_paper_pdf(state: Dict[str, Any], output_path: str) -> str:
     paper_title = (state.get("title") or "Academic Research Paper").strip()
 
     class AcademicPDF(FPDF):
-        running_head = paper_title[:70] + ("…" if len(paper_title) > 70 else "")
         body_family = "Helvetica"
 
-        # The title page carries no running head or folio, per manuscript convention.
-        def header(self):
-            if self.page_no() <= 1:
-                return
-            self.set_font(self.body_family, "I", 8)
-            self.set_text_color(120, 120, 120)
-            self.cell(0, 6, clean(self.running_head), border=0, align="R")
-            self.ln(8)
-
+        # Preprints in this style carry no running head; a centred folio on every
+        # page, first page included, is the whole of the page furniture.
         def footer(self):
-            if self.page_no() <= 1:
-                return
-            self.set_y(-16)
-            self.set_font(self.body_family, "", 8)
-            self.set_text_color(120, 120, 120)
+            self.set_y(-15)
+            self.set_font(self.body_family, "", 9)
+            self.set_text_color(60, 60, 60)
             self.cell(0, 6, f"{self.page_no()}", border=0, align="C")
 
-    pdf = AcademicPDF(format="A4")
+    pdf = AcademicPDF(format="Letter")
     pdf.set_margins(MARGIN, MARGIN, MARGIN)
     pdf.set_auto_page_break(auto=True, margin=MARGIN)
     pdf.alias_nb_pages()
@@ -213,11 +209,11 @@ def generate_paper_pdf(state: Dict[str, Any], output_path: str) -> str:
     def section(number: Optional[int], heading: str, body: Any, markdown: bool = True):
         if not body:
             return
-        pdf.ln(3)
-        pdf.set_font(body_family, "B", BODY_SIZE + 2)
+        pdf.ln(4)
+        pdf.set_font(body_family, "B", SECTION_SIZE)
         pdf.set_text_color(15, 15, 15)
         label = f"{number}. {heading}" if number is not None else heading
-        mc(0, 7, clean(label))
+        mc(0, 6.5, clean(label))
         pdf.ln(1)
         if isinstance(body, list):
             for item in body:
@@ -231,51 +227,61 @@ def generate_paper_pdf(state: Dict[str, Any], output_path: str) -> str:
     def subsection(label: str, body: Any):
         if not body:
             return
-        pdf.set_font(body_family, "BI", BODY_SIZE)
-        pdf.set_text_color(40, 40, 40)
-        mc(0, 6, clean(label))
+        pdf.ln(1)
+        pdf.set_font(body_family, "B", SUBSECTION_SIZE)
+        pdf.set_text_color(30, 30, 30)
+        mc(0, 5.6, clean(label))
         render_markdown(str(body))
         pdf.ln(1)
 
-    # --- Title page ---------------------------------------------------------
+    # --- Title block --------------------------------------------------------
+    # Preprint style: no separate title page. Title, abstract, and the opening
+    # section all share page one, exactly as an arXiv submission does.
     pdf.add_page()
-    pdf.ln(22)
-    pdf.set_font(body_family, "B", 17)
-    pdf.set_text_color(15, 15, 15)
-    mc(0, 9, clean(paper_title), align="C")
-    pdf.ln(6)
+    pdf.ln(8)
+    pdf.set_font(body_family, "B", TITLE_SIZE)
+    pdf.set_text_color(0, 0, 0)
+    mc(0, 8, clean(paper_title), align="C")
+    pdf.ln(4)
 
-    pdf.set_font(body_family, "I", 10)
+    pdf.set_font(body_family, "", BODY_SIZE + 1)
+    pdf.set_text_color(40, 40, 40)
+    mc(0, 5.5, clean("Autonomous Research Synthesis"), align="C")
+    pdf.set_font(body_family, "", BODY_SIZE)
     pdf.set_text_color(90, 90, 90)
-    mc(0, 5.5, clean("Literature-based research synthesis"), align="C")
     mc(0, 5.5, clean(date.today().strftime("%d %B %Y")), align="C")
-    pdf.ln(9)
+    pdf.ln(6)
 
     abstract = state.get("abstract")
     if abstract:
         pdf.set_font(body_family, "B", BODY_SIZE + 1)
-        pdf.set_text_color(15, 15, 15)
-        mc(0, 6, clean("Abstract"), align="C")
-        pdf.ln(2)
-        # Abstracts are conventionally set narrower than the body column
-        inset = 12
-        pdf.set_left_margin(MARGIN + inset)
-        pdf.set_right_margin(MARGIN + inset)
+        pdf.set_text_color(0, 0, 0)
+        mc(0, 5.5, clean("Abstract"), align="C")
+        pdf.ln(1.5)
+        # The abstract sits in a narrower measure than the body column
+        pdf.set_left_margin(MARGIN + ABSTRACT_INSET)
+        pdf.set_right_margin(MARGIN + ABSTRACT_INSET)
+        pdf.set_x(MARGIN + ABSTRACT_INSET)
         render_markdown(str(abstract))
         pdf.set_left_margin(MARGIN)
         pdf.set_right_margin(MARGIN)
+        pdf.set_x(MARGIN)
 
     keywords = state.get("keywords") or []
     if keywords:
-        pdf.ln(3)
-        pdf.set_font(body_family, "", BODY_SIZE - 0.5)
-        pdf.set_text_color(60, 60, 60)
-        mc(0, 5.5, clean("Keywords: " + "; ".join(keywords)), align="L")
+        pdf.ln(1)
+        pdf.set_left_margin(MARGIN + ABSTRACT_INSET)
+        pdf.set_right_margin(MARGIN + ABSTRACT_INSET)
+        pdf.set_x(MARGIN + ABSTRACT_INSET)
+        pdf.set_font(body_family, "B", BODY_SIZE - 0.5)
+        pdf.set_text_color(40, 40, 40)
+        mc(0, 5, clean("Keywords: " + "; ".join(keywords)), align="L")
+        pdf.set_left_margin(MARGIN)
+        pdf.set_right_margin(MARGIN)
+        pdf.set_x(MARGIN)
 
-    # Running head and page numbers start on the body pages, not the title page.
-
-    # --- Body ---------------------------------------------------------------
-    pdf.add_page()
+    # --- Body flows on from the abstract, no page break ----------------------
+    pdf.ln(4)
     section(1, "Introduction", state.get("introduction"))
     section(2, "Literature Review", state.get("literature_review"))
     section(3, "Research Gap", state.get("research_gap"))
@@ -310,11 +316,11 @@ def generate_paper_pdf(state: Dict[str, Any], output_path: str) -> str:
     references = state.get("references") or []
     if references:
         pdf.add_page()
-        pdf.set_font(body_family, "B", BODY_SIZE + 2)
+        pdf.set_font(body_family, "B", SECTION_SIZE)
         pdf.set_text_color(15, 15, 15)
-        mc(0, 7, clean("References"))
+        mc(0, 6.5, clean("References"))
         pdf.ln(2)
-        pdf.set_font(body_family, "", BODY_SIZE - 0.5)
+        pdf.set_font(body_family, "", REFERENCE_SIZE)
         pdf.set_text_color(25, 25, 25)
         # APA orders the list alphabetically with a hanging indent: the first line
         # sits flush left while turnover lines are indented. Setting the left margin
@@ -323,17 +329,17 @@ def generate_paper_pdf(state: Dict[str, Any], output_path: str) -> str:
         pdf.set_left_margin(MARGIN + hang)
         for ref in sorted(references, key=lambda r: str(r).lower()):
             pdf.set_x(MARGIN)
-            mc(pdf.w - MARGIN - (MARGIN + hang) + hang, 5.2,
+            mc(pdf.w - MARGIN - (MARGIN + hang) + hang, 4.4,
                            clean(escape_markdown(str(ref))), align="L")
-            pdf.ln(1.2)
+            pdf.ln(1.0)
         pdf.set_left_margin(MARGIN)
 
     # --- Appendices ---------------------------------------------------------
     if state.get("appendices"):
         pdf.add_page()
-        pdf.set_font(body_family, "B", BODY_SIZE + 2)
+        pdf.set_font(body_family, "B", SECTION_SIZE)
         pdf.set_text_color(15, 15, 15)
-        mc(0, 7, clean("Appendices"))
+        mc(0, 6.5, clean("Appendices"))
         pdf.ln(2)
         render_markdown(str(state.get("appendices")))
 

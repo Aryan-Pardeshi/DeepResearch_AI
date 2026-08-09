@@ -240,3 +240,5 @@ r e s e a r c h - b o t / . e n v
 # Data directory and databases
 data/
 data/*.db
+# Stray PDFs from local test runs
+research-bot/test_*.pdf
