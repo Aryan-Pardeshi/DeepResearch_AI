@@ -47,8 +47,10 @@ async def start_research_mode(request: ResearchModeStartRequest):
         "thread_id": thread_id,
         "mode": "research",
         "problem_statement": request.problem_statement,
-        "research_objectives": request.research_objectives or [f"Investigate key dimensions of: {request.problem_statement[:100]}"],
-        "research_questions": request.research_questions or [f"What are the foundational mechanisms and findings concerning {request.problem_statement[:80]}?"],
+        # Left empty on purpose: scope_definition_agent derives these from the
+        # problem statement unless the author supplied them in the Advanced panel.
+        "research_objectives": request.research_objectives or [],
+        "research_questions": request.research_questions or [],
         "keywords": [],
         "raw_papers": [],
         "screened_papers": [],
@@ -155,6 +157,7 @@ async def approve_research_mode(request: ResearchModeApproveRequest):
                 "state": {
                     "problem_statement": values.get("problem_statement"),
                     "research_objectives": values.get("research_objectives"),
+                    "research_questions": values.get("research_questions"),
                     "keywords": values.get("keywords"),
                     "raw_papers_count": len(values.get("raw_papers", [])),
                     "screened_papers_count": len(values.get("screened_papers", [])),
@@ -172,6 +175,7 @@ async def approve_research_mode(request: ResearchModeApproveRequest):
                     "conclusion": values.get("conclusion"),
                     "future_scope": values.get("future_scope"),
                     "references": values.get("references"),
+                    "appendices": values.get("appendices"),
                     "introduction": values.get("introduction"),
                     "abstract": values.get("abstract"),
                     "title": values.get("title")

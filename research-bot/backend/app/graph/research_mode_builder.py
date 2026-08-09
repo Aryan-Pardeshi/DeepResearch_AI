@@ -12,6 +12,8 @@ from langgraph.types import interrupt
 
 from backend.app.graph.research_mode_state import ResearchModeState
 from backend.app.agents.research_mode.agents import (
+    scope_definition_agent,
+    scope_reviser_agent,
     keyword_extractor_agent,
     paper_fetcher_agent,
     paper_screener_agent,
@@ -19,14 +21,16 @@ from backend.app.agents.research_mode.agents import (
     gap_analysis_agent,
     framework_agent,
     hypotheses_agent,
-    methodology_agent,
+    research_design_agent,
+    data_collection_agent,
+    data_analysis_agent,
     results_agent,
     discussion_agent,
-    implications_agent,
     limitations_agent,
     conclusion_agent,
     future_scope_agent,
     references_agent,
+    appendices_agent,
     introduction_agent,
     abstract_agent,
     title_agent,
@@ -36,14 +40,26 @@ from backend.app.llm import get_llm
 logger = logging.getLogger(__name__)
 
 
+# Approval keywords that let a checkpoint pass through without revision
+APPROVAL_WORDS = ["", "approve", "approved", "ok", "yes", "looks good", "continue"]
+
+
+def _is_approval(message: str) -> bool:
+    return (message or "").strip().lower() in APPROVAL_WORDS
+
+
 # Checkpoint wrapper nodes with HITL interrupt
 
 async def checkpoint_1_node(state: ResearchModeState) -> dict:
-    """Checkpoint 1: Review Problem Statement, Objectives, RQs, Keywords."""
+    """Checkpoint 1: Review Problem Statement, Objectives, RQs, Keywords.
+
+    Revision requests route to scope_reviser and loop back here, so the author can
+    keep prompting until the scope is right.
+    """
     logger.info("Executing Checkpoint 1 HITL interrupt...")
     user_input = interrupt({
         "checkpoint": "checkpoint_1",
-        "message": "Review Problem Statement, Objectives, and Keywords before paper fetching.",
+        "message": "Review Problem Statement, Objectives, Questions, and Keywords before paper fetching.",
         "keywords": state.get("keywords", []),
         "problem_statement": state.get("problem_statement", ""),
         "research_objectives": state.get("research_objectives", []),
@@ -51,41 +67,27 @@ async def checkpoint_1_node(state: ResearchModeState) -> dict:
     })
 
     message = user_input.get("message", "") if isinstance(user_input, dict) else str(user_input)
-    
-    if message and message.strip().lower() not in ["approve", "approved", "ok", "yes", "looks good", "continue"]:
+
+    if not _is_approval(message):
         logger.info(f"Checkpoint 1 revision requested: {message}")
-        llm = get_llm(role="planner")
-        prompt = f"""Original Problem Statement: {state.get('problem_statement')}
-Original Objectives: {state.get('research_objectives')}
-Original Keywords: {state.get('keywords')}
-
-User Revision Request: {message}
-
-Update the keywords and objectives based on user feedback.
-Return JSON with keys: "keywords" (list of strings), "research_objectives" (list of strings)."""
-        try:
-            res = await llm.ainvoke(prompt)
-            import json
-            raw = res.content.strip()
-            if "```" in raw:
-                raw = raw.split("```")[1]
-                if raw.startswith("json"):
-                    raw = raw[4:]
-            revised = json.loads(raw)
-            return {
-                "keywords": revised.get("keywords", state.get("keywords")),
-                "research_objectives": revised.get("research_objectives", state.get("research_objectives")),
-                "user_feedback": message,
-                "hitl_checkpoint": "checkpoint_1_approved",
-                "status": "fetching_papers"
-            }
-        except Exception as e:
-            logger.warning(f"Error processing Checkpoint 1 feedback: {e}")
+        return {
+            "user_feedback": message,
+            "hitl_checkpoint": "checkpoint_1_revising",
+            "status": "revising_scope"
+        }
 
     return {
+        "user_feedback": None,
         "hitl_checkpoint": "checkpoint_1_approved",
         "status": "fetching_papers"
     }
+
+
+def route_after_checkpoint_1(state: ResearchModeState) -> str:
+    """Loops back through scope revision until the author approves."""
+    if state.get("hitl_checkpoint") == "checkpoint_1_revising":
+        return "scope_reviser"
+    return "paper_fetcher"
 
 
 async def checkpoint_2_node(state: ResearchModeState) -> dict:
@@ -227,8 +229,10 @@ Return JSON with keys: "research_design", "data_collection_plan", "data_analysis
 builder = StateGraph(ResearchModeState)
 
 # Add Nodes
+builder.add_node("scope_definition", scope_definition_agent)
 builder.add_node("keyword_extractor", keyword_extractor_agent)
 builder.add_node("checkpoint_1", checkpoint_1_node)
+builder.add_node("scope_reviser", scope_reviser_agent)
 builder.add_node("paper_fetcher", paper_fetcher_agent)
 builder.add_node("paper_screener", paper_screener_agent)
 builder.add_node("literature_review", literature_review_agent)
@@ -237,23 +241,31 @@ builder.add_node("framework", framework_agent)
 builder.add_node("checkpoint_2", checkpoint_2_node)
 builder.add_node("hypotheses", hypotheses_agent)
 builder.add_node("checkpoint_3", checkpoint_3_node)
-builder.add_node("methodology", methodology_agent)
+builder.add_node("research_design", research_design_agent)
+builder.add_node("data_collection", data_collection_agent)
+builder.add_node("data_analysis", data_analysis_agent)
 builder.add_node("checkpoint_4", checkpoint_4_node)
 builder.add_node("results", results_agent)
 builder.add_node("discussion", discussion_agent)
-builder.add_node("implications", implications_agent)
 builder.add_node("limitations", limitations_agent)
 builder.add_node("conclusion", conclusion_agent)
 builder.add_node("future_scope", future_scope_agent)
 builder.add_node("references", references_agent)
+builder.add_node("appendices", appendices_agent)
 builder.add_node("introduction", introduction_agent)
 builder.add_node("abstract", abstract_agent)
 builder.add_node("title", title_agent)
 
 # Edges
-builder.add_edge(START, "keyword_extractor")
+builder.add_edge(START, "scope_definition")
+builder.add_edge("scope_definition", "keyword_extractor")
 builder.add_edge("keyword_extractor", "checkpoint_1")
-builder.add_edge("checkpoint_1", "paper_fetcher")
+builder.add_conditional_edges(
+    "checkpoint_1",
+    route_after_checkpoint_1,
+    {"scope_reviser": "scope_reviser", "paper_fetcher": "paper_fetcher"},
+)
+builder.add_edge("scope_reviser", "checkpoint_1")
 builder.add_edge("paper_fetcher", "paper_screener")
 builder.add_edge("paper_screener", "literature_review")
 builder.add_edge("literature_review", "gap_analysis")
@@ -261,16 +273,18 @@ builder.add_edge("gap_analysis", "framework")
 builder.add_edge("framework", "checkpoint_2")
 builder.add_edge("checkpoint_2", "hypotheses")
 builder.add_edge("hypotheses", "checkpoint_3")
-builder.add_edge("checkpoint_3", "methodology")
-builder.add_edge("methodology", "checkpoint_4")
+builder.add_edge("checkpoint_3", "research_design")
+builder.add_edge("research_design", "data_collection")
+builder.add_edge("data_collection", "data_analysis")
+builder.add_edge("data_analysis", "checkpoint_4")
 builder.add_edge("checkpoint_4", "results")
 builder.add_edge("results", "discussion")
-builder.add_edge("discussion", "implications")
-builder.add_edge("implications", "limitations")
+builder.add_edge("discussion", "limitations")
 builder.add_edge("limitations", "conclusion")
 builder.add_edge("conclusion", "future_scope")
 builder.add_edge("future_scope", "references")
-builder.add_edge("references", "introduction")
+builder.add_edge("references", "appendices")
+builder.add_edge("appendices", "introduction")
 builder.add_edge("introduction", "abstract")
 builder.add_edge("abstract", "title")
 builder.add_edge("title", END)

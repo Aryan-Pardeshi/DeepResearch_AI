@@ -316,22 +316,34 @@
             <div class="rm-hero-header">
                 <div class="rm-badge"><i data-lucide="graduation-cap" style="width: 14px; height: 14px;"></i> Autonomous Academic Engine</div>
                 <h1 class="hero-title">Academic Research Paper Synthesis</h1>
-                <p class="hero-subtitle">18 autonomous agents, 3 academic API indexes, and 4 Human-in-the-Loop approval checkpoints.</p>
+                <p class="hero-subtitle">20 autonomous agents, 3 academic API indexes, and 4 Human-in-the-Loop approval checkpoints.</p>
             </div>
 
             <div class="rm-input-card card">
                 <div class="form-group">
                     <label class="form-label" for="rm-ps-input">Core Problem Statement *</label>
                     <textarea class="form-input rm-textarea" id="rm-ps-input" placeholder="State the core research gap, problem, or empirical challenge to investigate..."></textarea>
+                    <p class="rm-hint">Research Objectives and Research Questions are drafted automatically from this statement. You review and re-prompt them at Checkpoint 1.</p>
                 </div>
-                <div class="form-group">
-                    <label class="form-label" for="rm-objs-input">Research Objectives (One per line)</label>
-                    <textarea class="form-input rm-textarea-sm" id="rm-objs-input" placeholder="e.g. Examine theoretical mechanisms&#10;Evaluate empirical replication studies"></textarea>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="rm-rqs-input">Research Questions (One per line)</label>
-                    <textarea class="form-input rm-textarea-sm" id="rm-rqs-input" placeholder="e.g. What factors predict outcome Y?&#10;How does condition X impact system performance?"></textarea>
-                </div>
+
+                <details class="rm-advanced" id="rm-advanced-panel">
+                    <summary class="rm-advanced-summary">
+                        <i data-lucide="sliders-horizontal" style="width: 15px; height: 15px;"></i>
+                        <span>Advanced — define scope manually (optional)</span>
+                    </summary>
+                    <div class="rm-advanced-body">
+                        <p class="rm-hint">Anything you fill in here is kept verbatim; anything left blank is auto-defined by the agents.</p>
+                        <div class="form-group">
+                            <label class="form-label" for="rm-objs-input">Research Objectives (One per line)</label>
+                            <textarea class="form-input rm-textarea-sm" id="rm-objs-input" placeholder="e.g. Examine theoretical mechanisms&#10;Evaluate empirical replication studies"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="rm-rqs-input">Research Questions (One per line)</label>
+                            <textarea class="form-input rm-textarea-sm" id="rm-rqs-input" placeholder="e.g. What factors predict outcome Y?&#10;How does condition X impact system performance?"></textarea>
+                        </div>
+                    </div>
+                </details>
+
                 <button class="btn-primary btn-lg" id="rm-start-btn" style="width: 100%; justify-content: center;">
                     <i data-lucide="atom" style="width: 18px; height: 18px;"></i>
                     <span>Launch Autonomous Academic Pipeline</span>
@@ -428,6 +440,6 @@
     <div class="toast-container" id="toast-container"></div>
 
     <!-- Application Script -->
-    <script src="app.js?v=2.0.0"></script>
+    <script src="app.js?v=2.1.0"></script>
 </body>
 </html>
