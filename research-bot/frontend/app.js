@@ -254,6 +254,9 @@ function cacheDomElements() {
         rmPsInput: document.getElementById('rm-ps-input'),
         rmObjsInput: document.getElementById('rm-objs-input'),
         rmRqsInput: document.getElementById('rm-rqs-input'),
+        rmModelPlanner: document.getElementById('rm-model-planner'),
+        rmModelResearcher: document.getElementById('rm-model-researcher'),
+        rmModelAggregator: document.getElementById('rm-model-aggregator'),
         rmStartBtn: document.getElementById('rm-start-btn'),
         rmPipelineStepsGrid: document.getElementById('rm-pipeline-steps-grid'),
         rmPipelineStatusTag: document.getElementById('rm-pipeline-status-tag'),
@@ -282,6 +285,10 @@ async function checkConfigGate() {
         if (!res.ok) return;
         const data = await res.json();
         
+        if (dom.rmModelPlanner && data.llm_model_planner) dom.rmModelPlanner.placeholder = data.llm_model_planner;
+        if (dom.rmModelResearcher && data.llm_model_researcher) dom.rmModelResearcher.placeholder = data.llm_model_researcher;
+        if (dom.rmModelAggregator && data.llm_model_aggregator) dom.rmModelAggregator.placeholder = data.llm_model_aggregator;
+
         if (!data.ok || (data.missing_required && data.missing_required.length > 0)) {
             // Populate form defaults if present
             if (dom.gateLlmBaseUrl) dom.gateLlmBaseUrl.value = data.llm_base_url || 'https://api.deepseek.com';
@@ -745,6 +752,14 @@ async function handleRMStart() {
     const objs = dom.rmObjsInput.value.split('\n').map(s => s.trim()).filter(Boolean);
     const rqs = dom.rmRqsInput.value.split('\n').map(s => s.trim()).filter(Boolean);
 
+    const plannerModel = dom.rmModelPlanner?.value.trim();
+    const researcherModel = dom.rmModelResearcher?.value.trim();
+    const aggregatorModel = dom.rmModelAggregator?.value.trim();
+    const models = {};
+    if (plannerModel) models.planner = plannerModel;
+    if (researcherModel) models.researcher = researcherModel;
+    if (aggregatorModel) models.aggregator = aggregatorModel;
+
     dom.rmStartBtn.disabled = true;
     dom.rmStartBtn.innerHTML = '<div class="spinner-ring sm"></div><span>Defining research scope...</span>';
 
@@ -752,7 +767,7 @@ async function handleRMStart() {
         const res = await fetch(`${API_BASE_URL}/research-mode/start`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ problem_statement: ps, research_objectives: objs, research_questions: rqs })
+            body: JSON.stringify({ problem_statement: ps, research_objectives: objs, research_questions: rqs, models })
         });
 
         const data = await res.json();

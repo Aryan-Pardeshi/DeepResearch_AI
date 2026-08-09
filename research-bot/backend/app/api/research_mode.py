@@ -46,6 +46,7 @@ class ResearchModeStartRequest(BaseModel):
     problem_statement: str
     research_objectives: List[str] = []
     research_questions: List[str] = []
+    models: Dict[str, str] = {}
 
 
 class ResearchModeApproveRequest(BaseModel):
@@ -215,6 +216,7 @@ async def start_research_mode(request: ResearchModeStartRequest):
         "keywords": [],
         "raw_papers": [],
         "screened_papers": [],
+        "model_overrides": request.models or {},
         "status": "initializing"
     }
 

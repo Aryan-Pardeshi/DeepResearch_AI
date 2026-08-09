@@ -280,6 +280,43 @@ def generate_paper_pdf(state: Dict[str, Any], output_path: str) -> str:
         pdf.set_right_margin(MARGIN)
         pdf.set_x(MARGIN)
 
+    figures = state.get("figures") or {}
+
+    def embed_figure(image_path: Optional[str], caption: str):
+        if not image_path or not Path(image_path).is_file():
+            return
+        try:
+            col_width = pdf.w - 2 * MARGIN
+            try:
+                from PIL import Image
+                with Image.open(image_path) as img:
+                    w_px, h_px = img.size
+                aspect = h_px / w_px
+            except Exception:
+                aspect = 0.7
+
+            img_w = col_width
+            img_h = col_width * aspect
+            max_h = pdf.h - 2 * MARGIN - 20
+            if img_h > max_h:
+                img_h = max_h
+                img_w = img_h / aspect
+
+            space_left = pdf.h - pdf.get_y() - MARGIN
+            if space_left < img_h + 15:
+                pdf.add_page()
+
+            x = MARGIN + (col_width - img_w) / 2
+            pdf.image(image_path, x=x, y=pdf.get_y(), w=img_w, h=img_h)
+            pdf.set_y(pdf.get_y() + img_h + 2)
+
+            pdf.set_font(body_family, "I", BODY_SIZE - 1)
+            pdf.set_text_color(60, 60, 60)
+            mc(0, 4.5, clean(caption), align="C")
+            pdf.ln(4)
+        except Exception as e:
+            logger.warning(f"Could not embed figure '{caption}' from {image_path}: {e}")
+
     # --- Body flows on from the abstract, no page break ----------------------
     pdf.ln(4)
     section(1, "Introduction", state.get("introduction"))
@@ -301,7 +338,10 @@ def generate_paper_pdf(state: Dict[str, Any], output_path: str) -> str:
         subsection("8.3 Data Analysis", state.get("data_analysis_plan"))
         pdf.ln(2)
 
+    embed_figure(figures.get("prisma"), "Figure 1: Study selection flow")
+
     section(9, "Results", state.get("results"))
+    embed_figure(figures.get("evidence"), "Figure 2: Evidence mapping by hypothesis")
 
     if state.get("discussion"):
         section(10, "Discussion", state.get("discussion"))
@@ -311,6 +351,7 @@ def generate_paper_pdf(state: Dict[str, Any], output_path: str) -> str:
     section(11, "Limitations", state.get("limitations"))
     section(12, "Conclusion", state.get("conclusion"))
     section(13, "Future Scope", state.get("future_scope"))
+
 
     # --- References ---------------------------------------------------------
     references = state.get("references") or []

@@ -34,3 +34,8 @@ class ResearchModeState(TypedDict, total=False):
     user_feedback: Optional[str]
     status: str  # "initializing", "awaiting_approval", "fetching_papers", "synthesizing", "completed", "error"
     error: Optional[str]
+
+    corpus_stats: Dict[str, int]
+    figures: Dict[str, str]     # figure name -> absolute image path
+    model_overrides: Dict[str, str]     # role -> model name
+
