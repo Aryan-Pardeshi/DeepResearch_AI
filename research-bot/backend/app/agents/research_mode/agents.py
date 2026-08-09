@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import logging
 import asyncio
@@ -9,6 +10,66 @@ from backend.app.tools.academic_search import search_academic_papers, screen_pap
 
 logger = logging.getLogger(__name__)
 
+# What this pipeline actually did, stated plainly. Sections that describe the study
+# get this appended so the prose does not claim primary data collection that never
+# happened - the corpus is retrieved abstracts, not experiments the authors ran.
+EVIDENCE_BASIS_NOTE = """
+IMPORTANT - describe the work accurately:
+This paper is a literature-based synthesis. The evidence base is a set of paper
+titles and abstracts retrieved from OpenAlex, Semantic Scholar, and ArXiv, screened
+for relevance. No experiment was conducted, no primary data was collected, and full
+texts were not analyzed. Do not claim to have run trials, collected data, or
+performed a formal meta-analysis. Where the Methodology section describes a study,
+present it explicitly as a proposed design for future work, not as something
+already carried out.
+"""
+
+# Openers models prepend when they narrate the task instead of doing it
+_PREAMBLE_RE = re.compile(
+    r"^\s*(here (is|are)|below (is|are)|sure[,!.]|certainly[,!.]|of course[,!.]|"
+    r"i(?:'ve| have)? (?:written|created|prepared|drafted)|as requested|"
+    r"this (?:is|section) )[^\n]*\n+",
+    re.IGNORECASE,
+)
+_TRAILING_RE = re.compile(
+    r"\n+\s*(let me know|i hope this|feel free to|would you like)[^\n]*$",
+    re.IGNORECASE,
+)
+_SECTION_WORDS = (
+    "abstract|introduction|literature review|research gap|conceptual framework|"
+    "theoretical framework|hypotheses|methodology|results|discussion|implications|"
+    "limitations|conclusion|future scope|future research directions|appendices"
+)
+
+
+def _strip_preamble(text: str) -> str:
+    """Removes conversational scaffolding models wrap around requested content.
+
+    Catches "Here is a structured abstract...", a leading horizontal rule, and a
+    redundant opening heading that merely repeats the section name - all of which
+    otherwise land verbatim in the finished paper.
+    """
+    if not text:
+        return text
+
+    cleaned = text.strip()
+    for _ in range(3):  # preamble, rule, and heading can stack
+        before = cleaned
+        cleaned = _PREAMBLE_RE.sub("", cleaned, count=1)
+        cleaned = re.sub(r"^\s*(-{3,}|\*{3,}|_{3,})\s*\n+", "", cleaned, count=1)
+        cleaned = re.sub(
+            rf"^\s*(?:#{{1,6}}\s*|\*\*)\s*(?:{_SECTION_WORDS})\s*:?\s*(?:\*\*)?\s*\n+",
+            "",
+            cleaned,
+            count=1,
+            flags=re.IGNORECASE,
+        )
+        if cleaned == before:
+            break
+
+    cleaned = _TRAILING_RE.sub("", cleaned)
+    return cleaned.strip()
+
 
 async def _safe_invoke_llm(llm, prompt: str, default_fallback: str = "", max_retries: int = 2) -> str:
     """Helper to safely invoke LLM with retry logic and fallback on API/JSON decode errors."""
@@ -16,7 +77,7 @@ async def _safe_invoke_llm(llm, prompt: str, default_fallback: str = "", max_ret
         try:
             res = await llm.ainvoke(prompt)
             if hasattr(res, "content") and res.content:
-                text = str(res.content).strip()
+                text = _strip_preamble(str(res.content).strip())
                 if text:
                     return text
         except Exception as e:
@@ -299,7 +360,10 @@ async def research_design_agent(state: ResearchModeState) -> Dict[str, Any]:
 Conceptual Framework:
 {framework[:1500]}
 
-Specify the Research Design for testing these hypotheses: design type (experimental, quasi-experimental, observational, or empirical literature synthesis), unit of analysis, variables and their operationalization, and rationale.
+Specify a Research Design that WOULD test these hypotheses: design type (experimental,
+quasi-experimental, or observational), unit of analysis, variables and their operationalization,
+and rationale. Write it as a proposed design for future work - use "would" and "should", never
+claim the study was carried out.
 Length: 250 - 450 words. Output prose only."""
 
     design = await _safe_invoke_llm(llm, prompt, "Empirical systematic review and quantitative meta-analysis design.")
@@ -369,8 +433,12 @@ async def results_agent(state: ResearchModeState) -> Dict[str, Any]:
 Empirical Evidence Corpus:
 {papers_str}
 
-Synthesize the empirical Results for each hypothesis based on evidence from the literature corpus. Indicate whether each hypothesis is supported, partially supported, or unsupported by empirical evidence.
-Length: 500 - 900 words."""
+For each hypothesis, report what the retrieved literature reports and whether that reported
+evidence supports, partially supports, or fails to support it. Attribute every claim to the
+literature ("studies in the corpus report...") rather than to results of your own.
+State plainly where the corpus provides no evidence bearing on a hypothesis.
+Length: 500 - 900 words.
+{EVIDENCE_BASIS_NOTE}"""
 
     text = await _safe_invoke_llm(llm, prompt, "Empirical results indicate strong support across hypotheses H1 and H2.")
     return {"results": text}
@@ -394,7 +462,8 @@ Literature Context:
 {lit_review[:1000]}
 
 Write the Discussion section. Contextualize findings within prior research, explain unexpected outcomes or contradictions, and examine theoretical underlying mechanisms.
-Length: 400 - 800 words."""
+Length: 400 - 800 words.
+{EVIDENCE_BASIS_NOTE}"""
 
     text = await _safe_invoke_llm(llm, prompt, "The discussion contextualizes these results within existing literature.")
     
@@ -426,7 +495,11 @@ Results Summary:
 {results[:1000]}
 
 State the explicit Limitations of this study (sample size/corpus constraints, analytical boundaries, potential confounding factors, publication bias).
-Length: 200 - 400 words."""
+Name the constraints of this synthesis honestly and specifically: screening and synthesis rested on
+titles and abstracts rather than full texts, the corpus is bounded by the keywords queried and the
+indexes searched, and no primary data was collected.
+Length: 200 - 400 words.
+{EVIDENCE_BASIS_NOTE}"""
 
     text = await _safe_invoke_llm(llm, prompt, "Limitations include reliance on published literature databases and potential publication bias.")
     return {"limitations": text}
@@ -534,7 +607,8 @@ Synthesized Key Results:
 
 Write a comprehensive Introduction section for this academic paper.
 Include: Background & Context, Problem Definition, Significance & Scope, and Paper Roadmap.
-Length: 500 - 900 words."""
+Length: 500 - 900 words.
+{EVIDENCE_BASIS_NOTE}"""
 
     text = await _safe_invoke_llm(llm, prompt, f"Introduction framing research into {ps}.")
     return {"introduction": text}
@@ -561,7 +635,13 @@ Key Results:
 Conclusion:
 {conclusion[:400]}
 
-Write a structured academic Abstract (~200 - 250 words) with explicit subheadings: Background, Objective, Methods, Results, Conclusion."""
+Write a structured academic Abstract (~200 - 250 words) with explicit subheadings: Background, Objective, Methods, Results, Conclusion.
+Under Methods, describe what was actually done: a keyword-driven search of academic indexes and
+relevance screening of titles and abstracts. Do not describe trials, data collection, or a formal
+meta-analysis as though they were performed.
+Output the abstract body only. Do not restate the title, do not add a heading, and do not preface
+it with any commentary about what you are producing.
+{EVIDENCE_BASIS_NOTE}"""
 
     text = await _safe_invoke_llm(llm, prompt, "Background: Research investigation.\nObjective: Evaluate mechanisms.\nMethods: Systematic review.\nResults: Hypotheses supported.\nConclusion: Key contributions synthesized.")
     return {"abstract": text}
