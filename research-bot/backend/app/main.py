@@ -55,12 +55,10 @@ static_path = Path(__file__).resolve().parent / "static"
 static_path.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 
-# Mount static frontend directory if present
 frontend_path = root_dir / "frontend"
-if frontend_path.exists():
-    app.mount("/app", StaticFiles(directory=str(frontend_path), html=True), name="frontend_ui")
 
-@app.get("/")
+
+@app.get("/healthz")
 def read_root():
     return {"status": "running", "message": "Research Bot API is up and running"}
 
@@ -148,5 +146,11 @@ def _apply_config_update(body: ConfigUpdate):
 def update_config(body: ConfigUpdate):
     return _apply_config_update(body)
 
+
+# Serve the UI from the application root. Registered last so every API route above
+# keeps precedence: a mount at "/" would otherwise swallow them.
+if frontend_path.exists():
+    app.mount("/", StaticFiles(directory=str(frontend_path), html=True), name="frontend_ui")
+
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=int(os.getenv("PORT", "8000")), reload=True)

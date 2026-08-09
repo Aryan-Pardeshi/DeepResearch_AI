@@ -1,30 +1,27 @@
 services:
-  backend:
+  app:
     build:
       context: .
-      dockerfile: backend/Dockerfile
-    image: research-bot-backend
-    container_name: research-backend
+      dockerfile: Dockerfile
+    image: research-bot:latest
+    container_name: research-bot
+    restart: unless-stopped
     ports:
       - "8000:8000"
     env_file:
       - path: .env
         required: false
     volumes:
+      # Live code reload during development
       - ./backend:/app/backend
-    networks:
-      - research-net
+      - ./frontend:/app/frontend
+      # Durable graph checkpoints and LLM cache; survives rebuilds
+      - research-data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
 
-  frontend:
-    image: nginx:alpine
-    container_name: research-frontend
-    ports:
-      - "80:80"
-    volumes:
-      - ./frontend:/usr/share/nginx/html
-    networks:
-      - research-net
-
-networks:
-  research-net:
-    driver: bridge
+volumes:
+  research-data:

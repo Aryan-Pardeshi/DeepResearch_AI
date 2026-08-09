@@ -16,10 +16,10 @@ cursorStyle.innerHTML = `
 document.head.appendChild(cursorStyle);
 
 // Configuration
+// The backend serves this page, so the API lives on the same origin. Opening
+// index.html straight off disk is the one case that needs an explicit host.
 const API_BASE_URL = window.API_BASE_URL || (
-    (window.location.protocol === 'file:' || window.location.port === '80' || window.location.port === '')
-        ? `${window.location.protocol === 'file:' ? 'http:' : window.location.protocol}//${window.location.hostname || 'localhost'}:8000`
-        : window.location.origin
+    window.location.protocol === 'file:' ? 'http://localhost:8000' : window.location.origin
 );
 let activeResearchController = null;
 let activeRMController = null;
@@ -460,7 +460,7 @@ function switchPanel(targetPanel) {
 // Health Check
 async function checkBackendHealth() {
     try {
-        const res = await fetch(`${API_BASE_URL}/`);
+        const res = await fetch(`${API_BASE_URL}/healthz`);
         if (res.ok) {
             dom.backendOfflineBanner.style.display = 'none';
         } else {
