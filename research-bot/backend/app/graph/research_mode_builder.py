@@ -32,6 +32,7 @@ from backend.app.agents.research_mode.agents import (
     conclusion_agent,
     future_scope_agent,
     references_agent,
+    figures_agent,
     appendices_agent,
     introduction_agent,
     abstract_agent,
@@ -43,6 +44,7 @@ logger = logging.getLogger(__name__)
 
 
 # Approval keywords that let a checkpoint pass through without revision
+
 APPROVAL_WORDS = ["", "approve", "approved", "ok", "yes", "looks good", "continue"]
 
 
@@ -256,6 +258,7 @@ builder.add_node("limitations", limitations_agent)
 builder.add_node("conclusion", conclusion_agent)
 builder.add_node("future_scope", future_scope_agent)
 builder.add_node("references", references_agent)
+builder.add_node("figures", figures_agent)
 builder.add_node("appendices", appendices_agent)
 builder.add_node("introduction", introduction_agent)
 builder.add_node("abstract", abstract_agent)
@@ -290,7 +293,8 @@ builder.add_edge("discussion", "limitations")
 builder.add_edge("limitations", "conclusion")
 builder.add_edge("conclusion", "future_scope")
 builder.add_edge("future_scope", "references")
-builder.add_edge("references", "appendices")
+builder.add_edge("references", "figures")
+builder.add_edge("figures", "appendices")
 builder.add_edge("appendices", "introduction")
 builder.add_edge("introduction", "abstract")
 builder.add_edge("abstract", "title")

@@ -4,11 +4,13 @@ import json
 import logging
 import asyncio
 import time
+from pathlib import Path
 from typing import Dict, Any, List, Tuple
 from backend.app.graph.research_mode_state import ResearchModeState
 from backend.app.llm import get_llm
 from backend.app.tools.academic_search import search_academic_papers, screen_papers, format_apa
 from backend.app.tools.fulltext_fetcher import fetch_fulltext_excerpts, FULLTEXT_TOP_N
+from backend.app.tools.figures import render_prisma_diagram, render_evidence_table
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +44,14 @@ _SECTION_WORDS = (
     "theoretical framework|hypotheses|methodology|results|discussion|implications|"
     "limitations|conclusion|future scope|future research directions|appendices"
 )
+
+
+def get_llm_for(state: ResearchModeState, role: str, temperature: float = 0.0):
+    """Retrieves LLM for a given role, applying per-run model_overrides if specified in state."""
+    model_override = (state.get("model_overrides") or {}).get(role)
+    llm_instance = get_llm(model=model_override, role=role, temperature=temperature)
+    logger.info(f"get_llm_for(role='{role}'): using model '{llm_instance.model_name}' (override='{model_override}')")
+    return llm_instance
 
 
 def _strip_preamble(text: str) -> str:
@@ -97,7 +107,7 @@ async def scope_definition_agent(state: ResearchModeState) -> Dict[str, Any]:
     rqs = state.get("research_questions", [])
 
     if not objs or not rqs:
-        llm = get_llm(role="planner")
+        llm = get_llm_for(state, role="planner")
         prompt = f"""Problem Statement: {ps}
 Generate 2-4 concrete research objectives and 2-4 research questions suitable for academic paper synthesis.
 Return JSON with keys: "research_objectives" (list of strings), "research_questions" (list of strings)."""
@@ -137,7 +147,7 @@ async def scope_reviser_agent(state: ResearchModeState) -> Dict[str, Any]:
     keywords = state.get("keywords", [])
     feedback = state.get("user_feedback", "")
 
-    llm = get_llm(role="planner")
+    llm = get_llm_for(state, role="planner")
     prompt = f"""Problem Statement: {ps}
 Objectives: {json.dumps(objs)}
 Questions: {json.dumps(rqs)}
@@ -178,7 +188,7 @@ async def keyword_extractor_agent(state: ResearchModeState) -> Dict[str, Any]:
     objs = state.get("research_objectives", [])
     rqs = state.get("research_questions", [])
 
-    llm = get_llm(role="planner")
+    llm = get_llm_for(state, role="planner")
     prompt = f"""Problem Statement:
 {ps}
 
@@ -215,9 +225,13 @@ async def paper_fetcher_agent(state: ResearchModeState) -> Dict[str, Any]:
     """2. Fetches raw papers from OpenAlex, Semantic Scholar, ArXiv using keywords."""
     logger.info("Running paper_fetcher_agent...")
     keywords = state.get("keywords", [])
-    raw_papers = await search_academic_papers(keywords)
+    raw_papers, search_stats = await search_academic_papers(keywords)
     return {
         "raw_papers": raw_papers,
+        "corpus_stats": {
+            "retrieved": search_stats["retrieved"],
+            "after_dedup": search_stats["after_dedup"],
+        },
         "status": "fetching_papers"
     }
 
@@ -228,10 +242,15 @@ async def paper_screener_agent(state: ResearchModeState) -> Dict[str, Any]:
     raw_papers = state.get("raw_papers", [])
     ps = state.get("problem_statement", "")
     objs = state.get("research_objectives", [])
+    researcher_model = (state.get("model_overrides") or {}).get("researcher")
 
-    screened = await screen_papers(raw_papers, ps, objs)
+    screened, screen_stats = await screen_papers(raw_papers, ps, objs, model=researcher_model)
+    existing_stats = dict(state.get("corpus_stats") or {})
+    existing_stats.update(screen_stats)
+
     return {
         "screened_papers": screened,
+        "corpus_stats": existing_stats,
         "status": "synthesizing"
     }
 
@@ -257,7 +276,13 @@ async def fulltext_fetcher_agent(state: ResearchModeState) -> Dict[str, Any]:
 
     elapsed = time.time() - start_time
     logger.info(f"fulltext_fetcher_agent completed in {elapsed:.2f}s")
-    return {"screened_papers": updated_papers}
+    existing_stats = dict(state.get("corpus_stats") or {})
+    existing_stats["fulltext_fetched"] = len(excerpts_map)
+
+    return {
+        "screened_papers": updated_papers,
+        "corpus_stats": existing_stats
+    }
 
 
 async def literature_review_agent(state: ResearchModeState) -> Dict[str, Any]:
@@ -267,7 +292,7 @@ async def literature_review_agent(state: ResearchModeState) -> Dict[str, Any]:
     ps = state.get("problem_statement", "")
     objs = state.get("research_objectives", [])
 
-    llm = get_llm(role="aggregator")
+    llm = get_llm_for(state, role="aggregator")
     
     papers_summary = "\n".join(
         f"- [{idx+1}] {p.get('authors', ['Anon'])[0] if p.get('authors') else 'Anon'} et al. ({p.get('year', 'n.d.')}). {p.get('title')}: {p.get('content_excerpt') if p.get('content_excerpt') else (p.get('abstract') or '')[:250]}"
@@ -379,14 +404,13 @@ async def citation_verifier_agent(state: ResearchModeState) -> Dict[str, Any]:
     }
 
 
-
 async def gap_analysis_agent(state: ResearchModeState) -> Dict[str, Any]:
     """5. Identifies what existing literature does NOT cover relative to the PS."""
     logger.info("Running gap_analysis_agent...")
     ps = state.get("problem_statement", "")
     lit_review = state.get("literature_review", "")
 
-    llm = get_llm(role="planner")
+    llm = get_llm_for(state, role="planner")
     prompt = f"""Problem Statement:
 {ps}
 
@@ -407,7 +431,7 @@ async def framework_agent(state: ResearchModeState) -> Dict[str, Any]:
     gap = state.get("research_gap", "")
     objs = state.get("research_objectives", [])
 
-    llm = get_llm(role="planner")
+    llm = get_llm_for(state, role="planner")
     prompt = f"""Problem Statement:
 {ps}
 
@@ -434,7 +458,7 @@ async def hypotheses_agent(state: ResearchModeState) -> Dict[str, Any]:
     framework = state.get("conceptual_framework", "")
     gap = state.get("research_gap", "")
 
-    llm = get_llm(role="planner")
+    llm = get_llm_for(state, role="planner")
     prompt = f"""Conceptual Framework:
 {framework}
 
@@ -468,7 +492,7 @@ async def research_design_agent(state: ResearchModeState) -> Dict[str, Any]:
     hypotheses = state.get("hypotheses", [])
     framework = state.get("conceptual_framework", "")
 
-    llm = get_llm(role="planner")
+    llm = get_llm_for(state, role="planner")
     prompt = f"""Hypotheses:
 {json.dumps(hypotheses)}
 
@@ -491,7 +515,7 @@ async def data_collection_agent(state: ResearchModeState) -> Dict[str, Any]:
     design = state.get("research_design", "")
     hypotheses = state.get("hypotheses", [])
 
-    llm = get_llm(role="planner")
+    llm = get_llm_for(state, role="planner")
     prompt = f"""Research Design:
 {design[:1500]}
 
@@ -512,7 +536,7 @@ async def data_analysis_agent(state: ResearchModeState) -> Dict[str, Any]:
     collection = state.get("data_collection_plan", "")
     hypotheses = state.get("hypotheses", [])
 
-    llm = get_llm(role="planner")
+    llm = get_llm_for(state, role="planner")
     prompt = f"""Research Design:
 {design[:1000]}
 
@@ -539,7 +563,7 @@ async def results_agent(state: ResearchModeState) -> Dict[str, Any]:
     hypotheses = state.get("hypotheses", [])
     papers = state.get("screened_papers", [])
 
-    llm = get_llm(role="aggregator")
+    llm = get_llm_for(state, role="aggregator")
     papers_str = "\n".join(f"- {p.get('title')}: {p.get('abstract')[:200]}" for p in papers[:25])
 
     prompt = f"""Hypotheses:
@@ -566,7 +590,7 @@ async def discussion_agent(state: ResearchModeState) -> Dict[str, Any]:
     hypotheses = state.get("hypotheses", [])
     lit_review = state.get("literature_review", "")
 
-    llm = get_llm(role="aggregator")
+    llm = get_llm_for(state, role="aggregator")
     prompt = f"""Results:
 {results[:2000]}
 
@@ -602,7 +626,7 @@ async def limitations_agent(state: ResearchModeState) -> Dict[str, Any]:
     methodology = state.get("research_design", "")
     results = state.get("results", "")
 
-    llm = get_llm(role="planner")
+    llm = get_llm_for(state, role="planner")
     prompt = f"""Methodology & Design:
 {methodology[:1000]}
 
@@ -626,7 +650,7 @@ async def conclusion_agent(state: ResearchModeState) -> Dict[str, Any]:
     ps = state.get("problem_statement", "")
     results = state.get("results", "")
 
-    llm = get_llm(role="planner")
+    llm = get_llm_for(state, role="planner")
     prompt = f"""Problem Statement:
 {ps}
 
@@ -646,7 +670,7 @@ async def future_scope_agent(state: ResearchModeState) -> Dict[str, Any]:
     limitations = state.get("limitations", "")
     discussion = state.get("discussion", "")
 
-    llm = get_llm(role="planner")
+    llm = get_llm_for(state, role="planner")
     prompt = f"""Limitations:
 {limitations[:1000]}
 
@@ -678,24 +702,63 @@ async def references_agent(state: ResearchModeState) -> Dict[str, Any]:
     return {"references": references}
 
 
+async def figures_agent(state: ResearchModeState) -> Dict[str, Any]:
+    """16b. Generates PRISMA flow diagram and evidence table figures."""
+    logger.info("Running figures_agent...")
+    stats = state.get("corpus_stats", {})
+    papers = state.get("screened_papers", []) or state.get("raw_papers", [])
+    hypotheses = state.get("hypotheses", [])
+    thread_id = state.get("thread_id", "default")
+
+    figures_dir_str = os.getenv("FIGURES_DIR", "./data/figures")
+    figures_dir = Path(figures_dir_str).resolve()
+    figures_dir.mkdir(parents=True, exist_ok=True)
+
+    fig_dict = {}
+
+    try:
+        prisma_file = str(figures_dir / f"prisma_{thread_id}.png")
+        prisma_path = render_prisma_diagram(stats, prisma_file)
+        if prisma_path and os.path.exists(prisma_path):
+            fig_dict["prisma"] = prisma_path
+    except Exception as e:
+        logger.warning(f"Failed to generate PRISMA diagram: {e}")
+
+    try:
+        evidence_file = str(figures_dir / f"evidence_{thread_id}.png")
+        evidence_path = render_evidence_table(papers, hypotheses, evidence_file)
+        if evidence_path and os.path.exists(evidence_path):
+            fig_dict["evidence"] = evidence_path
+    except Exception as e:
+        logger.warning(f"Failed to generate evidence table: {e}")
+
+    return {"figures": fig_dict}
+
+
 async def appendices_agent(state: ResearchModeState) -> Dict[str, Any]:
     """17. Assembles supplementary material."""
     logger.info("Running appendices_agent...")
     keywords = state.get("keywords", [])
-    raw_count = len(state.get("raw_papers", []))
-    screened_count = len(state.get("screened_papers", []))
+    stats = state.get("corpus_stats", {})
+    retrieved = stats.get("retrieved", len(state.get("raw_papers", [])))
+    after_dedup = stats.get("after_dedup", len(state.get("raw_papers", [])))
+    screened = stats.get("screened", len(state.get("screened_papers", [])))
+    included = stats.get("included", len(state.get("screened_papers", [])))
 
-    llm = get_llm(role="planner")
+    llm = get_llm_for(state, role="planner")
     prompt = f"""Search Keywords Used: {json.dumps(keywords)}
-Papers Retrieved: {raw_count}
-Papers Retained After Screening: {screened_count}
+Corpus Selection Stats (Figure 1 PRISMA Flow):
+- Records Identified (Retrieved): {retrieved}
+- Records After Deduplication: {after_dedup}
+- Records Screened: {screened}
+- Studies Included in Synthesis: {included}
 
 Write the Appendices section of this paper as labelled appendices in Markdown:
-- Appendix A: Search Protocol
+- Appendix A: Search Protocol (describe database search, deduplication, and screening protocol consistent with Figure 1)
 - Appendix B: Screening and Inclusion Criteria
 Length: 300 - 600 words."""
 
-    text = await _safe_invoke_llm(llm, prompt, f"Appendix A: Search Protocol. Keywords: {', '.join(keywords)}. Retrieved: {raw_count}, Retained: {screened_count}.")
+    text = await _safe_invoke_llm(llm, prompt, f"Appendix A: Search Protocol. Keywords: {', '.join(keywords)}. Retrieved: {retrieved}, Retained: {included}.")
     return {"appendices": text}
 
 
@@ -707,7 +770,7 @@ async def introduction_agent(state: ResearchModeState) -> Dict[str, Any]:
     rqs = state.get("research_questions", [])
     results = state.get("results", "")
 
-    llm = get_llm(role="aggregator")
+    llm = get_llm_for(state, role="aggregator")
     prompt = f"""Problem Statement:
 {ps}
 
@@ -737,7 +800,7 @@ async def abstract_agent(state: ResearchModeState) -> Dict[str, Any]:
     results = state.get("results", "")
     conclusion = state.get("conclusion", "")
 
-    llm = get_llm(role="planner")
+    llm = get_llm_for(state, role="planner")
     prompt = f"""Introduction Overview:
 {intro[:600]}
 
@@ -768,7 +831,7 @@ async def title_agent(state: ResearchModeState) -> Dict[str, Any]:
     ps = state.get("problem_statement", "")
     abstract = state.get("abstract", "")
 
-    llm = get_llm(role="planner")
+    llm = get_llm_for(state, role="planner")
     prompt = f"""Problem Statement:
 {ps}
 
@@ -785,3 +848,4 @@ Return ONLY the title string, without quotes."""
         "hitl_checkpoint": "completed",
         "status": "completed"
     }
+

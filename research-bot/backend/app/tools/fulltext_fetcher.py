@@ -1,9 +1,11 @@
+import os
 import io
 import re
 import logging
 import asyncio
 import httpx
 import pypdf
+from backend.app.tools.oa_resolver import resolve_oa_pdf_url
 
 logger = logging.getLogger(__name__)
 
@@ -60,81 +62,107 @@ def _skip_cover_page(title: str, text: str) -> str:
     return text[match.start():] if match else text
 
 
+async def _download_and_extract(client: httpx.AsyncClient, url: str, title: str) -> str | None:
+    if not url:
+        return None
+    try:
+        async with client.stream("GET", url) as resp:
+            if resp.status_code != 200:
+                logger.warning(f"HTTP {resp.status_code} fetching PDF for '{title}' from {url}")
+                return None
+
+            cl = resp.headers.get("Content-Length")
+            if cl and cl.isdigit() and int(cl) > FULLTEXT_MAX_PDF_BYTES:
+                logger.warning(
+                    f"Aborting fetch for '{title}': Content-Length {cl} exceeds {FULLTEXT_MAX_PDF_BYTES} bytes cap."
+                )
+                return None
+
+            chunks = []
+            downloaded = 0
+            async for chunk in resp.aiter_bytes():
+                downloaded += len(chunk)
+                if downloaded > FULLTEXT_MAX_PDF_BYTES:
+                    logger.warning(
+                        f"Aborting fetch for '{title}': Downloaded size exceeded {FULLTEXT_MAX_PDF_BYTES} bytes cap."
+                    )
+                    return None
+                chunks.append(chunk)
+            pdf_bytes = b"".join(chunks)
+
+        if not pdf_bytes:
+            logger.warning(f"Empty PDF content received for '{title}'")
+            return None
+
+        reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
+        pages_text = []
+        for page in reader.pages:
+            txt = page.extract_text()
+            if txt:
+                pages_text.append(txt)
+
+        full_text = " ".join(" ".join(pages_text).split())
+        if not full_text:
+            logger.warning(f"No text extracted from PDF for '{title}'")
+            return None
+
+        if not _text_belongs_to_paper(title, full_text):
+            logger.warning(
+                f"Discarding full text for '{title}': extracted content does not match "
+                f"the paper title (URL likely resolved to a different document)."
+            )
+            return None
+
+        excerpt = _skip_cover_page(title, full_text)[:FULLTEXT_CHAR_BUDGET]
+        return excerpt
+    except Exception as e:
+        logger.warning(f"Failed to fetch/extract fulltext PDF for '{title}' from {url}: {e}")
+        return None
+
+
 async def _fetch_single_pdf(paper: dict, semaphore: asyncio.Semaphore) -> tuple[str, str | None]:
     title = paper.get("title", "")
-    pdf_url = paper.get("pdf_url", "")
-    if not pdf_url:
-        return (title, None)
+    initial_pdf_url = paper.get("pdf_url", "")
+
+    email = os.getenv("OPENALEX_EMAIL", "").strip()
+    user_agent = f"ResearchBot/1.0 (mailto:{email})" if (email and email != "your_email@example.com") else "ResearchBot/1.0 (mailto:researchbot@example.com)"
+    headers = {"User-Agent": user_agent}
 
     async with semaphore:
         try:
-            async with httpx.AsyncClient(timeout=FULLTEXT_FETCH_TIMEOUT, follow_redirects=True) as client:
-                async with client.stream("GET", pdf_url) as resp:
-                    if resp.status_code != 200:
-                        logger.warning(f"HTTP {resp.status_code} fetching PDF for '{title}' from {pdf_url}")
-                        return (title, None)
+            async with httpx.AsyncClient(timeout=FULLTEXT_FETCH_TIMEOUT, follow_redirects=True, headers=headers) as client:
+                if initial_pdf_url:
+                    excerpt = await _download_and_extract(client, initial_pdf_url, title)
+                    if excerpt:
+                        return (title, excerpt)
+                    logger.info(f"Direct fetch failed for '{title}'. Attempting OA resolution...")
 
-                    cl = resp.headers.get("Content-Length")
-                    if cl and cl.isdigit() and int(cl) > FULLTEXT_MAX_PDF_BYTES:
-                        logger.warning(
-                            f"Aborting fetch for '{title}': Content-Length {cl} exceeds {FULLTEXT_MAX_PDF_BYTES} bytes cap."
-                        )
-                        return (title, None)
+                paper_for_oa = dict(paper)
+                paper_for_oa["pdf_url"] = ""
+                resolved_url = await resolve_oa_pdf_url(client, paper_for_oa)
 
-                    chunks = []
-                    downloaded = 0
-                    async for chunk in resp.aiter_bytes():
-                        downloaded += len(chunk)
-                        if downloaded > FULLTEXT_MAX_PDF_BYTES:
-                            logger.warning(
-                                f"Aborting fetch for '{title}': Downloaded size exceeded {FULLTEXT_MAX_PDF_BYTES} bytes cap."
-                            )
-                            return (title, None)
-                        chunks.append(chunk)
-                    pdf_bytes = b"".join(chunks)
+                if resolved_url and resolved_url != initial_pdf_url:
+                    logger.info(f"Retrying fetch for '{title}' with resolved OA URL: {resolved_url}")
+                    excerpt = await _download_and_extract(client, resolved_url, title)
+                    if excerpt:
+                        return (title, excerpt)
 
-            if not pdf_bytes:
-                logger.warning(f"Empty PDF content received for '{title}'")
                 return (title, None)
-
-            reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
-            pages_text = []
-            for page in reader.pages:
-                txt = page.extract_text()
-                if txt:
-                    pages_text.append(txt)
-
-            full_text = " ".join(" ".join(pages_text).split())
-            if not full_text:
-                logger.warning(f"No text extracted from PDF for '{title}'")
-                return (title, None)
-
-            if not _text_belongs_to_paper(title, full_text):
-                logger.warning(
-                    f"Discarding full text for '{title}': extracted content does not match "
-                    f"the paper title (URL likely resolved to a different document)."
-                )
-                return (title, None)
-
-            excerpt = _skip_cover_page(title, full_text)[:FULLTEXT_CHAR_BUDGET]
-            return (title, excerpt)
         except Exception as e:
-            logger.warning(f"Failed to fetch/extract fulltext PDF for '{title}': {e}")
+            logger.warning(f"Error processing PDF for '{title}': {e}")
             return (title, None)
 
 
 async def fetch_fulltext_excerpts(papers: list[dict]) -> dict[str, str]:
     """Fetches PDF full-text excerpts concurrently for the top FULLTEXT_TOP_N papers."""
     top_selected = papers[:FULLTEXT_TOP_N]
-    papers_to_fetch = [p for p in top_selected if p.get("pdf_url")]
-
     results: dict[str, str] = {}
-    if not papers_to_fetch:
+    if not top_selected:
         logger.info(f"fetched full text for 0/{FULLTEXT_TOP_N} papers")
         return results
 
     semaphore = asyncio.Semaphore(FULLTEXT_CONCURRENCY)
-    tasks = [asyncio.create_task(_fetch_single_pdf(p, semaphore)) for p in papers_to_fetch]
+    tasks = [asyncio.create_task(_fetch_single_pdf(p, semaphore)) for p in top_selected]
 
     try:
         raw_results = await asyncio.wait_for(
@@ -163,4 +191,5 @@ async def fetch_fulltext_excerpts(papers: list[dict]) -> dict[str, str]:
 
     logger.info(f"fetched full text for {len(results)}/{FULLTEXT_TOP_N} papers")
     return results
+
 

@@ -5,7 +5,7 @@ import asyncio
 import logging
 import httpx
 import feedparser
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from backend.app.llm import get_llm
 
 logger = logging.getLogger(__name__)
@@ -182,7 +182,7 @@ async def fetch_arxiv_papers(client: httpx.AsyncClient, keyword: str, max_result
         logger.warning(f"ArXiv search skipped for '{keyword}': {e}")
     return papers
 
-async def search_academic_papers(keywords: List[str]) -> List[Dict[str, Any]]:
+async def search_academic_papers(keywords: List[str]) -> Tuple[List[Dict[str, Any]], Dict[str, int]]:
     """Searches OpenAlex, Semantic Scholar, and ArXiv concurrently with strict timeouts and deduplication."""
     # All extracted keywords are queried; every request runs concurrently on one client
     selected_keywords = keywords[:MAX_SEARCH_KEYWORDS] if keywords else ["research"]
@@ -222,8 +222,9 @@ async def search_academic_papers(keywords: List[str]) -> List[Dict[str, Any]]:
 
         deduped.append(paper)
 
+    stats = {"retrieved": len(combined), "after_dedup": len(deduped)}
     logger.info(f"Academic search retrieved {len(combined)} raw papers, {len(deduped)} after deduplication.")
-    return deduped
+    return deduped, stats
 
 def _select_candidates(papers: List[Dict[str, Any]], limit: int) -> List[Dict[str, Any]]:
     """Picks the candidate pool for screening, round-robin across sources.
@@ -305,15 +306,16 @@ Papers:
 async def screen_papers(
     papers: List[Dict[str, Any]],
     problem_statement: str,
-    objectives: List[str]
-) -> List[Dict[str, Any]]:
+    objectives: List[str],
+    model: Optional[str] = None
+) -> Tuple[List[Dict[str, Any]], Dict[str, int]]:
     """Screens the corpus for relevance to the problem statement.
 
     Batches are scored concurrently (bounded by SCREEN_CONCURRENCY) so a large corpus
     costs a few seconds rather than a serial call per batch.
     """
     if len(papers) <= SCREEN_THRESHOLD:
-        return papers
+        return papers, {"screened": len(papers), "included": len(papers)}
 
     candidates = _select_candidates(papers, SCREEN_CANDIDATES)
     logger.info(
@@ -321,7 +323,7 @@ async def screen_papers(
         f"Screening {len(candidates)} candidates for relevance..."
     )
 
-    llm = get_llm(role="researcher")
+    llm = get_llm(model=model, role="researcher")
     objectives_str = "\n".join(f"- {obj}" for obj in objectives)
     semaphore = asyncio.Semaphore(SCREEN_CONCURRENCY)
 
@@ -349,8 +351,9 @@ async def screen_papers(
         reverse=True
     )
     screened = scored_papers[:SCREEN_KEEP]
+    stats = {"screened": len(candidates), "included": len(screened)}
     logger.info(f"Screening complete. Selected top {len(screened)} papers.")
-    return screened
+    return screened, stats
 
 def format_apa(paper: Dict[str, Any]) -> str:
     """Formats paper metadata into APA 7th edition citation string."""
