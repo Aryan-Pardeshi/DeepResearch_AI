@@ -16,3 +16,4 @@ openai>=1.0.0
 feedparser>=6.0.10
 fpdf2>=2.7.8
 pypdf>=3.0.0
+python-docx>=1.1.0
