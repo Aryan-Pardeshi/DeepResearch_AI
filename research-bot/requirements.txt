@@ -11,3 +11,6 @@ langgraph-checkpoint==4.1.1
 tavily-python==0.7.26
 httpx==0.28.1
 matplotlib==3.8.2
+openai>=1.0.0
+feedparser>=6.0.10
+fpdf2>=2.7.8
