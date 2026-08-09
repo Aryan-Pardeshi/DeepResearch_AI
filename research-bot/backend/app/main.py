@@ -11,6 +11,7 @@ if str(root_dir) not in sys.path:
     sys.path.insert(0, str(root_dir))
 
 from backend.app.api.agent import router as agent_router
+from backend.app.api.research_mode import router as research_mode_router
 from backend.app.llm import lazy_llm, llm_fast, llm_pro
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -28,6 +29,7 @@ app.add_middleware(
 )
 
 app.include_router(agent_router)
+app.include_router(research_mode_router)
 
 # Mount static directory for serving charts
 static_path = Path(__file__).resolve().parent / "static"

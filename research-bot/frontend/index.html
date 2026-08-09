@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Deep Research Assistant</title>
+    <title>AI Deep Research Assistant & Academic Lab</title>
     <link rel="stylesheet" href="style.css">
     <!-- Marked.js for markdown parsing -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -16,12 +16,29 @@
     <header>
         <div class="logo-container">
             <img class="logo-img" src="https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011" alt="Dolphin AI">
-            <span class="logo-text">DEEPRESEARCH</span>
+            <div class="brand-text-group">
+                <span class="logo-text">DEEPRESEARCH</span>
+                <span class="logo-tag">ACADEMIC LAB</span>
+            </div>
         </div>
+
+        <!-- Mode Switcher -->
+        <div class="mode-toggle-container" id="mode-toggle-container">
+            <button class="mode-tab active" id="tab-deepsearch" data-mode="deepsearch">
+                <i data-lucide="globe" style="width: 15px; height: 15px;"></i>
+                <span>DeepSearch</span>
+            </button>
+            <button class="mode-tab" id="tab-researchmode" data-mode="researchmode">
+                <i data-lucide="book-open-check" style="width: 15px; height: 15px;"></i>
+                <span>Research Mode</span>
+            </button>
+        </div>
+
         <div class="status-badge" id="app-status-badge">
             <div class="status-dot" id="app-status-dot"></div>
             <span id="app-status-text">Ready for query</span>
         </div>
+
         <div class="header-actions">
             <button class="btn-icon theme-toggle" id="theme-toggle-btn" title="Toggle theme">
                 <i data-lucide="moon" style="width: 18px; height: 18px;"></i>
@@ -31,38 +48,116 @@
             </button>
             <button class="btn-secondary btn-new-research" id="new-research-btn" style="display:none;">
                 <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
-                <span>New Research</span>
+                <span>New Run</span>
             </button>
         </div>
     </header>
 
-    <!-- Settings Modal -->
+    <!-- Env Setup Gate / Mandatory Configuration Modal -->
+    <div class="modal-overlay setup-gate-modal" id="setup-gate-modal" style="display:none;">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <h2 class="modal-title">System Environment Setup</h2>
+                    <span class="modal-subtitle">Configure OpenAI-Compatible Provider & Academic Search Keys</span>
+                </div>
+            </div>
+
+            <!-- Prominent Privacy Notice -->
+            <div class="local-privacy-banner">
+                <i data-lucide="shield-check" style="width: 24px; height: 24px; flex-shrink: 0;"></i>
+                <div class="privacy-notice-text">
+                    <strong>PRIVACY GUARANTEE:</strong> All keys and configuration values are saved <u>locally on your machine only</u> in your local <code>.env</code> file. Nothing is uploaded, collected, or transmitted to external servers.
+                </div>
+            </div>
+
+            <div class="modal-body">
+                <form id="setup-gate-form">
+                    <div class="form-section-title">LLM Configuration (OpenAI Compatible)</div>
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label class="form-label" for="gate-llm-base-url">LLM Base URL</label>
+                            <input type="text" class="form-input" id="gate-llm-base-url" placeholder="https://api.deepseek.com or http://localhost:11434/v1">
+                        </div>
+                        <div class="form-group full-width">
+                            <label class="form-label" for="gate-llm-api-key">LLM API Key</label>
+                            <input type="password" class="form-input" id="gate-llm-api-key" placeholder="sk-...">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="gate-llm-model-planner">Planner Model</label>
+                            <input type="text" class="form-input" id="gate-llm-model-planner" placeholder="deepseek-chat">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="gate-llm-model-researcher">Researcher Model</label>
+                            <input type="text" class="form-input" id="gate-llm-model-researcher" placeholder="deepseek-chat">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="gate-llm-model-aggregator">Aggregator Model</label>
+                            <input type="text" class="form-input" id="gate-llm-model-aggregator" placeholder="deepseek-chat">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="gate-tavily-key">Tavily Web Search Key</label>
+                            <input type="password" class="form-input" id="gate-tavily-key" placeholder="tvly-...">
+                        </div>
+                    </div>
+
+                    <div class="form-section-title" style="margin-top: 1.5rem;">Academic Search APIs (Optional / Free)</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="gate-openalex-email">OpenAlex Email (Polite Pool)</label>
+                            <input type="email" class="form-input" id="gate-openalex-email" placeholder="researcher@university.edu">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="gate-semantic-scholar">Semantic Scholar API Key</label>
+                            <input type="password" class="form-input" id="gate-semantic-scholar" placeholder="Optional API key">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <span class="save-status" id="gate-save-status"></span>
+                <button class="btn-primary" id="gate-submit-btn">
+                    <i data-lucide="lock" style="width: 16px; height: 16px;"></i>
+                    <span>Save & Initialize Workspace</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Regular Settings Modal -->
     <div class="modal-overlay" id="settings-modal" style="display:none;">
         <div class="modal">
             <div class="modal-header">
-                <h2 class="modal-title">API Configuration</h2>
+                <h2 class="modal-title">System Settings</h2>
                 <button class="modal-close" id="settings-modal-close">&times;</button>
             </div>
             <div class="modal-body">
-                <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem;">
-                    Enter your API keys below. They will be saved to <code>.env</code>.
-                </p>
+                <div class="local-privacy-banner compact">
+                    <i data-lucide="shield-check" style="width: 18px; height: 18px; flex-shrink:0;"></i>
+                    <span>Keys saved locally on your machine.</span>
+                </div>
                 <div class="form-group">
-                    <label class="form-label" for="input-deepseek-key">DEEPSEEK_API_KEY</label>
-                    <input type="password" class="form-input" id="input-deepseek-key" placeholder="sk-...">
-                    <a class="form-hint" href="https://platform.deepseek.com/api_keys" target="_blank">Get a DeepSeek API key</a>
+                    <label class="form-label" for="input-llm-base-url">LLM_BASE_URL</label>
+                    <input type="text" class="form-input" id="input-llm-base-url">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="input-deepseek-key">LLM_API_KEY</label>
+                    <input type="password" class="form-input" id="input-deepseek-key">
                 </div>
                 <div class="form-group">
                     <label class="form-label" for="input-tavily-key">TAVILY_API_KEY</label>
-                    <input type="password" class="form-input" id="input-tavily-key" placeholder="tvly-...">
-                    <a class="form-hint" href="https://app.tavily.com/home" target="_blank">Get a Tavily API key</a>
+                    <input type="password" class="form-input" id="input-tavily-key">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="input-openalex-email">OPENALEX_EMAIL</label>
+                    <input type="email" class="form-input" id="input-openalex-email">
                 </div>
             </div>
             <div class="modal-footer">
                 <span class="save-status" id="save-status"></span>
                 <button class="btn-primary" id="save-config-btn">
                     <i data-lucide="check" style="width: 16px; height: 16px;"></i>
-                    <span>Save & Apply</span>
+                    <span>Save Changes</span>
                 </button>
             </div>
         </div>
@@ -71,16 +166,18 @@
     <!-- Backend Offline Banner -->
     <div class="backend-offline-banner" id="backend-offline-banner" style="display: none;">
         <i data-lucide="cloud-off" style="width: 18px; height: 18px; flex-shrink: 0;"></i>
-        <span>Backend is offline at <strong>http://127.0.0.1:8000</strong>. Start the backend server to continue.</span>
+        <span>Backend server unreachable at <strong>http://127.0.0.1:8000</strong>. Please start the backend process.</span>
     </div>
 
     <!-- Main Container -->
     <main>
         
-        <!-- View 1: Landing / Query Input Panel -->
+        <!-- DEEPSEARCH MODE PANELS -->
+        
+        <!-- View 1: Landing Panel -->
         <section id="landing-panel" class="panel active">
             <h1 class="hero-title">Ask anything. We will plan, research, and synthesize.</h1>
-            <p class="hero-subtitle">A focused, single-run research workspace driven by deep agentic loops.</p>
+            <p class="hero-subtitle">Multi-agent web research workspace driven by autonomous agent loops.</p>
             
             <div class="search-box-container">
                 <textarea class="search-input" id="query-input" placeholder="What would you like to research today?"></textarea>
@@ -103,53 +200,46 @@
             </div>
         </section>
 
-        <!-- View 2: Plan Approval / Revision Panel -->
+        <!-- View 2: Approval Panel -->
         <section id="approval-panel" class="panel">
             <div class="approval-header">
                 <h1 class="section-title">Research Design Console</h1>
                 <button class="btn-secondary btn-new-research" id="approval-new-research-btn">
                     <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
-                    <span>New Conversation</span>
+                    <span>New Session</span>
                 </button>
             </div>
             
             <div class="original-query-banner">
-                <span>Researching: </span><strong id="approval-query-display">"..."</strong>
+                <span>Research Query: </span><strong id="approval-query-display">"..."</strong>
             </div>
 
             <div class="approval-grid">
-                <!-- Problem Statement Card -->
                 <div class="card">
                     <div class="card-header">
                         <i class="card-icon" data-lucide="book-open" style="width: 20px; height: 20px;"></i>
                         <h2 class="card-title">Problem Statement</h2>
                     </div>
-                    <p class="problem-statement-text" id="approval-ps-text">
-                        Generating problem statement…
-                    </p>
+                    <p class="problem-statement-text" id="approval-ps-text">Generating problem statement…</p>
                 </div>
 
-                <!-- Sub-tasks / Research Plan Card -->
                 <div class="card">
                     <div class="card-header">
                         <i class="card-icon" data-lucide="list-todo" style="width: 20px; height: 20px;"></i>
                         <h2 class="card-title">Proposed Research Plan</h2>
                     </div>
-                    <div class="subtasks-list" id="approval-subtasks-container">
-                        <!-- Subtasks injected dynamically -->
-                    </div>
+                    <div class="subtasks-list" id="approval-subtasks-container"></div>
                 </div>
 
-                <!-- Action / Revision Console Card -->
                 <div class="card">
                     <div class="card-header">
                         <i class="card-icon" data-lucide="edit-3" style="width: 20px; height: 20px;"></i>
                         <h2 class="card-title">Revisions Console</h2>
                     </div>
                     <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
-                        Need changes? Describe them below and submit revisions. Otherwise, click "Approve & Run" to start researching.
+                        Need changes? Type instructions below or click Approve to execute.
                     </p>
-                    <textarea class="feedback-textarea" id="feedback-input" placeholder="Type instructions to modify the plan (e.g. 'replace task 2 with...', 'focus more on...')"></textarea>
+                    <textarea class="feedback-textarea" id="feedback-input" placeholder="Type instructions to modify the plan..."></textarea>
                     
                     <div class="feedback-controls">
                         <button class="btn-secondary" id="submit-feedback-btn" style="display: none;">
@@ -167,25 +257,19 @@
 
         <!-- View 3: Execution Workspace Panel -->
         <section id="workspace-panel" class="panel">
-            
-            <!-- Left Pane: Workers Status -->
             <aside class="workers-sidebar">
                 <h2 class="sidebar-title">
                     <i data-lucide="cpu" style="width: 20px; height: 20px; color: var(--accent-purple);"></i>
                     <span>Parallel Researchers</span>
                 </h2>
-                <!-- Execution timer -->
                 <div class="sidebar-timer-container" id="sidebar-timer-container">
                     <i data-lucide="clock" style="width: 16px; height: 16px; color: var(--accent-purple);"></i>
                     <span class="timer-label">Research Time:</span>
                     <span id="research-timer" class="timer-value">00:00</span>
                 </div>
-                <div class="workers-list" id="workers-list-container">
-                    <!-- Dynamic worker cards -->
-                </div>
+                <div class="workers-list" id="workers-list-container"></div>
             </aside>
 
-            <!-- Right Pane: Report Workspace -->
             <article class="report-workspace">
                 <div class="report-workspace-header">
                     <h2 class="section-title" style="margin: 0;">Research Report</h2>
@@ -210,22 +294,11 @@
                 </div>
 
                 <div class="report-container">
-                    <!-- Streaming Aggregator Output -->
-                    <div class="report-content" id="report-output">
-                        <!-- Final Markdown Report rendered here -->
-                    </div>
-
-                    <!-- Streaming dots indicator -->
+                    <div class="report-content" id="report-output"></div>
                     <div class="streaming-loader" id="report-streaming-indicator" style="display: none;">
-                        <div class="streaming-dots">
-                            <span></span>
-                            <span></span>
-                            <span></span>
-                        </div>
+                        <div class="streaming-dots"><span></span><span></span><span></span></div>
                         <span>Synthesizing final research report...</span>
                     </div>
-
-                    <!-- Sources & References -->
                     <div class="sources-section" id="workspace-sources-section" style="display: none;">
                         <div class="sources-header">
                             <h2 class="sources-title">
@@ -233,13 +306,124 @@
                                 <span>Retrieved Sources</span>
                             </h2>
                         </div>
-                        <div class="sources-grid" id="workspace-sources-container">
-                            <!-- Clickable citation cards -->
-                        </div>
+                        <div class="sources-grid" id="workspace-sources-container"></div>
                     </div>
                 </div>
             </article>
+        </section>
 
+
+        <!-- RESEARCH MODE PANELS -->
+
+        <!-- Research Mode View 1: Input Panel -->
+        <section id="rm-input-panel" class="panel">
+            <div class="rm-hero-header">
+                <div class="rm-badge"><i data-lucide="graduation-cap" style="width: 14px; height: 14px;"></i> Autonomous Academic Engine</div>
+                <h1 class="hero-title">Academic Research Paper Synthesis</h1>
+                <p class="hero-subtitle">18 autonomous agents, 3 academic API indexes, and 4 Human-in-the-Loop approval checkpoints.</p>
+            </div>
+
+            <div class="rm-input-card card">
+                <div class="form-group">
+                    <label class="form-label" for="rm-ps-input">Core Problem Statement *</label>
+                    <textarea class="form-input rm-textarea" id="rm-ps-input" placeholder="State the core research gap, problem, or empirical challenge to investigate..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="rm-objs-input">Research Objectives (One per line)</label>
+                    <textarea class="form-input rm-textarea-sm" id="rm-objs-input" placeholder="e.g. Examine theoretical mechanisms&#10;Evaluate empirical replication studies"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="rm-rqs-input">Research Questions (One per line)</label>
+                    <textarea class="form-input rm-textarea-sm" id="rm-rqs-input" placeholder="e.g. What factors predict outcome Y?&#10;How does condition X impact system performance?"></textarea>
+                </div>
+                <button class="btn-primary btn-lg" id="rm-start-btn" style="width: 100%; justify-content: center;">
+                    <i data-lucide="atom" style="width: 18px; height: 18px;"></i>
+                    <span>Launch Autonomous Academic Pipeline</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Research Mode View 2: Pipeline Execution & HITL Workspace -->
+        <section id="rm-workspace-panel" class="panel">
+            
+            <!-- Signature Element: Pipeline Progress Tracker -->
+            <div class="pipeline-tracker-container card">
+                <div class="tracker-header">
+                    <div class="tracker-title-group">
+                        <i data-lucide="git-merge" style="width: 20px; height: 20px; color: var(--academic-blue);"></i>
+                        <h2 class="tracker-title">Autonomous Academic Pipeline</h2>
+                    </div>
+                    <span class="tracker-status-tag" id="rm-pipeline-status-tag">Phase: Keyword Extraction</span>
+                </div>
+
+                <div class="pipeline-steps-grid" id="rm-pipeline-steps-grid">
+                    <!-- 18 stages + 4 checkpoints rendered dynamically -->
+                </div>
+            </div>
+
+            <!-- Main Content Area: HITL Review vs Live Paper Stream -->
+            <div class="rm-workspace-body">
+                
+                <!-- HITL Review Panel -->
+                <div class="rm-hitl-panel card" id="rm-hitl-panel" style="display: none;">
+                    <div class="card-header border-bottom">
+                        <div class="hitl-title-group">
+                            <i data-lucide="shield-alert" style="width: 22px; height: 22px; color: var(--amber-review);"></i>
+                            <h2 class="card-title" id="rm-hitl-title">Checkpoint Review Required</h2>
+                        </div>
+                        <span class="hitl-badge" id="rm-hitl-checkpoint-badge">Checkpoint 1 of 4</span>
+                    </div>
+
+                    <div class="hitl-content-body" id="rm-hitl-body">
+                        <!-- Dynamic Checkpoint Inputs -->
+                    </div>
+
+                    <div class="hitl-actions">
+                        <div class="form-group" style="width: 100%;">
+                            <label class="form-label" for="rm-hitl-feedback-input">Revision Request (Optional)</label>
+                            <textarea class="form-input rm-textarea-sm" id="rm-hitl-feedback-input" placeholder="Specify any edits or revisions for this phase..."></textarea>
+                        </div>
+                        <div class="hitl-btn-row">
+                            <button class="btn-secondary" id="rm-hitl-revise-btn">
+                                <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i>
+                                <span>Request Revisions</span>
+                            </button>
+                            <button class="btn-primary btn-emerald" id="rm-hitl-approve-btn">
+                                <i data-lucide="check-circle-2" style="width: 16px; height: 16px;"></i>
+                                <span>Approve & Continue Pipeline</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Final Paper View Card -->
+                <div class="rm-paper-card card" id="rm-paper-card">
+                    <div class="paper-header">
+                        <div class="paper-title-group">
+                            <i data-lucide="file-text" style="width: 22px; height: 22px; color: var(--academic-blue);"></i>
+                            <h2 class="paper-heading" id="rm-paper-title">Synthesizing Paper...</h2>
+                        </div>
+                        <div class="paper-actions">
+                            <button class="btn-secondary" id="rm-copy-paper-btn" style="display: none;">
+                                <i data-lucide="copy" style="width: 16px; height: 16px;"></i>
+                                <span>Copy Text</span>
+                            </button>
+                            <button class="btn-primary btn-pdf" id="rm-export-pdf-btn" style="display: none;">
+                                <i data-lucide="file-down" style="width: 16px; height: 16px;"></i>
+                                <span>Export Academic PDF</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="paper-render-container" id="rm-paper-output">
+                        <div class="paper-placeholder-state">
+                            <div class="spinner-ring"></div>
+                            <p>Academic pipeline executing. Live sections will materialize as agents complete synthesis.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
         </section>
 
     </main>
@@ -248,6 +432,6 @@
     <div class="toast-container" id="toast-container"></div>
 
     <!-- Application Script -->
-    <script src="app.js?v=1.0.6"></script>
+    <script src="app.js?v=2.0.0"></script>
 </body>
 </html>
