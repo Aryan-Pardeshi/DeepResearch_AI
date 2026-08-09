@@ -416,10 +416,18 @@
                                 <i data-lucide="copy" style="width: 16px; height: 16px;"></i>
                                 <span>Copy Text</span>
                             </button>
-                            <button class="btn-primary btn-pdf" id="rm-export-pdf-btn" style="display: none;">
-                                <i data-lucide="file-down" style="width: 16px; height: 16px;"></i>
-                                <span>Export Academic PDF</span>
-                            </button>
+                            <div class="export-dropdown" id="rm-export-dropdown" style="display: none;">
+                                <button class="btn-primary btn-pdf" id="rm-export-main-btn" onclick="toggleExportMenu(event)">
+                                    <i data-lucide="file-down" style="width: 16px; height: 16px;"></i>
+                                    <span>Export Report</span>
+                                    <span class="caret" style="margin-left: 4px;">▼</span>
+                                </button>
+                                <div class="dropdown-menu" id="rm-export-menu">
+                                    <button class="dropdown-item" onclick="exportReport('pdf')">📄 Export as PDF (.pdf)</button>
+                                    <button class="dropdown-item" onclick="exportReport('docx')">📝 Export as Word (.docx)</button>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
 

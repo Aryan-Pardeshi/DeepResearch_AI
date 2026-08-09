@@ -2509,6 +2509,50 @@ main {
     background: #3b82f6;
 }
 
+/* Export Dropdown Styling */
+.export-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.export-dropdown .dropdown-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 100%;
+    margin-top: 6px;
+    background: rgba(30, 41, 59, 0.95);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    min-width: 200px;
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.export-dropdown .dropdown-menu.show {
+    display: block;
+}
+
+.export-dropdown .dropdown-item {
+    width: 100%;
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    color: #e2e8f0;
+    text-align: left;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.export-dropdown .dropdown-item:hover {
+    background: rgba(59, 130, 246, 0.3);
+    color: #ffffff;
+}
+
+
 /* Responsive Focus & Accessibility */
 *:focus-visible {
     outline: 2px solid var(--academic-blue);
