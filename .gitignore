@@ -242,3 +242,7 @@ data/
 data/*.db
 # Stray PDFs from local test runs
 research-bot/test_*.pdf
+research-bot/scratch/
+research-bot/test_*.docx
+e2e_*.pdf
+e2e_*.docx

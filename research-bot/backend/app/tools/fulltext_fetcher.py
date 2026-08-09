@@ -3,6 +3,7 @@ import io
 import re
 import logging
 import asyncio
+import xml.etree.ElementTree as ET
 import httpx
 import pypdf
 from backend.app.tools.oa_resolver import resolve_oa_pdf_url
@@ -25,6 +26,28 @@ FULLTEXT_MAX_PDF_BYTES = 16 * 1024 * 1024  # 16MB cap, abort larger downloads
 
 FULLTEXT_CONCURRENCY = 4       # concurrent downloads
 FULLTEXT_TOTAL_BUDGET_SECONDS = 25.0   # whole-batch ceiling
+
+
+def _extract_xml_text(raw: bytes) -> str:
+    """Flattens JATS full-text XML into plain text.
+
+    Europe PMC's open-access endpoint returns article XML rather than a PDF, so the
+    body has to be walked directly. Falls back to the whole document when no <body>
+    element is present.
+    """
+    try:
+        root = ET.fromstring(raw)
+    except ET.ParseError as e:
+        logger.warning(f"Could not parse full-text XML: {e}")
+        return ""
+    # The article title sits in <front>, not <body>. Prepend it so the
+    # title-match guard sees it and the excerpt opens with the paper's own title.
+    title_el = root.find(".//article-title")
+    title = " ".join(title_el.itertext()) if title_el is not None else ""
+
+    body = root.find(".//body")
+    node = body if body is not None else root
+    return " ".join(f"{title} {' '.join(node.itertext())}".split())
 
 
 def _significant_words(text: str) -> set:
@@ -94,14 +117,17 @@ async def _download_and_extract(client: httpx.AsyncClient, url: str, title: str)
             logger.warning(f"Empty PDF content received for '{title}'")
             return None
 
-        reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
-        pages_text = []
-        for page in reader.pages:
-            txt = page.extract_text()
-            if txt:
-                pages_text.append(txt)
-
-        full_text = " ".join(" ".join(pages_text).split())
+        if pdf_bytes[:5] != b"%PDF-" and pdf_bytes.lstrip()[:5] == b"<?xml":
+            # Europe PMC serves open-access full text as JATS XML, not PDF
+            full_text = _extract_xml_text(pdf_bytes)
+        else:
+            reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
+            pages_text = []
+            for page in reader.pages:
+                txt = page.extract_text()
+                if txt:
+                    pages_text.append(txt)
+            full_text = " ".join(" ".join(pages_text).split())
         if not full_text:
             logger.warning(f"No text extracted from PDF for '{title}'")
             return None

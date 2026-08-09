@@ -580,7 +580,46 @@ Length: 500 - 900 words.
 {EVIDENCE_BASIS_NOTE}"""
 
     text = await _safe_invoke_llm(llm, prompt, "Empirical results indicate strong support across hypotheses H1 and H2.")
-    return {"results": text}
+
+    # Map individual papers to hypotheses so the evidence table figure has data.
+    # Without this nothing ever sets hypothesis_support and Figure 2 cannot render.
+    mapped = papers
+    if hypotheses and papers:
+        table_papers = papers[:15]
+        listing = "\n".join(f"[{i+1}] {p.get('title')}" for i, p in enumerate(table_papers))
+        h_listing = "\n".join(f"H{i+1}: {h}" for i, h in enumerate(hypotheses))
+        map_prompt = f"""Hypotheses:
+{h_listing}
+
+Papers:
+{listing}
+
+For each paper, judge from its title and topic whether the paper bears on each hypothesis.
+Use exactly one of these values per cell: "supports", "mixed", "refutes", or "" (empty string
+when the paper provides no evidence bearing on that hypothesis). Most cells will be empty -
+do not guess, and do not mark a paper as supporting a hypothesis it does not address.
+Return ONLY a JSON object keyed by paper number, e.g.
+{{"1": {{"H1": "supports", "H2": ""}}, "2": {{"H1": "", "H2": "mixed"}}}}"""
+
+        try:
+            raw = await _safe_invoke_llm(llm, map_prompt, "{}")
+            if "```" in raw:
+                raw = raw.split("```")[1]
+                if raw.startswith("json"):
+                    raw = raw[4:]
+            support = json.loads(raw.strip())
+            mapped = [dict(p) for p in papers]
+            for idx, paper in enumerate(mapped[:15]):
+                cells = support.get(str(idx + 1)) or {}
+                if isinstance(cells, dict):
+                    paper["hypothesis_support"] = {
+                        k: v for k, v in cells.items() if isinstance(v, str)
+                    }
+        except Exception as e:
+            logger.warning(f"Could not map papers to hypotheses for the evidence table: {e}")
+            mapped = papers
+
+    return {"results": text, "screened_papers": mapped}
 
 
 async def discussion_agent(state: ResearchModeState) -> Dict[str, Any]:
