@@ -16,7 +16,11 @@ cursorStyle.innerHTML = `
 document.head.appendChild(cursorStyle);
 
 // Configuration
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = window.API_BASE_URL || (
+    (window.location.protocol === 'file:' || window.location.port === '80' || window.location.port === '')
+        ? `${window.location.protocol === 'file:' ? 'http:' : window.location.protocol}//${window.location.hostname || 'localhost'}:8000`
+        : window.location.origin
+);
 let activeResearchController = null;
 let activeRMController = null;
 
@@ -183,6 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
     checkBackendHealth();
     checkConfigGate();
     renderRMPipelineTracker();
+    restoreRMSessionOnLoad();
     if (window.lucide) lucide.createIcons();
 });
 
@@ -423,13 +428,28 @@ async function saveSettingsModal() {
 // Theme handling
 function initTheme() {
     const theme = localStorage.getItem('deepresearch_theme') || 'dark';
-    if (theme === 'light') document.documentElement.classList.add('light-mode');
+    if (theme === 'light') {
+        document.documentElement.classList.add('light-mode');
+    } else {
+        document.documentElement.classList.remove('light-mode');
+    }
+    updateThemeIcon();
 }
 
 function toggleTheme() {
     document.documentElement.classList.toggle('light-mode');
     const isLight = document.documentElement.classList.contains('light-mode');
     localStorage.setItem('deepresearch_theme', isLight ? 'light' : 'dark');
+    updateThemeIcon();
+}
+
+function updateThemeIcon() {
+    const isLight = document.documentElement.classList.contains('light-mode');
+    const btn = document.getElementById('theme-toggle-btn');
+    if (btn) {
+        btn.innerHTML = `<i data-lucide="${isLight ? 'sun' : 'moon'}" style="width: 18px; height: 18px;"></i>`;
+        if (window.lucide) lucide.createIcons();
+    }
 }
 
 function switchPanel(targetPanel) {
@@ -453,8 +473,174 @@ async function checkBackendHealth() {
 
 
 /* ==========================================================================
-   RESEARCH MODE PIPELINE LOGIC
+   RESEARCH MODE PIPELINE LOGIC & SESSION PERSISTENCE
    ========================================================================== */
+
+function saveRMSession() {
+    if (!state.rm.threadId) return;
+    try {
+        const sessionData = {
+            threadId: state.rm.threadId,
+            rmState: state.rm,
+            lastSeq: state.rm.lastSeq || 0,
+            timestamp: Date.now()
+        };
+        localStorage.setItem('rm_session', JSON.stringify(sessionData));
+    } catch (e) {
+        console.warn('Failed to save RM session:', e);
+    }
+}
+
+function clearRMSession() {
+    try {
+        localStorage.removeItem('rm_session');
+    } catch (e) {
+        console.warn('Failed to clear RM session:', e);
+    }
+}
+
+async function restoreRMSessionOnLoad() {
+    try {
+        const raw = localStorage.getItem('rm_session');
+        if (!raw) return;
+        const session = JSON.parse(raw);
+        if (!session || !session.threadId) return;
+
+        const res = await fetch(`${API_BASE_URL}/research-mode/result/${session.threadId}`);
+        if (!res.ok) {
+            if (res.status === 404) {
+                clearRMSession();
+            }
+            return;
+        }
+        const data = await res.json();
+        const values = data.values || {};
+        
+        state.rm.threadId = session.threadId;
+        if (session.rmState) {
+            Object.assign(state.rm, session.rmState);
+        }
+        applyRMStatePayload(values);
+        if (data.hitl_checkpoint) state.rm.hitlCheckpoint = data.hitl_checkpoint;
+        if (data.status) state.rm.status = data.status;
+        if (session.lastSeq !== undefined) state.rm.lastSeq = session.lastSeq;
+
+        // Switch UI to Research Mode tab & workspace panel
+        switchMode('researchmode');
+        switchPanel(dom.rmWorkspacePanel);
+
+        if (data.is_completed) {
+            updateRMPipelineTracker('title', RM_STAGES.map(s => s.id));
+            if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
+            renderRMPaperFinal();
+        } else if (data.is_checkpoint || data.hitl_checkpoint) {
+            const cp = (data.hitl_checkpoint || 'checkpoint_1').replace(/_(approved|revising)$/, '');
+            state.rm.hitlCheckpoint = cp;
+            const cpIdx = RM_STAGES.findIndex(s => s.id === cp);
+            const completedStages = cpIdx > 0 ? RM_STAGES.slice(0, cpIdx).map(s => s.id) : [];
+            updateRMPipelineTracker(cp, completedStages);
+            renderRMHitlPanel(cp);
+            renderRMPaperLive();
+        } else {
+            renderRMPaperLive();
+        }
+
+        showResumeBanner(data);
+    } catch (e) {
+        console.warn('Error restoring session on load:', e);
+    }
+}
+
+function showResumeBanner(data) {
+    let banner = document.getElementById('rm-resume-banner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'rm-resume-banner';
+        banner.className = 'original-query-banner';
+        banner.style.display = 'flex';
+        banner.style.justifyContent = 'space-between';
+        banner.style.alignItems = 'center';
+        banner.style.marginBottom = '1.25rem';
+
+        const workspace = document.getElementById('rm-workspace-panel');
+        if (workspace && workspace.firstChild) {
+            workspace.insertBefore(banner, workspace.firstChild);
+        }
+    }
+
+    const shortId = state.rm.threadId ? state.rm.threadId.slice(0, 8) : '';
+    const statusText = data.is_completed
+        ? 'Completed Academic Paper'
+        : (data.hitl_checkpoint ? `Checkpoint (${data.hitl_checkpoint})` : 'In Progress');
+
+    banner.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <i data-lucide="rotate-ccw" style="width: 18px; height: 18px; color: var(--academic-blue);"></i>
+            <span><strong>Session Resumed:</strong> Rehydrated session <code>${shortId}</code> — Status: <em>${statusText}</em></span>
+        </div>
+        <button id="rm-banner-reset-btn" class="btn-secondary" style="padding: 0.3rem 0.75rem; font-size: 0.8rem; display: flex; align-items: center; gap: 0.35rem;">
+            <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
+            <span>New Research</span>
+        </button>
+    `;
+
+    if (window.lucide) lucide.createIcons();
+
+    document.getElementById('rm-banner-reset-btn')?.addEventListener('click', resetResearchModeForm);
+}
+
+function resetResearchModeForm() {
+    clearRMSession();
+    state.rm.threadId = null;
+    state.rm.status = 'idle';
+    state.rm.hitlCheckpoint = null;
+    state.rm.problemStatement = '';
+    state.rm.researchObjectives = [];
+    state.rm.researchQuestions = [];
+    state.rm.keywords = [];
+    state.rm.rawPapersCount = 0;
+    state.rm.screenedPapersCount = 0;
+    state.rm.literatureReview = '';
+    state.rm.researchGap = '';
+    state.rm.conceptualFramework = '';
+    state.rm.hypotheses = [];
+    state.rm.researchDesign = '';
+    state.rm.dataCollectionPlan = '';
+    state.rm.dataAnalysisPlan = '';
+    state.rm.results = '';
+    state.rm.discussion = '';
+    state.rm.implications = '';
+    state.rm.limitations = '';
+    state.rm.conclusion = '';
+    state.rm.futureScope = [];
+    state.rm.references = [];
+    state.rm.appendices = '';
+    state.rm.introduction = '';
+    state.rm.abstract = '';
+    state.rm.title = '';
+    state.rm.lastSeq = 0;
+
+    if (dom.rmPsInput) dom.rmPsInput.value = '';
+    if (dom.rmObjsInput) dom.rmObjsInput.value = '';
+    if (dom.rmRqsInput) dom.rmRqsInput.value = '';
+
+    const banner = document.getElementById('rm-resume-banner');
+    if (banner) banner.remove();
+
+    if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
+    if (dom.rmCopyPaperBtn) dom.rmCopyPaperBtn.style.display = 'none';
+    if (dom.rmExportPdfBtn) dom.rmExportPdfBtn.style.display = 'none';
+    if (dom.rmPaperOutput) dom.rmPaperOutput.innerHTML = `
+        <div class="paper-placeholder-state">
+            <div class="spinner-ring"></div>
+            <p>Academic pipeline executing. Live sections will materialize as agents complete synthesis.</p>
+        </div>
+    `;
+
+    renderRMPipelineTracker();
+    switchPanel(dom.rmInputPanel);
+    showToast('Research session reset.', 'info');
+}
 
 function renderRMPipelineTracker() {
     if (!dom.rmPipelineStepsGrid) return;
@@ -534,6 +720,7 @@ async function handleRMStart() {
         state.rm.researchQuestions = data.research_questions || [];
         state.rm.keywords = data.keywords || [];
         state.rm.hitlCheckpoint = data.hitl_checkpoint;
+        saveRMSession();
 
         switchPanel(dom.rmWorkspacePanel);
         updateRMPipelineTracker('checkpoint_1', ['scope_definition', 'keyword_extractor']);
@@ -660,10 +847,19 @@ async function handleRMApprove(feedback) {
     activeRMController = new AbortController();
 
     try {
+        const reqPayload = { thread_id: state.rm.threadId, message: feedback || '' };
+        if (state.rm.lastSeq !== undefined && state.rm.lastSeq !== null) {
+            reqPayload.from_seq = state.rm.lastSeq;
+        }
+        const reqHeaders = { 'Content-Type': 'application/json' };
+        if (state.rm.lastSeq !== undefined && state.rm.lastSeq !== null) {
+            reqHeaders['Last-Event-ID'] = String(state.rm.lastSeq);
+        }
+
         const response = await fetch(`${API_BASE_URL}/research-mode/approve`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ thread_id: state.rm.threadId, message: feedback || '' }),
+            headers: reqHeaders,
+            body: JSON.stringify(reqPayload),
             signal: activeRMController.signal
         });
 
@@ -702,16 +898,22 @@ function processRMSEEvent(data) {
         updateRMPipelineTracker(data.node);
     } else if (data.event === 'node_update') {
         applyRMStatePayload(data.data || {});
+        if (data.seq !== undefined) state.rm.lastSeq = data.seq;
         renderRMPaperLive();
+        saveRMSession();
     } else if (data.event === 'checkpoint') {
         const cp = (data.hitl_checkpoint || 'checkpoint_1').replace(/_(approved|revising)$/, '');
         state.rm.hitlCheckpoint = cp;
         applyRMStatePayload(data.state);
+        if (data.seq !== undefined) state.rm.lastSeq = data.seq;
         renderRMHitlPanel(cp);
+        saveRMSession();
     } else if (data.event === 'completed') {
         applyRMStatePayload(data.state);
+        if (data.seq !== undefined) state.rm.lastSeq = data.seq;
         updateRMPipelineTracker('title', RM_STAGES.map(s => s.id));
         renderRMPaperFinal();
+        saveRMSession();
     } else if (data.event === 'error') {
         showToast(data.message || 'Pipeline error occurred.', 'error');
     }
@@ -944,6 +1146,7 @@ function resetToLanding() {
     state.finalAnswer = '';
     state.workers = {};
     dom.queryInput.value = '';
+    clearRMSession();
     switchPanel(dom.landingPanel);
 }
 
