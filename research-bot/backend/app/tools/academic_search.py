@@ -64,17 +64,21 @@ async def fetch_openalex_papers(client: httpx.AsyncClient, keyword: str, max_res
                 if not title:
                     continue
                 abstract = _reconstruct_openalex_abstract(item.get("abstract_inverted_index"))
-                authors = [
-                    auth.get("author", {}).get("display_name", "")
-                    for auth in item.get("authorships", [])
-                    if auth.get("author", {}).get("display_name")
-                ]
+                authors = []
+
+                for auth in item.get("authorships") or []:
+                    if isinstance(auth, dict):
+                        auth_obj = auth.get("author") or {}
+                        name = auth_obj.get("display_name")
+                        if name:
+                            authors.append(name)
                 year = item.get("publication_year")
                 doi = _normalize_doi(item.get("doi"))
                 landing_page = item.get("doi") or (item.get("primary_location") or {}).get("landing_page_url") or ""
                 oa_info = item.get("open_access") or {}
                 best_oa = item.get("best_oa_location") or {}
                 pdf_url = oa_info.get("oa_url") or best_oa.get("pdf_url") or ""
+
                 
                 papers.append({
                     "title": title.strip(),
