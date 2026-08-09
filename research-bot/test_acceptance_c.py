@@ -16,8 +16,10 @@ def main():
     lit_review_text = (
         "Recent advances in quantum neural networks have demonstrated high accuracy (Smith et al., 2024). "
         "However, legacy benchmarks (Fabricated et al., 2023) suffered from overfitting. "
-        "Further analysis by (Jones, 2022) confirmed these findings, while (FakeAuthor & Other, 2021) claimed otherwise."
+        "Further analysis by (Jones, 2022) confirmed these findings, while (FakeAuthor & Other, 2021) claimed otherwise. "
+        "Another section re-iterated (Fabricated et al., 2023) findings."
     )
+
 
     print("=== INPUT LITERATURE REVIEW ===")
     print(lit_review_text)

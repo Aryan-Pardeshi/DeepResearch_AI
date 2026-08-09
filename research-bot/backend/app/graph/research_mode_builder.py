@@ -105,7 +105,7 @@ async def checkpoint_2_node(state: ResearchModeState) -> dict:
 
     message = user_input.get("message", "") if isinstance(user_input, dict) else str(user_input)
     
-    if message and message.strip().lower() not in ["approve", "approved", "ok", "yes", "looks good", "continue"]:
+    if not _is_approval(message):
         logger.info(f"Checkpoint 2 revision requested: {message}")
         llm = get_llm(role="planner")
         prompt = f"""Original Conceptual Framework: {state.get('conceptual_framework')}
@@ -147,7 +147,7 @@ async def checkpoint_3_node(state: ResearchModeState) -> dict:
 
     message = user_input.get("message", "") if isinstance(user_input, dict) else str(user_input)
     
-    if message and message.strip().lower() not in ["approve", "approved", "ok", "yes", "looks good", "continue"]:
+    if not _is_approval(message):
         logger.info(f"Checkpoint 3 revision requested: {message}")
         llm = get_llm(role="planner")
         prompt = f"""Original Hypotheses: {state.get('hypotheses')}
@@ -190,7 +190,8 @@ async def checkpoint_4_node(state: ResearchModeState) -> dict:
 
     message = user_input.get("message", "") if isinstance(user_input, dict) else str(user_input)
     
-    if message and message.strip().lower() not in ["approve", "approved", "ok", "yes", "looks good", "continue"]:
+    if not _is_approval(message):
+
         logger.info(f"Checkpoint 4 revision requested: {message}")
         llm = get_llm(role="planner")
         prompt = f"""Original Research Design: {state.get('research_design')}

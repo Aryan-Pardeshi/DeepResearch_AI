@@ -35,8 +35,9 @@ def _normalize_doi(doi: Optional[str]) -> str:
     if not doi:
         return ""
     doi = doi.strip().lower()
-    doi = re.sub(r"^https?://(dx\.)?doi\.org/", "", doi)
-    return doi
+    doi = re.sub(r"^(https?://(dx\.)?doi\.org/|doi:\s*)", "", doi)
+    return doi.strip()
+
 
 def _normalize_title(title: Optional[str]) -> str:
     if not title:
@@ -110,7 +111,13 @@ async def fetch_semantic_scholar_papers(client: httpx.AsyncClient, keyword: str,
             headers["x-api-key"] = api_key
 
         resp = await client.get(url, params=params, headers=headers)
+        if resp.status_code == 429:
+            logger.warning(f"Semantic Scholar 429 rate limit hit for '{keyword}', retrying in 1.0s...")
+            await asyncio.sleep(1.0)
+            resp = await client.get(url, params=params, headers=headers)
+
         if resp.status_code == 200:
+
             data = resp.json()
             for item in data.get("data", []):
                 title = item.get("title") or ""

@@ -357,7 +357,7 @@ def verify_citations(text: str, papers: List[Dict[str, Any]]) -> Tuple[str, List
     for orig_str, rep_str in replacements.items():
         modified_text = modified_text.replace(orig_str, rep_str)
 
-    return modified_text, unverified_citations
+    return modified_text, list(dict.fromkeys(unverified_citations))
 
 
 async def citation_verifier_agent(state: ResearchModeState) -> Dict[str, Any]:

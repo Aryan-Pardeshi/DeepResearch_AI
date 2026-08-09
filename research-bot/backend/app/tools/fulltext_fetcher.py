@@ -9,7 +9,8 @@ logger = logging.getLogger(__name__)
 FULLTEXT_TOP_N = 10            # only the N highest-ranked papers get fetched
 FULLTEXT_CHAR_BUDGET = 1500    # extracted characters kept per paper
 FULLTEXT_FETCH_TIMEOUT = 8.0   # seconds, per PDF download
-FULLTEXT_MAX_PDF_BYTES = 8 * 1024 * 1024   # 8MB cap, abort larger downloads
+FULLTEXT_MAX_PDF_BYTES = 16 * 1024 * 1024  # 16MB cap, abort larger downloads
+
 FULLTEXT_CONCURRENCY = 4       # concurrent downloads
 FULLTEXT_TOTAL_BUDGET_SECONDS = 25.0   # whole-batch ceiling
 
