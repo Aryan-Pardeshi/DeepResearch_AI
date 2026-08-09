@@ -8,6 +8,10 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
+    environment:
+      # Local development: the setup gate may rewrite .env. On a public deployment
+      # drop this and set CONFIG_API_TOKEN instead.
+      ALLOW_OPEN_CONFIG_API: "1"
     env_file:
       - path: .env
         required: false

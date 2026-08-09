@@ -366,6 +366,28 @@ function setupEventListeners() {
     dom.rmExportPdfBtn?.addEventListener('click', handleRMExportPDF);
 }
 
+// Admin token for the config API. The backend rejects config writes without it
+// unless the deployment explicitly opted into open access for local use.
+function getConfigToken() {
+    return window.CONFIG_API_TOKEN || localStorage.getItem('config_api_token') || '';
+}
+
+function configHeaders() {
+    const headers = { 'Content-Type': 'application/json' };
+    const token = getConfigToken();
+    if (token) headers['X-Config-Token'] = token;
+    return headers;
+}
+
+async function promptForConfigToken() {
+    const token = window.prompt('This deployment requires an admin token to change configuration. Enter X-Config-Token:');
+    if (token && token.trim()) {
+        localStorage.setItem('config_api_token', token.trim());
+        return true;
+    }
+    return false;
+}
+
 // Setup Gate Submit
 async function submitSetupGate() {
     const payload = {
@@ -380,12 +402,24 @@ async function submitSetupGate() {
 
     dom.gateSaveStatus.textContent = 'Saving configuration locally...';
     try {
-        const res = await fetch(`${API_BASE_URL}/config/setup`, {
+        let res = await fetch(`${API_BASE_URL}/config/setup`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: configHeaders(),
             body: JSON.stringify(payload)
         });
+        if (res.status === 401 && await promptForConfigToken()) {
+            res = await fetch(`${API_BASE_URL}/config/setup`, {
+                method: 'POST',
+                headers: configHeaders(),
+                body: JSON.stringify(payload)
+            });
+        }
         const data = await res.json();
+        if (res.status === 401 || res.status === 403) {
+            localStorage.removeItem('config_api_token');
+            dom.gateSaveStatus.textContent = data.detail || 'Configuration API is locked on this deployment.';
+            return;
+        }
         if (data.ok) {
             dom.gateSaveStatus.textContent = 'Configuration saved!';
             setTimeout(() => {
@@ -411,14 +445,27 @@ async function saveSettingsModal() {
 
     dom.saveStatus.textContent = 'Saving...';
     try {
-        const res = await fetch(`${API_BASE_URL}/health/config`, {
+        let res = await fetch(`${API_BASE_URL}/health/config`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: configHeaders(),
             body: JSON.stringify(payload)
         });
+        if (res.status === 401 && await promptForConfigToken()) {
+            res = await fetch(`${API_BASE_URL}/health/config`, {
+                method: 'POST',
+                headers: configHeaders(),
+                body: JSON.stringify(payload)
+            });
+        }
         if (res.ok) {
             dom.saveStatus.textContent = 'Saved successfully!';
             setTimeout(() => dom.settingsModal.style.display = 'none', 1000);
+        } else if (res.status === 401 || res.status === 403) {
+            localStorage.removeItem('config_api_token');
+            const data = await res.json().catch(() => ({}));
+            dom.saveStatus.textContent = data.detail || 'Configuration API is locked on this deployment.';
+        } else {
+            dom.saveStatus.textContent = 'Failed to save settings.';
         }
     } catch (e) {
         dom.saveStatus.textContent = 'Error saving settings.';
