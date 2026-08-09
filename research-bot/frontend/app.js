@@ -273,6 +273,22 @@ function cacheDomElements() {
         rmExportPdfBtn: document.getElementById('rm-export-pdf-btn'),
         rmExportDropdown: document.getElementById('rm-export-dropdown'),
 
+        statRetrieved: document.getElementById('stat-retrieved'),
+        statDedup: document.getElementById('stat-dedup'),
+        statScreened: document.getElementById('stat-screened'),
+        statIncluded: document.getElementById('stat-included'),
+        statFulltext: document.getElementById('stat-fulltext'),
+        rmCorpusStatsBar: document.getElementById('rm-corpus-stats-bar'),
+        rmLogDrawer: document.getElementById('rm-log-drawer'),
+        rmLogBody: document.getElementById('rm-log-body'),
+        rmLogCount: document.getElementById('rm-log-count'),
+        rmEvidenceCard: document.getElementById('rm-evidence-card'),
+        rmEvidenceMatrixView: document.getElementById('rm-evidence-matrix-view'),
+        paperDetailModal: document.getElementById('paper-detail-modal'),
+        modalPaperTitle: document.getElementById('modal-paper-title'),
+        modalPaperBody: document.getElementById('modal-paper-body'),
+        modalCloseBtn: document.getElementById('modal-close-btn'),
+
         toastContainer: document.getElementById('toast-container')
 
     };
@@ -984,12 +1000,70 @@ async function handleRMApprove(feedback) {
     }
 }
 
+function appendLogLine(msg, level = 'info') {
+    if (!dom.rmLogBody) return;
+    const timeStr = new Date().toLocaleTimeString();
+    const div = document.createElement('div');
+    div.className = `rm-log-line ${level}`;
+    div.style.color = level === 'warn' ? '#fbbf24' : (level === 'success' ? '#34d399' : (level === 'error' ? '#f87171' : '#38bdf8'));
+    div.textContent = `[${timeStr}] ${msg}`;
+    dom.rmLogBody.appendChild(div);
+    dom.rmLogBody.scrollTop = dom.rmLogBody.scrollHeight;
+
+    const count = dom.rmLogBody.children.length;
+    if (dom.rmLogCount) dom.rmLogCount.textContent = `${count} events`;
+}
+
+function updateCorpusStats(stats) {
+    if (!stats) return;
+    if (dom.statRetrieved) dom.statRetrieved.textContent = stats.retrieved || 0;
+    if (dom.statDedup) dom.statDedup.textContent = stats.after_dedup || 0;
+    if (dom.statScreened) dom.statScreened.textContent = stats.screened || 0;
+    if (dom.statIncluded) dom.statIncluded.textContent = stats.included || 0;
+    if (dom.statFulltext) dom.statFulltext.textContent = stats.fulltext_fetched || 0;
+    if (dom.rmCorpusStatsBar) dom.rmCorpusStatsBar.style.display = 'flex';
+}
+
+function openPaperInspector(paper) {
+    if (!paper || !dom.paperDetailModal) return;
+    if (dom.modalPaperTitle) dom.modalPaperTitle.textContent = paper.title || 'Paper Details';
+    if (dom.modalPaperBody) {
+        dom.modalPaperBody.innerHTML = `
+            <div style="margin-bottom: 1rem;">
+                <h4 style="margin: 0 0 0.5rem 0; color: var(--academic-blue); font-size: 1.05rem;">${paper.title || 'Untitled'}</h4>
+                <p style="margin: 0.25rem 0; color: var(--text-muted);"><strong>Authors:</strong> ${Array.isArray(paper.authors) ? paper.authors.join(', ') : (paper.authors || 'N/A')}</p>
+                <p style="margin: 0.25rem 0; color: var(--text-muted);"><strong>Venue / Year:</strong> ${paper.venue || paper.journal || 'Academic Index'} (${paper.year || 'N/A'})</p>
+                <p style="margin: 0.25rem 0;"><strong>DOI:</strong> ${paper.doi ? `<a href="https://doi.org/${paper.doi}" target="_blank" style="color: var(--academic-blue);">${paper.doi}</a>` : 'N/A'}</p>
+                <p style="margin: 0.25rem 0;"><strong>PDF Source:</strong> ${paper.pdf_url ? `<a href="${paper.pdf_url}" target="_blank" style="color: var(--emerald-accent);">[Open Access PDF Link]</a>` : '<span style="color: var(--text-muted);">No PDF Direct Link</span>'}</p>
+            </div>
+            <div style="background: var(--bg-surface); padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 1rem;">
+                <p style="margin: 0 0 0.25rem 0; font-weight: 600;">Relevance Score: <span style="color: var(--academic-blue);">${paper.relevance_score || 'N/A'}/10</span></p>
+                <p style="margin: 0; color: var(--text-secondary);"><strong>Inclusion Rationale:</strong> ${paper.inclusion_reason || paper.rationale || 'Selected based on topic alignment.'}</p>
+            </div>
+            <div style="margin-top: 1rem;">
+                <h5 style="margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: 600;">Extracted Full-Text Excerpt</h5>
+                <pre style="white-space: pre-wrap; font-family: monospace; font-size: 0.82rem; background: #0f172a; color: #f8fafc; padding: 0.85rem; border-radius: 8px; max-height: 250px; overflow-y: auto;">${paper.fulltext_excerpt || paper.abstract || 'No full-text excerpt extracted for this paper.'}</pre>
+            </div>
+        `;
+    }
+    dom.paperDetailModal.style.display = 'flex';
+}
+
+if (dom.modalCloseBtn) {
+    dom.modalCloseBtn.onclick = () => {
+        if (dom.paperDetailModal) dom.paperDetailModal.style.display = 'none';
+    };
+}
+
 function processRMSEEvent(data) {
     if (data.event === 'node_start') {
         updateRMPipelineTracker(data.node);
+        appendLogLine(`Node started: ${data.node}`, 'info');
     } else if (data.event === 'node_update') {
         applyRMStatePayload(data.data || {});
         if (data.seq !== undefined) state.rm.lastSeq = data.seq;
+        appendLogLine(`Node updated: ${data.node}`, 'success');
+        if (data.data && data.data.corpus_stats) updateCorpusStats(data.data.corpus_stats);
         renderRMPaperLive();
         saveRMSession();
     } else if (data.event === 'checkpoint') {
@@ -997,15 +1071,20 @@ function processRMSEEvent(data) {
         state.rm.hitlCheckpoint = cp;
         applyRMStatePayload(data.state);
         if (data.seq !== undefined) state.rm.lastSeq = data.seq;
+        appendLogLine(`HITL Checkpoint reached: ${cp}`, 'warn');
+        if (data.state && data.state.corpus_stats) updateCorpusStats(data.state.corpus_stats);
         renderRMHitlPanel(cp);
         saveRMSession();
     } else if (data.event === 'completed') {
         applyRMStatePayload(data.state);
         if (data.seq !== undefined) state.rm.lastSeq = data.seq;
+        appendLogLine(`Pipeline execution completed!`, 'success');
+        if (data.state && data.state.corpus_stats) updateCorpusStats(data.state.corpus_stats);
         updateRMPipelineTracker('title', RM_STAGES.map(s => s.id));
         renderRMPaperFinal();
         saveRMSession();
     } else if (data.event === 'error') {
+        appendLogLine(`Pipeline Error: ${data.message}`, 'error');
         showToast(data.message || 'Pipeline error occurred.', 'error');
     }
     return data.event;
