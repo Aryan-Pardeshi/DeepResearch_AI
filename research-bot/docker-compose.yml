@@ -9,9 +9,12 @@ services:
     ports:
       - "8000:8000"
     environment:
-      # Local development: the setup gate may rewrite .env. On a public deployment
-      # drop this and set CONFIG_API_TOKEN instead.
-      ALLOW_OPEN_CONFIG_API: "1"
+      # Off unless you opt in from your own .env. The config API can rewrite
+      # LLM_API_KEY and LLM_BASE_URL, so this file must never ship with it enabled:
+      # a copy deployed to a server would expose that endpoint to the internet.
+      # Local use: put ALLOW_OPEN_CONFIG_API=1 in .env (gitignored).
+      # Deployed:  set CONFIG_API_TOKEN instead and leave this at 0.
+      ALLOW_OPEN_CONFIG_API: "${ALLOW_OPEN_CONFIG_API:-0}"
     env_file:
       - path: .env
         required: false
