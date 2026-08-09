@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 import sys, os, re
 from pathlib import Path
 import uvicorn
@@ -5,6 +6,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
 root_dir = Path(__file__).resolve().parent.parent.parent
 if str(root_dir) not in sys.path:
@@ -13,13 +15,30 @@ if str(root_dir) not in sys.path:
 from backend.app.api.agent import router as agent_router
 from backend.app.api.research_mode import router as research_mode_router
 from backend.app.llm import lazy_llm, llm_fast, llm_pro
+from backend.app.graph.research_mode_builder import set_checkpointer as set_rm_checkpointer
+from backend.app.graph.builder import set_checkpointer as set_ds_checkpointer
 
 from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 ENV_PATH = root_dir / ".env"
 
-app = FastAPI(title="AI Research Assistant Bot")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    db_path_str = os.getenv("RESEARCH_DB_PATH", "./data/research_state.db")
+    db_path = Path(db_path_str).resolve()
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+
+    async with AsyncSqliteSaver.from_conn_string(str(db_path)) as checkpointer:
+        await checkpointer.setup()
+        set_rm_checkpointer(checkpointer)
+        set_ds_checkpointer(checkpointer)
+        yield
+
+
+app = FastAPI(title="AI Research Assistant Bot", lifespan=lifespan)
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,6 +54,11 @@ app.include_router(research_mode_router)
 static_path = Path(__file__).resolve().parent / "static"
 static_path.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
+
+# Mount static frontend directory if present
+frontend_path = root_dir / "frontend"
+if frontend_path.exists():
+    app.mount("/app", StaticFiles(directory=str(frontend_path), html=True), name="frontend_ui")
 
 @app.get("/")
 def read_root():

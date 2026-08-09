@@ -289,5 +289,26 @@ builder.add_edge("introduction", "abstract")
 builder.add_edge("abstract", "title")
 builder.add_edge("title", END)
 
-checkpointer = MemorySaver()
-research_mode_graph = builder.compile(checkpointer=checkpointer)
+_checkpointer = MemorySaver()
+_compiled_graph = None
+
+
+def set_checkpointer(checkpointer):
+    global _checkpointer, _compiled_graph
+    _checkpointer = checkpointer
+    _compiled_graph = builder.compile(checkpointer=_checkpointer)
+    logger.info(f"Research Mode graph compiled with checkpointer: {type(checkpointer).__name__}")
+
+
+def get_research_mode_graph():
+    global _compiled_graph
+    if _compiled_graph is None:
+        _compiled_graph = builder.compile(checkpointer=_checkpointer)
+    return _compiled_graph
+
+
+def __getattr__(name: str):
+    if name == "research_mode_graph":
+        return get_research_mode_graph()
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+
