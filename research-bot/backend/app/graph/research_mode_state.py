@@ -24,6 +24,7 @@ class ResearchModeState(TypedDict, total=False):
     conclusion: str
     future_scope: List[str] | str
     references: List[str]  # Formatted APA citations
+    appendices: str
     introduction: str
     abstract: str
     title: str

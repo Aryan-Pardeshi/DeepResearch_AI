@@ -59,38 +59,85 @@ const state = {
         conclusion: '',
         futureScope: [],
         references: [],
+        appendices: '',
         introduction: '',
         abstract: '',
         title: '',
-        activeStage: 'keyword_extractor'
+        activeStage: 'scope_definition'
     }
 };
 
-// Research Mode Pipeline 18 Stages Metadata
+// Research Mode Pipeline Stage Metadata (agent research flow order)
 const RM_STAGES = [
-    { id: 'keyword_extractor', name: '1. Keywords', role: 'extractor' },
+    { id: 'scope_definition', name: '1-3. Scope Definition', role: 'scoper' },
+    { id: 'keyword_extractor', name: 'Keyword Extraction', role: 'extractor' },
     { id: 'checkpoint_1', name: 'HITL Checkpoint 1', hitl: true },
-    { id: 'paper_fetcher', name: '2. Paper Fetcher', role: 'fetcher' },
-    { id: 'paper_screener', name: '3. Paper Screener', role: 'screener' },
-    { id: 'literature_review', name: '4. Lit Review', role: 'synthesizer' },
-    { id: 'gap_analysis', name: '5. Gap Analysis', role: 'analyst' },
-    { id: 'framework', name: '6. Framework', role: 'architect' },
+    { id: 'paper_fetcher', name: 'Corpus Retrieval', role: 'fetcher' },
+    { id: 'paper_screener', name: 'Corpus Screening', role: 'screener' },
+    { id: 'literature_review', name: '4. Literature Review', role: 'synthesizer' },
+    { id: 'gap_analysis', name: '5. Research Gap', role: 'analyst' },
+    { id: 'framework', name: '6. Conceptual Framework', role: 'architect' },
     { id: 'checkpoint_2', name: 'HITL Checkpoint 2', hitl: true },
     { id: 'hypotheses', name: '7. Hypotheses', role: 'formulator' },
     { id: 'checkpoint_3', name: 'HITL Checkpoint 3', hitl: true },
-    { id: 'methodology', name: '8. Methodology', role: 'methodologist' },
+    { id: 'research_design', name: '8. Research Design', role: 'methodologist' },
+    { id: 'data_collection', name: '9. Data Collection', role: 'methodologist' },
+    { id: 'data_analysis', name: '10. Data Analysis', role: 'methodologist' },
     { id: 'checkpoint_4', name: 'HITL Checkpoint 4', hitl: true },
-    { id: 'results', name: '9. Results', role: 'synthesizer' },
-    { id: 'discussion', name: '10. Discussion', role: 'interpreter' },
-    { id: 'implications', name: '11. Implications', role: 'evaluator' },
-    { id: 'limitations', name: '12. Limitations', role: 'critic' },
-    { id: 'conclusion', name: '13. Conclusion', role: 'summarizer' },
-    { id: 'future_scope', name: '14. Future Scope', role: 'visionary' },
-    { id: 'references', name: '15. References', role: 'indexer' },
-    { id: 'introduction', name: '16. Introduction', role: 'framer' },
-    { id: 'abstract', name: '17. Abstract', role: 'summarizer' },
-    { id: 'title', name: '18. Title', role: 'finalizer' }
+    { id: 'results', name: '11. Results', role: 'synthesizer' },
+    { id: 'discussion', name: '12. Discussion + Implications', role: 'interpreter' },
+    { id: 'limitations', name: '13. Limitations', role: 'critic' },
+    { id: 'conclusion', name: '14. Conclusion', role: 'summarizer' },
+    { id: 'future_scope', name: '15. Future Scope', role: 'visionary' },
+    { id: 'references', name: '16. References', role: 'indexer' },
+    { id: 'appendices', name: '17. Appendices', role: 'archivist' },
+    { id: 'introduction', name: '18. Introduction', role: 'framer' },
+    { id: 'abstract', name: '19. Abstract', role: 'summarizer' },
+    { id: 'title', name: '20. Title', role: 'finalizer' }
 ];
+
+// Nodes that run without their own tile in the tracker grid
+const RM_HIDDEN_STAGES = {
+    scope_reviser: { label: 'Revising Scope', anchor: 'checkpoint_1' }
+};
+
+// Maps the snake_case state payload from the backend onto the camelCase UI state
+const RM_STATE_KEY_MAP = {
+    problem_statement: 'problemStatement',
+    research_objectives: 'researchObjectives',
+    research_questions: 'researchQuestions',
+    keywords: 'keywords',
+    raw_papers_count: 'rawPapersCount',
+    screened_papers_count: 'screenedPapersCount',
+    literature_review: 'literatureReview',
+    research_gap: 'researchGap',
+    conceptual_framework: 'conceptualFramework',
+    hypotheses: 'hypotheses',
+    research_design: 'researchDesign',
+    data_collection_plan: 'dataCollectionPlan',
+    data_analysis_plan: 'dataAnalysisPlan',
+    results: 'results',
+    discussion: 'discussion',
+    implications: 'implications',
+    limitations: 'limitations',
+    conclusion: 'conclusion',
+    future_scope: 'futureScope',
+    references: 'references',
+    appendices: 'appendices',
+    introduction: 'introduction',
+    abstract: 'abstract',
+    title: 'title'
+};
+
+function applyRMStatePayload(payload) {
+    if (!payload) return;
+    Object.entries(RM_STATE_KEY_MAP).forEach(([snake, camel]) => {
+        const value = payload[snake];
+        if (value !== undefined && value !== null && value !== '') {
+            state.rm[camel] = value;
+        }
+    });
+}
 
 // Activity & Timer Monitors
 const researchTimer = {
@@ -136,6 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
     checkBackendHealth();
     checkConfigGate();
     renderRMPipelineTracker();
+    if (window.lucide) lucide.createIcons();
 });
 
 function cacheDomElements() {
@@ -300,7 +348,14 @@ function setupEventListeners() {
 
     // Research Mode Actions
     dom.rmStartBtn?.addEventListener('click', handleRMStart);
-    dom.rmHitlReviseBtn?.addEventListener('click', () => handleRMApprove(dom.rmHitlFeedbackInput.value));
+    dom.rmHitlReviseBtn?.addEventListener('click', () => {
+        const feedback = dom.rmHitlFeedbackInput.value.trim();
+        if (!feedback) {
+            showToast('Type what you want changed, then request revisions.', 'warning');
+            return;
+        }
+        handleRMApprove(feedback);
+    });
     dom.rmHitlApproveBtn?.addEventListener('click', () => handleRMApprove('approve'));
     dom.rmCopyPaperBtn?.addEventListener('click', () => copyToClipboard(getPaperMarkdown(), dom.rmCopyPaperBtn));
     dom.rmExportPdfBtn?.addEventListener('click', handleRMExportPDF);
@@ -423,6 +478,9 @@ function renderRMPipelineTracker() {
 }
 
 function updateRMPipelineTracker(activeStageId, completedStages = []) {
+    const hidden = RM_HIDDEN_STAGES[activeStageId];
+    const anchoredStageId = hidden ? hidden.anchor : activeStageId;
+
     RM_STAGES.forEach(stage => {
         const el = document.getElementById(`rm-step-${stage.id}`);
         if (!el) return;
@@ -430,14 +488,15 @@ function updateRMPipelineTracker(activeStageId, completedStages = []) {
         el.classList.remove('active', 'completed');
         if (completedStages.includes(stage.id)) {
             el.classList.add('completed');
-        } else if (stage.id === activeStageId) {
+        } else if (stage.id === anchoredStageId) {
             el.classList.add('active');
         }
     });
 
     if (dom.rmPipelineStatusTag) {
-        const current = RM_STAGES.find(s => s.id === activeStageId);
-        dom.rmPipelineStatusTag.textContent = current ? `Active: ${current.name}` : 'Pipeline Running';
+        const current = RM_STAGES.find(s => s.id === anchoredStageId);
+        const label = hidden ? hidden.label : (current ? current.name : null);
+        dom.rmPipelineStatusTag.textContent = label ? `Active: ${label}` : 'Pipeline Running';
     }
 }
 
@@ -452,7 +511,7 @@ async function handleRMStart() {
     const rqs = dom.rmRqsInput.value.split('\n').map(s => s.trim()).filter(Boolean);
 
     dom.rmStartBtn.disabled = true;
-    dom.rmStartBtn.innerHTML = '<div class="spinner-ring sm"></div><span>Initializing Academic Agents...</span>';
+    dom.rmStartBtn.innerHTML = '<div class="spinner-ring sm"></div><span>Defining research scope...</span>';
 
     try {
         const res = await fetch(`${API_BASE_URL}/research-mode/start`, {
@@ -477,7 +536,7 @@ async function handleRMStart() {
         state.rm.hitlCheckpoint = data.hitl_checkpoint;
 
         switchPanel(dom.rmWorkspacePanel);
-        updateRMPipelineTracker('keyword_extractor', ['keyword_extractor']);
+        updateRMPipelineTracker('checkpoint_1', ['scope_definition', 'keyword_extractor']);
         renderRMHitlPanel('checkpoint_1');
 
     } catch (e) {
@@ -492,10 +551,15 @@ function renderRMHitlPanel(checkpoint) {
     dom.rmHitlPanel.style.display = 'block';
     dom.rmHitlBody.innerHTML = '';
     dom.rmHitlFeedbackInput.value = '';
+    dom.rmHitlFeedbackInput.placeholder = 'Specify any edits or revisions for this phase...';
 
     if (checkpoint === 'checkpoint_1') {
-        dom.rmHitlTitle.textContent = 'Checkpoint 1: Problem Statement & Keywords Review';
+        dom.rmHitlTitle.textContent = 'Checkpoint 1: Scope Review — Problem, Objectives & Questions';
         dom.rmHitlBadge.textContent = 'Checkpoint 1 of 4';
+        dom.rmHitlFeedbackInput.placeholder = 'e.g. Make objective 2 focus on cost, not latency. Add a question about long-term stability.';
+
+        const objectives = state.rm.researchObjectives || [];
+        const questions = state.rm.researchQuestions || [];
 
         dom.rmHitlBody.innerHTML = `
             <div class="form-group">
@@ -503,9 +567,31 @@ function renderRMHitlPanel(checkpoint) {
                 <div class="problem-statement-text">${state.rm.problemStatement}</div>
             </div>
             <div class="form-group">
+                <label class="form-label">Research Objectives <span class="label-tag">auto-defined</span></label>
+                <div class="subtasks-list">
+                    ${objectives.map((o, i) => `
+                        <div class="subtask-item">
+                            <span class="subtask-number">O${i + 1}</span>
+                            <span class="subtask-content">${o}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Research Questions <span class="label-tag">auto-defined</span></label>
+                <div class="subtasks-list">
+                    ${questions.map((q, i) => `
+                        <div class="subtask-item">
+                            <span class="subtask-number">RQ${i + 1}</span>
+                            <span class="subtask-content">${q}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            <div class="form-group">
                 <label class="form-label">Extracted Academic Keywords (6-10)</label>
                 <div class="chips-container">
-                    ${state.rm.keywords.map(kw => `<span class="chip active">${kw}</span>`).join('')}
+                    ${(state.rm.keywords || []).map(kw => `<span class="chip active">${kw}</span>`).join('')}
                 </div>
             </div>
         `;
@@ -615,34 +701,15 @@ function processRMSEEvent(data) {
     if (data.event === 'node_start') {
         updateRMPipelineTracker(data.node);
     } else if (data.event === 'node_update') {
-        const out = data.data || {};
-        Object.assign(state.rm, {
-            literatureReview: out.literature_review || state.rm.literatureReview,
-            researchGap: out.research_gap || state.rm.researchGap,
-            conceptualFramework: out.conceptual_framework || state.rm.conceptualFramework,
-            hypotheses: out.hypotheses || state.rm.hypotheses,
-            researchDesign: out.research_design || state.rm.researchDesign,
-            dataCollectionPlan: out.data_collection_plan || state.rm.dataCollectionPlan,
-            dataAnalysisPlan: out.data_analysis_plan || state.rm.dataAnalysisPlan,
-            results: out.results || state.rm.results,
-            discussion: out.discussion || state.rm.discussion,
-            implications: out.implications || state.rm.implications,
-            limitations: out.limitations || state.rm.limitations,
-            conclusion: out.conclusion || state.rm.conclusion,
-            futureScope: out.future_scope || state.rm.futureScope,
-            references: out.references || state.rm.references,
-            introduction: out.introduction || state.rm.introduction,
-            abstract: out.abstract || state.rm.abstract,
-            title: out.title || state.rm.title
-        });
+        applyRMStatePayload(data.data || {});
         renderRMPaperLive();
     } else if (data.event === 'checkpoint') {
-        const cp = data.hitl_checkpoint || 'checkpoint_1';
+        const cp = (data.hitl_checkpoint || 'checkpoint_1').replace(/_(approved|revising)$/, '');
         state.rm.hitlCheckpoint = cp;
-        if (data.state) Object.assign(state.rm, data.state);
+        applyRMStatePayload(data.state);
         renderRMHitlPanel(cp);
     } else if (data.event === 'completed') {
-        if (data.state) Object.assign(state.rm, data.state);
+        applyRMStatePayload(data.state);
         updateRMPipelineTracker('title', RM_STAGES.map(s => s.id));
         renderRMPaperFinal();
     } else if (data.event === 'error') {
@@ -670,15 +737,19 @@ function getPaperMarkdown() {
     if (s.abstract) md += `## Abstract\n${s.abstract}\n\n`;
     if (s.introduction) md += `## 1. Introduction\n${s.introduction}\n\n`;
     if (s.literatureReview) md += `## 2. Literature Review\n${s.literatureReview}\n\n`;
-    if (s.conceptualFramework) md += `## 3. Research Gap & Conceptual Framework\n### Research Gap\n${s.researchGap}\n\n### Conceptual Framework\n${s.conceptualFramework}\n\n`;
-    if (s.hypotheses && s.hypotheses.length) md += `## 4. Hypotheses\n${s.hypotheses.map((h, i) => `- **H${i+1}**: ${h}`).join('\n')}\n\n`;
-    if (s.researchDesign) md += `## 5. Methodology\n**Design**: ${s.researchDesign}\n\n**Data Collection**: ${s.dataCollectionPlan}\n\n**Data Analysis**: ${s.dataAnalysisPlan}\n\n`;
-    if (s.results) md += `## 6. Results\n${s.results}\n\n`;
-    if (s.discussion) md += `## 7. Discussion\n${s.discussion}\n\n`;
-    if (s.implications) md += `## 8. Implications\n${s.implications}\n\n`;
-    if (s.limitations) md += `## 9. Limitations\n${s.limitations}\n\n`;
-    if (s.conclusion) md += `## 10. Conclusion & Future Scope\n${s.conclusion}\n\n### Future Directions\n${Array.isArray(s.futureScope) ? s.futureScope.map(f => `- ${f}`).join('\n') : s.futureScope}\n\n`;
-    if (s.references && s.references.length) md += `## References\n${s.references.map(r => `- ${r}`).join('\n')}\n\n`;
+    if (s.researchGap) md += `## 3. Research Gap\n${s.researchGap}\n\n`;
+    if (s.researchObjectives && s.researchObjectives.length) md += `## 4. Research Objectives\n${s.researchObjectives.map((o, i) => `${i+1}. ${o}`).join('\n')}\n\n`;
+    if (s.researchQuestions && s.researchQuestions.length) md += `## 5. Research Questions\n${s.researchQuestions.map((q, i) => `**RQ${i+1}**: ${q}`).join('\n\n')}\n\n`;
+    if (s.conceptualFramework) md += `## 6. Conceptual Framework\n${s.conceptualFramework}\n\n`;
+    if (s.hypotheses && s.hypotheses.length) md += `## 7. Hypotheses\n${s.hypotheses.map((h, i) => `- **H${i+1}**: ${h}`).join('\n')}\n\n`;
+    if (s.researchDesign) md += `## 8. Methodology\n### 8.1 Research Design\n${s.researchDesign}\n\n### 8.2 Data Collection\n${s.dataCollectionPlan}\n\n### 8.3 Data Analysis\n${s.dataAnalysisPlan}\n\n`;
+    if (s.results) md += `## 9. Results\n${s.results}\n\n`;
+    if (s.discussion) md += `## 10. Discussion\n${s.discussion}\n\n${s.implications ? `### 10.1 Implications\n${s.implications}\n\n` : ''}`;
+    if (s.limitations) md += `## 11. Limitations\n${s.limitations}\n\n`;
+    if (s.conclusion) md += `## 12. Conclusion\n${s.conclusion}\n\n`;
+    if (s.futureScope && s.futureScope.length) md += `## 13. Future Scope\n${Array.isArray(s.futureScope) ? s.futureScope.map(f => `- ${f}`).join('\n') : s.futureScope}\n\n`;
+    if (s.references && s.references.length) md += `## 14. References\n${s.references.map(r => `- ${r}`).join('\n')}\n\n`;
+    if (s.appendices) md += `## 15. Appendices\n${s.appendices}\n\n`;
     return md;
 }
 
