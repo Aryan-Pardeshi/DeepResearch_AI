@@ -1,27 +1,35 @@
 import os
+import re
 import logging
+from datetime import date
 from pathlib import Path
 from fpdf import FPDF
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional, List, Tuple
 
 logger = logging.getLogger(__name__)
 
-# Unicode-capable TTFs to try, in order: (regular, bold). Academic text is full of
-# subscripts, Greek letters, and en-dashes that the built-in latin-1 fonts cannot encode.
+# Serif families first: academic papers are set in a serif face. Each entry is
+# (regular, bold, italic); missing faces fall back to the regular file.
 UNICODE_FONT_CANDIDATES = [
-    (os.getenv("PDF_FONT_PATH"), os.getenv("PDF_FONT_PATH_BOLD")),
-    ("C:/Windows/Fonts/segoeui.ttf", "C:/Windows/Fonts/segoeuib.ttf"),
-    ("C:/Windows/Fonts/arial.ttf", "C:/Windows/Fonts/arialbd.ttf"),
-    ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
-    ("/usr/share/fonts/dejavu/DejaVuSans.ttf", "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf"),
-    ("/Library/Fonts/Arial Unicode.ttf", None),
+    (os.getenv("PDF_FONT_PATH"), os.getenv("PDF_FONT_PATH_BOLD"), os.getenv("PDF_FONT_PATH_ITALIC")),
+    ("C:/Windows/Fonts/times.ttf", "C:/Windows/Fonts/timesbd.ttf", "C:/Windows/Fonts/timesi.ttf"),
+    ("C:/Windows/Fonts/georgia.ttf", "C:/Windows/Fonts/georgiab.ttf", "C:/Windows/Fonts/georgiai.ttf"),
+    ("/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",
+     "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",
+     "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Italic.ttf"),
+    ("/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",
+     "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf",
+     "/usr/share/fonts/truetype/liberation/LiberationSerif-Italic.ttf"),
+    ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf"),
 ]
 
 # Fallback transliterations, used only when no Unicode TTF is available on the host
 LATIN1_SUBSTITUTIONS = {
-    **{chr(0x2080 + d): str(d) for d in range(10)},          # subscript digits
+    **{chr(0x2080 + d): str(d) for d in range(10)},
     "\u2070": "0", "\u00b9": "1", "\u00b2": "2", "\u00b3": "3",
-    **{chr(0x2074 + d): str(d + 4) for d in range(6)},        # superscripts 4-9
+    **{chr(0x2074 + d): str(d + 4) for d in range(6)},
     "\u2212": "-", "\u2013": "-", "\u2014": "-", "\u2010": "-", "\u2011": "-",
     "\u2018": "'", "\u2019": "'", "\u201c": '"', "\u201d": '"',
     "\u2026": "...", "\u2192": "->", "\u2190": "<-", "\u21d2": "=>",
@@ -34,57 +42,121 @@ LATIN1_SUBSTITUTIONS = {
     "\u0394": "Delta", "\u03a3": "Sigma", "\u212b": "Angstrom",
 }
 
+# Page geometry, in mm. 25mm ~= the 1 inch margin expected of a manuscript.
+MARGIN = 25
+BODY_SIZE = 11
+BODY_LEADING = 5.6
 
-def _register_unicode_font(pdf: FPDF) -> Optional[Tuple[str, str]]:
-    """Registers the first available Unicode TTF. Returns (family, bold_style) or None."""
-    for regular, bold in UNICODE_FONT_CANDIDATES:
+
+def _register_fonts(pdf: FPDF) -> Optional[str]:
+    """Registers the first available serif TTF with bold and italic faces."""
+    for regular, bold, italic in UNICODE_FONT_CANDIDATES:
         if not regular or not Path(regular).is_file():
             continue
-        family = "PaperSans"
+        family = "PaperSerif"
         try:
             pdf.add_font(family, "", regular)
-            if bold and Path(bold).is_file():
-                pdf.add_font(family, "B", bold)
-                return family, "B"
-            # No bold face available: headings stay in the regular weight
-            return family, ""
+            # fpdf2 needs every style it may be asked for; reuse the regular file
+            # rather than raising when a face is missing.
+            bold_file = bold if bold and Path(bold).is_file() else regular
+            italic_file = italic if italic and Path(italic).is_file() else regular
+            pdf.add_font(family, "B", bold_file)
+            pdf.add_font(family, "I", italic_file)
+            # Bold-italic is requested by subsection headings; without it fpdf2 raises
+            pdf.add_font(family, "BI", bold_file)
+            return family
         except Exception as e:
             logger.warning(f"Could not register PDF font {regular}: {e}")
     return None
 
 
-class AcademicPDF(FPDF):
-    def header(self):
-        self.set_font("Helvetica", "I", 9)
-        self.set_text_color(120, 120, 120)
-        self.cell(0, 10, "Autonomous Academic Research Report", border=0, align="R")
-        self.ln(12)
+def _split_markdown_blocks(text: str) -> List[Tuple[str, str, int]]:
+    """Parses agent Markdown into (kind, text, level) blocks for the renderer.
 
-    def footer(self):
-        self.set_y(-15)
-        self.set_font("Helvetica", "I", 9)
-        self.set_text_color(120, 120, 120)
-        self.cell(0, 10, f"Page {self.page_no()}/{{nb}}", border=0, align="C")
+    Kinds: heading, bullet, numbered, paragraph. Horizontal rules are dropped.
+    """
+    blocks: List[Tuple[str, str, int]] = []
+    paragraph: List[str] = []
+
+    def flush():
+        if paragraph:
+            blocks.append(("paragraph", " ".join(paragraph).strip(), 0))
+            paragraph.clear()
+
+    for raw_line in (text or "").splitlines():
+        line = raw_line.rstrip()
+        stripped = line.strip()
+
+        if not stripped:
+            flush()
+            continue
+        if re.fullmatch(r"(-{3,}|\*{3,}|_{3,})", stripped):
+            flush()
+            continue
+
+        heading = re.match(r"^(#{1,6})\s+(.*)$", stripped)
+        if heading:
+            flush()
+            blocks.append(("heading", heading.group(2).strip(), len(heading.group(1))))
+            continue
+
+        bullet = re.match(r"^[-*\u2022]\s+(.*)$", stripped)
+        if bullet:
+            flush()
+            blocks.append(("bullet", bullet.group(1).strip(), 0))
+            continue
+
+        numbered = re.match(r"^(\d+)[.)]\s+(.*)$", stripped)
+        if numbered:
+            flush()
+            blocks.append(("numbered", f"{numbered.group(1)}. {numbered.group(2).strip()}", 0))
+            continue
+
+        paragraph.append(stripped)
+
+    flush()
+    return blocks
+
 
 def generate_paper_pdf(state: Dict[str, Any], output_path: str) -> str:
-    """Generates a PDF document for a completed ResearchMode paper state using FPDF2."""
-    pdf = AcademicPDF()
+    """Renders a completed ResearchMode paper as a formatted academic PDF."""
+    paper_title = (state.get("title") or "Academic Research Paper").strip()
+
+    class AcademicPDF(FPDF):
+        running_head = paper_title[:70] + ("…" if len(paper_title) > 70 else "")
+        body_family = "Helvetica"
+
+        # The title page carries no running head or folio, per manuscript convention.
+        def header(self):
+            if self.page_no() <= 1:
+                return
+            self.set_font(self.body_family, "I", 8)
+            self.set_text_color(120, 120, 120)
+            self.cell(0, 6, clean(self.running_head), border=0, align="R")
+            self.ln(8)
+
+        def footer(self):
+            if self.page_no() <= 1:
+                return
+            self.set_y(-16)
+            self.set_font(self.body_family, "", 8)
+            self.set_text_color(120, 120, 120)
+            self.cell(0, 6, f"{self.page_no()}", border=0, align="C")
+
+    pdf = AcademicPDF(format="A4")
+    pdf.set_margins(MARGIN, MARGIN, MARGIN)
+    pdf.set_auto_page_break(auto=True, margin=MARGIN)
     pdf.alias_nb_pages()
-    pdf.set_auto_page_break(auto=True, margin=15)
 
-    unicode_font = _register_unicode_font(pdf)
-    body_family, bold_style = unicode_font if unicode_font else ("Helvetica", "B")
-    bullet = "•" if unicode_font else "-"
+    family = _register_fonts(pdf)
+    unicode_font = family is not None
+    body_family = family or "Helvetica"
+    pdf.body_family = body_family
+    bullet_char = "\u2022" if unicode_font else "-"
 
-    pdf.add_page()
-
-    # Sanitizes text for the active font: Unicode passes through, Helvetica gets
-    # scientific characters transliterated before the latin-1 encode.
     def clean(text: Any) -> str:
         if not text:
             return ""
-        if isinstance(text, list):
-            text = "\n".join(f"{bullet} {item}" for item in text)
         text = str(text)
         if unicode_font:
             return text
@@ -93,73 +165,173 @@ def generate_paper_pdf(state: Dict[str, Any], output_path: str) -> str:
                 text = text.replace(char, replacement)
         return text.encode("latin-1", "replace").decode("latin-1")
 
-    # Title
-    title = state.get("title") or "Academic Research Paper"
-    pdf.set_font(body_family, bold_style, 18)
-    pdf.set_text_color(20, 30, 55)
-    pdf.multi_cell(0, 10, clean(title), align="C")
-    pdf.ln(8)
+    def escape_markdown(text: str) -> str:
+        """Neutralizes stray markers so fpdf2's markdown parser cannot mis-pair them."""
+        return text.replace("__", "").replace("--", "-")
 
-    # Helper for sections
-    def add_section(heading: str, body: Any):
+    def mc(w, h, txt, **kwargs):
+        """multi_cell that always returns the cursor to the left margin.
+
+        fpdf2 leaves x at the right edge by default, which starves the next
+        full-width cell of horizontal space.
+        """
+        kwargs.setdefault("new_x", "LMARGIN")
+        kwargs.setdefault("new_y", "NEXT")
+        return pdf.multi_cell(w, h, txt, **kwargs)
+
+    def body_text(text: str, size: float = BODY_SIZE, align: str = "J", indent: float = 0.0):
+        pdf.set_font(body_family, "", size)
+        pdf.set_text_color(25, 25, 25)
+        if indent:
+            pdf.set_x(MARGIN + indent)
+        mc(
+            pdf.w - 2 * MARGIN - indent, BODY_LEADING, clean(escape_markdown(text)),
+            align=align, markdown=True
+        )
+
+    def render_markdown(text: str):
+        """Renders agent Markdown: headings, lists, and inline bold become real styling."""
+        for kind, content, level in _split_markdown_blocks(text):
+            if kind == "heading":
+                pdf.ln(2)
+                pdf.set_font(body_family, "B", BODY_SIZE if level >= 3 else BODY_SIZE + 0.5)
+                pdf.set_text_color(30, 30, 30)
+                mc(0, BODY_LEADING, clean(re.sub(r"\*+", "", content)))
+                pdf.ln(1)
+            elif kind == "bullet":
+                body_text(f"{bullet_char}  {content}", align="L", indent=6)
+            elif kind == "numbered":
+                body_text(content, align="L", indent=6)
+            else:
+                body_text(content)
+                pdf.ln(1.5)
+
+    def section(number: Optional[int], heading: str, body: Any, markdown: bool = True):
         if not body:
             return
-        pdf.set_font(body_family, bold_style, 13)
-        pdf.set_text_color(40, 60, 110)
-        pdf.cell(0, 8, clean(heading), ln=True)
-        pdf.set_font(body_family, "", 10)
-        pdf.set_text_color(40, 40, 40)
-        pdf.multi_cell(0, 6, clean(body))
-        pdf.ln(4)
+        pdf.ln(3)
+        pdf.set_font(body_family, "B", BODY_SIZE + 2)
+        pdf.set_text_color(15, 15, 15)
+        label = f"{number}. {heading}" if number is not None else heading
+        mc(0, 7, clean(label))
+        pdf.ln(1)
+        if isinstance(body, list):
+            for item in body:
+                body_text(f"{bullet_char}  {item}", align="L", indent=6)
+        elif markdown:
+            render_markdown(str(body))
+        else:
+            body_text(str(body))
+        pdf.ln(2)
 
-    # Abstract Box
+    def subsection(label: str, body: Any):
+        if not body:
+            return
+        pdf.set_font(body_family, "BI", BODY_SIZE)
+        pdf.set_text_color(40, 40, 40)
+        mc(0, 6, clean(label))
+        render_markdown(str(body))
+        pdf.ln(1)
+
+    # --- Title page ---------------------------------------------------------
+    pdf.add_page()
+    pdf.ln(22)
+    pdf.set_font(body_family, "B", 17)
+    pdf.set_text_color(15, 15, 15)
+    mc(0, 9, clean(paper_title), align="C")
+    pdf.ln(6)
+
+    pdf.set_font(body_family, "I", 10)
+    pdf.set_text_color(90, 90, 90)
+    mc(0, 5.5, clean("Literature-based research synthesis"), align="C")
+    mc(0, 5.5, clean(date.today().strftime("%d %B %Y")), align="C")
+    pdf.ln(9)
+
     abstract = state.get("abstract")
     if abstract:
-        pdf.set_fill_color(245, 247, 250)
-        pdf.set_draw_color(200, 210, 225)
-        pdf.rect(pdf.get_x(), pdf.get_y(), 180, 0, style="") # container line
-        add_section("Abstract", abstract)
+        pdf.set_font(body_family, "B", BODY_SIZE + 1)
+        pdf.set_text_color(15, 15, 15)
+        mc(0, 6, clean("Abstract"), align="C")
+        pdf.ln(2)
+        # Abstracts are conventionally set narrower than the body column
+        inset = 12
+        pdf.set_left_margin(MARGIN + inset)
+        pdf.set_right_margin(MARGIN + inset)
+        render_markdown(str(abstract))
+        pdf.set_left_margin(MARGIN)
+        pdf.set_right_margin(MARGIN)
 
-    # Main Sections (final paper order)
-    add_section("1. Introduction", state.get("introduction"))
-    add_section("2. Literature Review", state.get("literature_review"))
-    add_section("3. Research Gap", state.get("research_gap"))
-    add_section("4. Research Objectives", state.get("research_objectives"))
-    add_section("5. Research Questions", state.get("research_questions"))
-    add_section("6. Conceptual Framework", state.get("conceptual_framework"))
-    add_section("7. Hypotheses", state.get("hypotheses"))
+    keywords = state.get("keywords") or []
+    if keywords:
+        pdf.ln(3)
+        pdf.set_font(body_family, "", BODY_SIZE - 0.5)
+        pdf.set_text_color(60, 60, 60)
+        mc(0, 5.5, clean("Keywords: " + "; ".join(keywords)), align="L")
 
-    methodology = ""
-    if state.get("research_design"):
-        methodology += f"Research Design:\n{state.get('research_design')}\n\n"
-    if state.get("data_collection_plan"):
-        methodology += f"Data Collection:\n{state.get('data_collection_plan')}\n\n"
-    if state.get("data_analysis_plan"):
-        methodology += f"Data Analysis:\n{state.get('data_analysis_plan')}"
-    add_section("8. Methodology", methodology)
+    # Running head and page numbers start on the body pages, not the title page.
 
-    add_section("9. Results", state.get("results"))
+    # --- Body ---------------------------------------------------------------
+    pdf.add_page()
+    section(1, "Introduction", state.get("introduction"))
+    section(2, "Literature Review", state.get("literature_review"))
+    section(3, "Research Gap", state.get("research_gap"))
+    section(4, "Research Objectives", state.get("research_objectives"))
+    section(5, "Research Questions", state.get("research_questions"))
+    section(6, "Conceptual Framework", state.get("conceptual_framework"))
+    section(7, "Hypotheses", state.get("hypotheses"))
 
-    discussion = ""
+    if any(state.get(k) for k in ("research_design", "data_collection_plan", "data_analysis_plan")):
+        pdf.ln(3)
+        pdf.set_font(body_family, "B", BODY_SIZE + 2)
+        pdf.set_text_color(15, 15, 15)
+        mc(0, 7, clean("8. Methodology"))
+        pdf.ln(1)
+        subsection("8.1 Research Design", state.get("research_design"))
+        subsection("8.2 Data Collection", state.get("data_collection_plan"))
+        subsection("8.3 Data Analysis", state.get("data_analysis_plan"))
+        pdf.ln(2)
+
+    section(9, "Results", state.get("results"))
+
     if state.get("discussion"):
-        discussion += f"{state.get('discussion')}\n\n"
-    if state.get("implications"):
-        discussion += f"Implications:\n{state.get('implications')}"
-    add_section("10. Discussion", discussion)
+        section(10, "Discussion", state.get("discussion"))
+        if state.get("implications"):
+            subsection("10.1 Implications", state.get("implications"))
 
-    add_section("11. Limitations", state.get("limitations"))
-    add_section("12. Conclusion", state.get("conclusion"))
-    add_section("13. Future Scope", state.get("future_scope"))
+    section(11, "Limitations", state.get("limitations"))
+    section(12, "Conclusion", state.get("conclusion"))
+    section(13, "Future Scope", state.get("future_scope"))
 
-    refs = state.get("references")
-    if refs:
+    # --- References ---------------------------------------------------------
+    references = state.get("references") or []
+    if references:
         pdf.add_page()
-        add_section("References", refs)
+        pdf.set_font(body_family, "B", BODY_SIZE + 2)
+        pdf.set_text_color(15, 15, 15)
+        mc(0, 7, clean("References"))
+        pdf.ln(2)
+        pdf.set_font(body_family, "", BODY_SIZE - 0.5)
+        pdf.set_text_color(25, 25, 25)
+        # APA orders the list alphabetically with a hanging indent: the first line
+        # sits flush left while turnover lines are indented. Setting the left margin
+        # past MARGIN and then starting the first line at MARGIN produces exactly that.
+        hang = 8
+        pdf.set_left_margin(MARGIN + hang)
+        for ref in sorted(references, key=lambda r: str(r).lower()):
+            pdf.set_x(MARGIN)
+            mc(pdf.w - MARGIN - (MARGIN + hang) + hang, 5.2,
+                           clean(escape_markdown(str(ref))), align="L")
+            pdf.ln(1.2)
+        pdf.set_left_margin(MARGIN)
 
-    appendices = state.get("appendices")
-    if appendices:
+    # --- Appendices ---------------------------------------------------------
+    if state.get("appendices"):
         pdf.add_page()
-        add_section("Appendices", appendices)
+        pdf.set_font(body_family, "B", BODY_SIZE + 2)
+        pdf.set_text_color(15, 15, 15)
+        mc(0, 7, clean("Appendices"))
+        pdf.ln(2)
+        render_markdown(str(state.get("appendices")))
 
     pdf.output(output_path)
     return output_path
