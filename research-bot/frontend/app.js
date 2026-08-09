@@ -166,7 +166,6 @@ function cacheDomElements() {
         gateModelAggregator: document.getElementById('gate-llm-model-aggregator'),
         gateTavilyKey: document.getElementById('gate-tavily-key'),
         gateOpenalexEmail: document.getElementById('gate-openalex-email'),
-        gateSemanticScholar: document.getElementById('gate-semantic-scholar'),
         gateSubmitBtn: document.getElementById('gate-submit-btn'),
         gateSaveStatus: document.getElementById('gate-save-status'),
 
@@ -316,8 +315,7 @@ async function submitSetupGate() {
         LLM_MODEL_RESEARCHER: dom.gateModelResearcher.value.trim(),
         LLM_MODEL_AGGREGATOR: dom.gateModelAggregator.value.trim(),
         TAVILY_API_KEY: dom.gateTavilyKey.value.trim(),
-        OPENALEX_EMAIL: dom.gateOpenalexEmail.value.trim(),
-        SEMANTIC_SCHOLAR_API_KEY: dom.gateSemanticScholar.value.trim()
+        OPENALEX_EMAIL: dom.gateOpenalexEmail.value.trim()
     };
 
     dom.gateSaveStatus.textContent = 'Saving configuration locally...';
