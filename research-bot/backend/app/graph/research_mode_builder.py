@@ -17,7 +17,9 @@ from backend.app.agents.research_mode.agents import (
     keyword_extractor_agent,
     paper_fetcher_agent,
     paper_screener_agent,
+    fulltext_fetcher_agent,
     literature_review_agent,
+    citation_verifier_agent,
     gap_analysis_agent,
     framework_agent,
     hypotheses_agent,
@@ -235,7 +237,9 @@ builder.add_node("checkpoint_1", checkpoint_1_node)
 builder.add_node("scope_reviser", scope_reviser_agent)
 builder.add_node("paper_fetcher", paper_fetcher_agent)
 builder.add_node("paper_screener", paper_screener_agent)
+builder.add_node("fulltext_fetcher", fulltext_fetcher_agent)
 builder.add_node("literature_review", literature_review_agent)
+builder.add_node("citation_verifier", citation_verifier_agent)
 builder.add_node("gap_analysis", gap_analysis_agent)
 builder.add_node("framework", framework_agent)
 builder.add_node("checkpoint_2", checkpoint_2_node)
@@ -267,8 +271,10 @@ builder.add_conditional_edges(
 )
 builder.add_edge("scope_reviser", "checkpoint_1")
 builder.add_edge("paper_fetcher", "paper_screener")
-builder.add_edge("paper_screener", "literature_review")
-builder.add_edge("literature_review", "gap_analysis")
+builder.add_edge("paper_screener", "fulltext_fetcher")
+builder.add_edge("fulltext_fetcher", "literature_review")
+builder.add_edge("literature_review", "citation_verifier")
+builder.add_edge("citation_verifier", "gap_analysis")
 builder.add_edge("gap_analysis", "framework")
 builder.add_edge("framework", "checkpoint_2")
 builder.add_edge("checkpoint_2", "hypotheses")
