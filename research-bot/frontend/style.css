@@ -88,6 +88,62 @@ body {
     padding-top: 80px; /* Offset fixed header */
 }
 
+/* Ambient backdrop: one fixed, blurred wash behind everything instead of the
+   free-floating orbs the earlier version used. It never scrolls, never
+   intercepts pointer events, and stays under every panel. */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+        radial-gradient(46% 42% at 50% 8%,  rgba(99, 102, 241, 0.26), transparent 70%),
+        radial-gradient(38% 36% at 14% 24%, rgba(139, 92, 246, 0.18), transparent 72%),
+        radial-gradient(38% 36% at 86% 20%, rgba(56, 189, 248, 0.14), transparent 72%);
+    filter: blur(30px);
+    animation: ambientDrift 22s ease-in-out infinite alternate;
+}
+
+/* Faint grid so large empty regions still read as a surface, not a void. */
+body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(70% 55% at 50% 30%, #000 0%, transparent 100%);
+    -webkit-mask-image: radial-gradient(70% 55% at 50% 30%, #000 0%, transparent 100%);
+}
+
+@keyframes ambientDrift {
+    from { transform: translate3d(-2%, 0, 0) scale(1); }
+    to   { transform: translate3d(2%, 3%, 0) scale(1.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body::before { animation: none; }
+}
+
+:root.light-mode body::before {
+    background:
+        radial-gradient(46% 42% at 50% 8%,  rgba(99, 102, 241, 0.12), transparent 70%),
+        radial-gradient(38% 36% at 86% 20%, rgba(56, 189, 248, 0.08), transparent 72%);
+}
+
+:root.light-mode body::after { display: none; }
+
+/* Content sits above the backdrop layers. The fixed header, toasts and modals
+   already carry higher z-indexes of their own. */
+main {
+    position: relative;
+    z-index: 1;
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
     width: 8px;
@@ -135,7 +191,7 @@ header {
     top: 0;
     left: 0;
     z-index: 1000;
-    background-color: rgba(9, 9, 11, 0.9);
+    background-color: transparent;
 }
 
 .logo-container {
@@ -159,43 +215,6 @@ header {
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-}
-
-.status-badge {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    border-radius: 50px;
-    background-color: rgba(24, 24, 27, 0.8);
-    border: 1px solid var(--card-border);
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-}
-
-.status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: var(--accent-teal);
-    box-shadow: 0 0 8px var(--accent-teal);
-}
-
-.status-dot.planning {
-    background-color: var(--accent-yellow);
-    box-shadow: 0 0 8px var(--accent-yellow);
-}
-
-.status-dot.researching {
-    background-color: var(--accent-purple);
-    box-shadow: 0 0 8px var(--accent-purple);
-    animation: pulse-glow 1.5s infinite alternate;
-}
-
-.status-dot.error {
-    background-color: var(--accent-red);
-    box-shadow: 0 0 8px var(--accent-red);
 }
 
 /* Page Layout Containers */
@@ -231,11 +250,21 @@ main {
 
 .hero-title {
     font-family: var(--font-outfit);
-    font-size: 2.75rem;
+    font-size: 3.1rem;
     font-weight: 600;
-    line-height: 1.2;
-    margin-bottom: 1rem;
+    letter-spacing: -0.02em;
+    line-height: 1.14;
+    margin-bottom: 1.1rem;
     background: linear-gradient(135deg, #ffffff 40%, #c8c8d0 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* The verbs carry the accent so the headline reads as two tones rather than one
+   flat block of white. Own background-clip, since the h1 already claims one. */
+.hero-accent {
+    background: linear-gradient(100deg, #60a5fa 0%, #818cf8 45%, #a78bfa 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -246,6 +275,7 @@ main {
     color: var(--text-secondary);
     margin-bottom: 2.5rem;
     font-weight: 300;
+    line-height: 1.6;
 }
 
 .search-box-container {
@@ -265,6 +295,10 @@ main {
 .search-box-container:focus-within {
     border-color: var(--accent-purple);
     box-shadow: 0 0 0 1px var(--accent-purple), 0 8px 32px var(--accent-purple-glow);
+}
+
+.search-box-container:hover {
+    border-color: var(--border-hover);
 }
 
 .search-input {
@@ -1452,8 +1486,11 @@ main {
 }
 
 :root.light-mode .mode-toggle-container {
-    background: #f1f5f9;
+    background: rgba(255, 255, 255, 0.65);
     border-color: #cbd5e1;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+        0 4px 14px rgba(15, 23, 42, 0.08);
 }
 
 :root.light-mode .mode-tab {
@@ -1465,16 +1502,7 @@ main {
 }
 
 :root.light-mode .mode-tab.active {
-    background: linear-gradient(135deg, var(--accent-purple), #4338ca);
     color: #ffffff;
-    box-shadow: 0 2px 10px rgba(99, 102, 241, 0.25);
-}
-
-:root.light-mode .status-badge {
-    background-color: #ffffff;
-    border-color: #e2e8f0;
-    color: #475569;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
 }
 
 :root.light-mode .btn-icon {
@@ -1610,10 +1638,11 @@ main {
     color: #64748b;
 }
 
-:root.light-mode .rm-badge {
-    background: rgba(2, 132, 199, 0.08);
-    border-color: rgba(2, 132, 199, 0.25);
-    color: #0284c7;
+:root.light-mode .hero-accent {
+    background: linear-gradient(100deg, #2563eb 0%, #4f46e5 45%, #7c3aed 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 :root.light-mode .label-tag {
@@ -2153,16 +2182,81 @@ main {
 }
 
 /* Mode Switcher Tabs */
+/* Centred on the header itself rather than by flex order, so the logo and the
+   action buttons can change width without dragging the switch off-centre. */
 .mode-toggle-container {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
-    background: rgba(16, 22, 38, 0.8);
-    border: 1px solid var(--card-border);
+    padding: 4px;
+    gap: 0;
     border-radius: 50px;
-    padding: 3px;
-    gap: 3px;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    backdrop-filter: blur(20px) saturate(170%);
+    -webkit-backdrop-filter: blur(20px) saturate(170%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.12),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+        0 6px 20px rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+    isolation: isolate;
+}
+
+/* The travelling pill. Both tabs are forced to equal width so a flat 100%
+   translate always lands exactly on the second one. */
+.mode-toggle-container::before {
+    content: "";
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 4px;
+    width: calc(50% - 4px);
+    border-radius: 50px;
+    background: linear-gradient(135deg, #6366f1, #4338ca);
+    box-shadow:
+        0 2px 12px rgba(99, 102, 241, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 0;
+}
+
+.mode-toggle-container:has(#tab-researchmode.active)::before {
+    transform: translateX(100%);
+}
+
+/* Specular sheen sweeping across the glass on hover. */
+.mode-toggle-container::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50px;
+    background: linear-gradient(
+        105deg,
+        transparent 35%,
+        rgba(255, 255, 255, 0.16) 50%,
+        transparent 65%
+    );
+    transform: translateX(-120%);
+    pointer-events: none;
+    z-index: 2;
+}
+
+.mode-toggle-container:hover::after {
+    animation: glassSheen 0.9s ease-out;
+}
+
+@keyframes glassSheen {
+    to { transform: translateX(120%); }
 }
 
 .mode-tab {
+    position: relative;
+    z-index: 1;
+    flex: 1 1 0;
+    min-width: 152px;
+    justify-content: center;
     background: transparent;
     border: none;
     outline: none;
@@ -2176,17 +2270,45 @@ main {
     display: flex;
     align-items: center;
     gap: 0.45rem;
-    transition: var(--transition-fast);
+    transition: color 0.25s ease, transform 0.25s ease;
 }
 
 .mode-tab:hover {
     color: var(--text-primary);
 }
 
+.mode-tab:active {
+    transform: scale(0.96);
+}
+
+/* The pill supplies the fill; the tab only changes its own text colour. */
 .mode-tab.active {
-    background: linear-gradient(135deg, var(--accent-purple), #4338ca);
     color: #ffffff;
-    box-shadow: 0 2px 10px rgba(99, 102, 241, 0.3);
+}
+
+.mode-tab i {
+    transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.mode-tab.active i {
+    transform: scale(1.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mode-toggle-container::before,
+    .mode-tab,
+    .mode-tab i { transition: none; }
+    .mode-toggle-container:hover::after { animation: none; }
+}
+
+/* Browsers without :has() get a static pill on the active tab instead of a
+   sliding one - no motion, but the selection still reads correctly. */
+@supports not selector(:has(*)) {
+    .mode-toggle-container::before { display: none; }
+    .mode-tab.active {
+        background: linear-gradient(135deg, #6366f1, #4338ca);
+        box-shadow: 0 2px 12px rgba(99, 102, 241, 0.45);
+    }
 }
 
 /* Privacy Guarantee Banner */
@@ -2252,23 +2374,88 @@ main {
     margin: 0 auto 2rem auto;
 }
 
-.rm-badge {
-    display: inline-flex;
+/* Indexed-source strip. Marks are drawn inline rather than loaded as brand
+   assets, so the row still renders with no network and nothing to hotlink. */
+.index-strip {
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.35rem 0.85rem;
-    background: rgba(56, 189, 248, 0.1);
-    border: 1px solid rgba(56, 189, 248, 0.25);
-    border-radius: 50px;
-    color: var(--academic-blue);
-    font-size: 0.75rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
+    gap: 0.7rem;
+    margin-top: 1.75rem;
 }
 
+.index-strip-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.index-list {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+}
+
+.index-chip,
+.index-chip:visited {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.85rem 0.4rem 0.45rem;
+    border-radius: 50px;
+    text-decoration: none;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(14px) saturate(150%);
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+}
+
+.index-chip:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.16);
+}
+
+.index-mark {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    object-fit: contain;
+}
+
+/* The OpenAlex mark ships as solid black, which vanishes on the dark surface.
+   Inverting it is the only change made to any of these brand assets. */
+.index-mark-openalex {
+    filter: invert(1);
+}
+
+:root.light-mode .index-mark-openalex {
+    filter: none;
+}
+
+.index-footnote {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 0.6rem;
+    margin-bottom: 0.25rem;
+}
+
+/* Matches .search-box-container's own spacing/backdrop rather than inheriting
+   the generic .card padding, so the two landing hero cards read as one design
+   instead of two different components. */
 .rm-input-card {
     max-width: 800px;
     margin: 0 auto;
+    padding: 1.25rem;
+    backdrop-filter: blur(12px);
     transition: var(--transition-smooth);
 }
 
@@ -2286,8 +2473,11 @@ main {
     box-shadow: none;
 }
 
+/* The primary field mirrors .search-input's type scale (1.1rem) - the two
+   are functionally the same control, just in different modes. */
 .rm-textarea {
     min-height: 90px;
+    font-size: 1.1rem;
 }
 
 .rm-textarea-sm {
@@ -2328,12 +2518,12 @@ main {
 }
 
 .rm-advanced-summary:hover {
-    color: var(--academic-blue);
+    color: var(--accent-purple);
 }
 
 .rm-advanced[open] .rm-advanced-summary {
     border-bottom: 1px solid var(--card-border);
-    color: var(--academic-blue);
+    color: var(--accent-purple);
 }
 
 .rm-advanced-body {
@@ -2723,32 +2913,6 @@ select:focus-visible,
 /* ==========================================================================
    Sleek Minimalist Vercel / Linear Style Theme
    ========================================================================== */
-
-.template-chips-container {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    margin-top: 0.75rem;
-}
-
-.template-chip {
-    padding: 0.4rem 0.85rem;
-    border-radius: 50px;
-    background-color: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    color: var(--text-secondary);
-    font-size: 0.8rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.template-chip:hover {
-    background-color: rgba(99, 102, 241, 0.15);
-    border-color: rgba(99, 102, 241, 0.4);
-    color: #ffffff;
-    box-shadow: 0 0 12px rgba(99, 102, 241, 0.2);
-}
 
 
 
