@@ -1556,6 +1556,17 @@ main {
 
 :root.light-mode .feedback-textarea:focus,
 :root.light-mode .form-input:focus,
+:root.light-mode .rm-input-card:focus-within {
+    border-color: var(--accent-purple);
+    box-shadow: 0 0 0 1px var(--accent-purple), 0 8px 32px var(--accent-purple-glow);
+}
+
+:root.light-mode .rm-input-card .rm-textarea:focus,
+:root.light-mode .rm-input-card .rm-textarea-sm:focus {
+    border-color: #cbd5e1;
+    box-shadow: none;
+}
+
 :root.light-mode .rm-textarea:focus,
 :root.light-mode .rm-textarea-sm:focus {
     border-color: var(--accent-purple);
@@ -2243,6 +2254,21 @@ main {
 .rm-input-card {
     max-width: 800px;
     margin: 0 auto;
+    transition: var(--transition-smooth);
+}
+
+/* Matches the DeepSearch search box: the panel carries the focus glow */
+.rm-input-card:focus-within {
+    border-color: var(--accent-purple);
+    box-shadow: 0 0 0 1px var(--accent-purple), 0 8px 32px var(--accent-purple-glow);
+}
+
+/* The card already signals focus, so the textarea inside must not draw a second
+   ring around itself - that double outline was the boxed-in look. */
+.rm-input-card .rm-textarea:focus,
+.rm-input-card .rm-textarea-sm:focus {
+    border-color: var(--border-hover);
+    box-shadow: none;
 }
 
 .rm-textarea {
@@ -2609,7 +2635,7 @@ select:focus-visible,
 }
 
 @keyframes cursorBlink {
-    0%, 100% { opacity: 1; text-shadow: 0 0 8px #38bdf8; }
+    0%, 100% { opacity: 1; text-shadow: 0 0 10px #818cf8; }
     50% { opacity: 0; text-shadow: none; }
 }
 
@@ -2619,8 +2645,8 @@ select:focus-visible,
 }
 
 @keyframes nodeGlowPulse {
-    0%, 100% { box-shadow: 0 0 8px rgba(56, 189, 248, 0.3), inset 0 0 12px rgba(56, 189, 248, 0.2); border-color: rgba(56, 189, 248, 0.6); }
-    50% { box-shadow: 0 0 22px rgba(56, 189, 248, 0.8), inset 0 0 20px rgba(56, 189, 248, 0.5); border-color: #38bdf8; }
+    0%, 100% { box-shadow: 0 0 8px rgba(99, 102, 241, 0.35), inset 0 0 12px rgba(99, 102, 241, 0.2); border-color: rgba(99, 102, 241, 0.6); }
+    50% { box-shadow: 0 0 25px rgba(99, 102, 241, 0.85), inset 0 0 20px rgba(99, 102, 241, 0.5); border-color: #6366f1; }
 }
 
 .orbital-loader-container {
@@ -2633,16 +2659,16 @@ select:focus-visible,
 .orbital-ring {
     width: 52px;
     height: 52px;
-    border: 3px solid rgba(56, 189, 248, 0.15);
-    border-top-color: var(--academic-blue);
-    border-right-color: var(--violet-pulse);
+    border: 3px solid rgba(99, 102, 241, 0.18);
+    border-top-color: var(--accent-purple);
+    border-right-color: #a855f7;
     border-radius: 50%;
     animation: orbitalRotate 0.9s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
 }
 .skeleton-line {
     height: 14px;
     border-radius: 4px;
-    background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.03) 75%);
+    background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(129,140,248,0.15) 50%, rgba(255,255,255,0.03) 75%);
     background-size: 200% 100%;
     animation: skeletonShimmer 1.5s infinite;
     margin-bottom: 0.75rem;
@@ -2651,7 +2677,7 @@ select:focus-visible,
     display: inline-block;
     width: 9px;
     height: 1.1em;
-    background: var(--academic-blue);
+    background: var(--accent-purple);
     margin-left: 3px;
     vertical-align: middle;
     border-radius: 2px;
@@ -2667,7 +2693,7 @@ select:focus-visible,
 }
 .ai-wave-bar {
     width: 3px;
-    background: var(--academic-blue);
+    background: var(--accent-purple);
     border-radius: 2px;
     animation: wavePulse 1s ease-in-out infinite;
 }
@@ -2680,16 +2706,16 @@ select:focus-visible,
 }
 
 /* ==========================================================================
-   Research Mode Ambient Backlight & Glow Effects
+   Research Mode Ambient Backlight & Glow Effects (Purple DeepSearch Theme)
    ========================================================================== */
 
 @keyframes ambientPulse {
     0%, 100% {
-        opacity: 0.45;
+        opacity: 0.5;
         transform: translate(-50%, -40%) scale(1);
     }
     50% {
-        opacity: 0.75;
+        opacity: 0.85;
         transform: translate(-50%, -40%) scale(1.15);
     }
 }
@@ -2701,7 +2727,7 @@ select:focus-visible,
     transform: translate(-50%, -40%);
     width: 650px;
     height: 380px;
-    background: radial-gradient(ellipse at center, rgba(56, 189, 248, 0.2), rgba(99, 102, 241, 0.12), transparent 70%);
+    background: radial-gradient(ellipse at center, rgba(99, 102, 241, 0.28), rgba(168, 85, 247, 0.18), transparent 70%);
     filter: blur(65px);
     pointer-events: none;
     z-index: 0;
@@ -2717,8 +2743,8 @@ select:focus-visible,
 .rm-glow-card:focus-within,
 .rm-glow-card.active-execution,
 .rm-card:focus-within {
-    border-color: rgba(56, 189, 248, 0.6) !important;
-    box-shadow: 0 0 25px rgba(56, 189, 248, 0.35), 0 0 50px rgba(99, 102, 241, 0.25), inset 0 0 15px rgba(56, 189, 248, 0.08) !important;
+    border-color: rgba(99, 102, 241, 0.7) !important;
+    box-shadow: 0 0 25px rgba(99, 102, 241, 0.4), 0 0 55px rgba(168, 85, 247, 0.25), inset 0 0 15px rgba(99, 102, 241, 0.12) !important;
 }
 
 
