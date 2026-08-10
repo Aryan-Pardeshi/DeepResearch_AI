@@ -124,50 +124,33 @@
         <!-- DEEPSEARCH MODE PANELS -->
         
         <!-- View 1: Landing Panel -->
-        <section id="landing-panel" class="panel active" style="position: relative;">
-            <div class="hero-plasma-container">
-                <div class="plasma-orb plasma-orb-1"></div>
-                <div class="plasma-orb plasma-orb-2"></div>
-            </div>
+        <section id="landing-panel" class="panel active">
             <h1 class="hero-title">Ask anything. We will plan, research, and synthesize.</h1>
             <p class="hero-subtitle">Multi-agent web research workspace driven by autonomous agent loops.</p>
             
-            <div class="hero-card-gradient-border">
-                <div class="search-box-container">
-                    <textarea class="search-input" id="query-input" placeholder="What would you like to research today?"></textarea>
-                    <div class="search-controls">
-                        <div class="filter-group">
-                            <span class="filter-label">Tavily Filters:</span>
-                            <div class="chips-container" id="filter-chips">
-                                <span class="chip active" data-topic="all">All</span>
-                                <span class="chip" data-topic="news">News</span>
-                                <span class="chip" data-topic="academic">Academic</span>
-                                <span class="chip" data-topic="finance">Finance</span>
-                                <span class="chip" data-topic="patent">Patent</span>
-                            </div>
+            <div class="search-box-container">
+                <textarea class="search-input" id="query-input" placeholder="What would you like to research today?"></textarea>
+                <div class="search-controls">
+                    <div class="filter-group">
+                        <span class="filter-label">Tavily Filters:</span>
+                        <div class="chips-container" id="filter-chips">
+                            <span class="chip active" data-topic="all">All</span>
+                            <span class="chip" data-topic="news">News</span>
+                            <span class="chip" data-topic="academic">Academic</span>
+                            <span class="chip" data-topic="finance">Finance</span>
+                            <span class="chip" data-topic="patent">Patent</span>
                         </div>
-                        <button class="btn-primary" id="plan-research-btn">
-                            <span>Plan Research</span>
-                            <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
-                        </button>
                     </div>
+                    <button class="btn-primary" id="plan-research-btn">
+                        <span>Plan Research</span>
+                        <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
+                    </button>
                 </div>
-            </div>
-
-            <div class="hero-metrics-strip">
-                <div class="hero-metric-item"><span>🤖</span> <strong>20+</strong> Autonomous Agents</div>
-                <div class="hero-metric-item"><span>📚</span> <strong>3</strong> Academic API Indexes</div>
-                <div class="hero-metric-item"><span>🛡️</span> <strong>100%</strong> Local Privacy Guarantee</div>
-                <div class="hero-metric-item"><span>⚡</span> <strong>Real-Time</strong> Live SSE Token Stream</div>
             </div>
         </section>
 
         <!-- View 2: Approval Panel -->
-        <section id="approval-panel" class="panel" style="position: relative;">
-            <div class="hero-plasma-container">
-                <div class="plasma-orb plasma-orb-1"></div>
-                <div class="plasma-orb plasma-orb-2"></div>
-            </div>
+        <section id="approval-panel" class="panel">
             <div class="approval-header">
                 <h1 class="section-title">Research Design Console</h1>
                 <button class="btn-secondary btn-new-research" id="approval-new-research-btn">
@@ -181,7 +164,7 @@
             </div>
 
             <div class="approval-grid">
-                <div class="card rm-glow-card">
+                <div class="card">
                     <div class="card-header">
                         <i class="card-icon" data-lucide="book-open" style="width: 20px; height: 20px;"></i>
                         <h2 class="card-title">Problem Statement</h2>
@@ -189,7 +172,7 @@
                     <p class="problem-statement-text" id="approval-ps-text">Generating problem statement…</p>
                 </div>
 
-                <div class="card rm-glow-card">
+                <div class="card">
                     <div class="card-header">
                         <i class="card-icon" data-lucide="list-todo" style="width: 20px; height: 20px;"></i>
                         <h2 class="card-title">Proposed Research Plan</h2>
@@ -197,7 +180,7 @@
                     <div class="subtasks-list" id="approval-subtasks-container"></div>
                 </div>
 
-                <div class="card rm-glow-card">
+                <div class="card">
                     <div class="card-header">
                         <i class="card-icon" data-lucide="edit-3" style="width: 20px; height: 20px;"></i>
                         <h2 class="card-title">Revisions Console</h2>
@@ -222,12 +205,8 @@
         </section>
 
         <!-- View 3: Execution Workspace Panel -->
-        <section id="workspace-panel" class="panel" style="position: relative;">
-            <div class="hero-plasma-container">
-                <div class="plasma-orb plasma-orb-1"></div>
-                <div class="plasma-orb plasma-orb-2"></div>
-            </div>
-            <aside class="workers-sidebar rm-glow-card">
+        <section id="workspace-panel" class="panel">
+            <aside class="workers-sidebar">
                 <h2 class="sidebar-title">
                     <i data-lucide="cpu" style="width: 20px; height: 20px; color: var(--accent-purple);"></i>
                     <span>Parallel Researchers</span>
@@ -240,7 +219,7 @@
                 <div class="workers-list" id="workers-list-container"></div>
             </aside>
 
-            <article class="report-workspace rm-glow-card">
+            <article class="report-workspace">
                 <div class="report-workspace-header">
                     <h2 class="section-title" style="margin: 0;">Research Report</h2>
                     <div class="report-actions" style="display: flex; gap: 0.5rem;">
@@ -286,21 +265,14 @@
         <!-- RESEARCH MODE PANELS -->
 
         <!-- Research Mode View 1: Input Panel -->
-        <section id="rm-input-panel" class="panel" style="position: relative;">
-            <div class="rm-ambient-aura"></div>
+        <section id="rm-input-panel" class="panel">
             <div class="rm-hero-header">
                 <div class="rm-badge"><i data-lucide="graduation-cap" style="width: 14px; height: 14px;"></i> Autonomous Academic Engine</div>
                 <h1 class="hero-title">Academic Research Paper Synthesis</h1>
                 <p class="hero-subtitle">20 autonomous agents, 3 academic API indexes, and 4 Human-in-the-Loop approval checkpoints.</p>
-                <div class="engine-capability-bar">
-                    <span class="capability-pill">⚡ Real-Time SSE Token Stream</span>
-                    <span class="capability-pill">📚 Open-Access Resolvers (Unpaywall, Europe PMC, CORE)</span>
-                    <span class="capability-pill">📊 Auto PRISMA Flowchart & Evidence Matrix</span>
-                    <span class="capability-pill">🤖 Per-Run Model Selection</span>
-                </div>
             </div>
 
-            <div class="rm-input-card card rm-glow-card">
+            <div class="rm-input-card card">
                 <div class="form-group">
                     <label class="form-label" for="rm-ps-input">Core Problem Statement *</label>
                     <textarea class="form-input rm-textarea" id="rm-ps-input" placeholder="State the core research gap, problem, or empirical challenge to investigate..."></textarea>
@@ -351,30 +323,14 @@
                 </button>
             </div>
 
-            <!-- Quick Start Research Template Grid -->
-            <div style="margin-top: 2rem;">
-                <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Popular Research Prompts (Click to Auto-Fill)</div>
-                <div class="research-template-grid">
-                    <div class="template-card" data-prompt="Efficacy of cognitive behavioral therapy interventions for healthcare worker burnout: a systematic review of randomised controlled trials">
-                        <span class="template-icon">🧬</span>
-                        <span class="template-title">Clinical & Bio-Medical</span>
-                        <span class="template-desc">CBT interventions for healthcare worker burnout</span>
-                    </div>
-                    <div class="template-card" data-prompt="Impact of generative AI code assistants on software developer productivity and code security vulnerabilities in enterprise codebases">
-                        <span class="template-icon">🤖</span>
-                        <span class="template-title">AI & Software Security</span>
-                        <span class="template-desc">Generative AI code assistants & security risks</span>
-                    </div>
-                    <div class="template-card" data-prompt="Macroeconomic predictors and systemic barrier factors influencing digital health platform adoption in rural healthcare systems">
-                        <span class="template-icon">📈</span>
-                        <span class="template-title">Economic & Market Trends</span>
-                        <span class="template-desc">Predictors of digital health platform adoption</span>
-                    </div>
-                    <div class="template-card" data-prompt="Comparative analysis of transformer architectures for high-frequency financial time-series forecasting under noisy market conditions">
-                        <span class="template-icon">🔬</span>
-                        <span class="template-title">Systematic Literature Review</span>
-                        <span class="template-desc">Transformer architectures for time-series forecasting</span>
-                    </div>
+            <!-- Sleek Prompt Template Chips -->
+            <div style="margin-top: 1.5rem; text-align: left;">
+                <div style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Sample Research Prompts:</div>
+                <div class="template-chips-container">
+                    <span class="template-chip" data-prompt="Efficacy of cognitive behavioral therapy interventions for healthcare worker burnout: a systematic review of randomised controlled trials">🧬 Clinical CBT</span>
+                    <span class="template-chip" data-prompt="Impact of generative AI code assistants on software developer productivity and code security vulnerabilities in enterprise codebases">🤖 GenAI Security</span>
+                    <span class="template-chip" data-prompt="Macroeconomic predictors and systemic barrier factors influencing digital health platform adoption in rural healthcare systems">📈 Digital Health Markets</span>
+                    <span class="template-chip" data-prompt="Comparative analysis of transformer architectures for high-frequency financial time-series forecasting under noisy market conditions">🔬 Time-Series Forecasting</span>
                 </div>
             </div>
         </section>
