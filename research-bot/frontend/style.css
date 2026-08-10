@@ -2679,4 +2679,47 @@ select:focus-visible,
     animation: nodeGlowPulse 1.8s infinite ease-in-out !important;
 }
 
+/* ==========================================================================
+   Research Mode Ambient Backlight & Glow Effects
+   ========================================================================== */
+
+@keyframes ambientPulse {
+    0%, 100% {
+        opacity: 0.45;
+        transform: translate(-50%, -40%) scale(1);
+    }
+    50% {
+        opacity: 0.75;
+        transform: translate(-50%, -40%) scale(1.15);
+    }
+}
+
+.rm-ambient-aura {
+    position: absolute;
+    top: 25%;
+    left: 50%;
+    transform: translate(-50%, -40%);
+    width: 650px;
+    height: 380px;
+    background: radial-gradient(ellipse at center, rgba(56, 189, 248, 0.2), rgba(99, 102, 241, 0.12), transparent 70%);
+    filter: blur(65px);
+    pointer-events: none;
+    z-index: 0;
+    animation: ambientPulse 7s ease-in-out infinite;
+}
+
+.rm-glow-card {
+    position: relative;
+    z-index: 1;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.rm-glow-card:focus-within,
+.rm-glow-card.active-execution,
+.rm-card:focus-within {
+    border-color: rgba(56, 189, 248, 0.6) !important;
+    box-shadow: 0 0 25px rgba(56, 189, 248, 0.35), 0 0 50px rgba(99, 102, 241, 0.25), inset 0 0 15px rgba(56, 189, 248, 0.08) !important;
+}
+
+
 
