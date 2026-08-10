@@ -645,6 +645,11 @@ async function restoreRMSessionOnLoad() {
         if (state.rm.status === 'completed') {
             if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
             renderRMPaperFinal();
+        } else if (state.rm.hitlApproved && !state.rm.hitlCheckpointPending) {
+            if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
+            if (typeof getPaperMarkdown === 'function' && getPaperMarkdown().trim().length > 50) {
+                renderRMPaperLive(false);
+            }
         } else {
             renderRMHitlPanel(currentCp);
             if (typeof getPaperMarkdown === 'function' && getPaperMarkdown().trim().length > 50) {
@@ -1001,7 +1006,10 @@ function renderRMHitlPanel(checkpoint) {
 async function handleRMApprove(feedback) {
     if (!state.rm.threadId) return;
 
+    state.rm.hitlApproved = true;
+    state.rm.hitlCheckpointPending = false;
     dom.rmHitlPanel.style.display = 'none';
+    saveRMSession();
     if (dom.rmPaperTitle) dom.rmPaperTitle.textContent = state.rm.title || 'Synthesizing Paper...';
     if (dom.rmPaperOutput && !getPaperMarkdown().trim()) {
         dom.rmPaperOutput.innerHTML = `
@@ -1154,6 +1162,47 @@ if (dom.modalCloseBtn) {
     };
 }
 
+function applyRMStatePayload(payload) {
+    if (!payload || typeof payload !== 'object') return;
+
+    const mapKey = (k, v) => {
+        if (v === undefined || v === null) return;
+        if (k === 'problem_statement') state.rm.problemStatement = v;
+        else if (k === 'research_objectives') state.rm.researchObjectives = v;
+        else if (k === 'research_questions') state.rm.researchQuestions = v;
+        else if (k === 'keywords') state.rm.keywords = v;
+        else if (k === 'raw_papers_count') state.rm.rawPapersCount = v;
+        else if (k === 'screened_papers_count') state.rm.screenedPapersCount = v;
+        else if (k === 'literature_review') state.rm.literatureReview = v;
+        else if (k === 'research_gap') state.rm.researchGap = v;
+        else if (k === 'conceptual_framework') state.rm.conceptualFramework = v;
+        else if (k === 'hypotheses') state.rm.hypotheses = v;
+        else if (k === 'research_design') state.rm.researchDesign = v;
+        else if (k === 'data_collection_plan') state.rm.dataCollectionPlan = v;
+        else if (k === 'data_analysis_plan') state.rm.dataAnalysisPlan = v;
+        else if (k === 'results') state.rm.results = v;
+        else if (k === 'discussion') state.rm.discussion = v;
+        else if (k === 'implications') state.rm.implications = v;
+        else if (k === 'limitations') state.rm.limitations = v;
+        else if (k === 'conclusion') state.rm.conclusion = v;
+        else if (k === 'future_scope') state.rm.futureScope = v;
+        else if (k === 'references') state.rm.references = v;
+        else if (k === 'appendices') state.rm.appendices = v;
+        else if (k === 'introduction') state.rm.introduction = v;
+        else if (k === 'abstract') state.rm.abstract = v;
+        else if (k === 'title') state.rm.title = v;
+        else {
+            const camelKey = k.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+            state.rm[camelKey] = v;
+            state.rm[k] = v;
+        }
+    };
+
+    for (const [k, v] of Object.entries(payload)) {
+        mapKey(k, v);
+    }
+}
+
 function processRMSEEvent(data) {
     const trackerContainer = document.querySelector('.pipeline-tracker-container');
     const paperCard = document.getElementById('rm-paper-card');
@@ -1173,14 +1222,19 @@ function processRMSEEvent(data) {
     } else if (data.event === 'checkpoint') {
         const cp = (data.hitl_checkpoint || 'checkpoint_1').replace(/_(approved|revising)$/, '');
         state.rm.hitlCheckpoint = cp;
-        applyRMStatePayload(data.state);
+        state.rm.hitlCheckpointPending = true;
+        state.rm.hitlApproved = false;
+        applyRMStatePayload(data.state || {});
         if (data.seq !== undefined) state.rm.lastSeq = data.seq;
         appendLogLine(`HITL Checkpoint reached: ${cp}`, 'warn');
         if (data.state && data.state.corpus_stats) updateCorpusStats(data.state.corpus_stats);
         renderRMHitlPanel(cp);
         saveRMSession();
     } else if (data.event === 'completed') {
-        applyRMStatePayload(data.state);
+        state.rm.status = 'completed';
+        state.rm.hitlCheckpointPending = false;
+        state.rm.hitlApproved = true;
+        applyRMStatePayload(data.state || {});
         if (data.seq !== undefined) state.rm.lastSeq = data.seq;
         appendLogLine(`Pipeline execution completed!`, 'success');
         if (data.state && data.state.corpus_stats) updateCorpusStats(data.state.corpus_stats);
