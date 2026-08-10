@@ -267,15 +267,6 @@ main {
     box-shadow: 0 0 0 1px var(--accent-purple), 0 8px 32px var(--accent-purple-glow);
 }
 
-/* Inside the gradient-border wrapper the outer frame already draws the edge, so
-   the inner panel must not draw a second one - that double line is what read as
-   a stray blue box sitting inside the card. */
-.hero-card-gradient-border .search-box-container,
-.hero-card-gradient-border .search-box-container:focus-within {
-    border-color: transparent;
-    box-shadow: none;
-}
-
 .search-input {
     width: 100%;
     background: transparent;
@@ -1222,7 +1213,8 @@ main {
 
 .toast {
     background: #18181b;
-    border: 1px solid var(--accent-red);
+    border: 1px solid var(--card-border);
+    border-left: 3px solid var(--text-secondary);
     border-radius: 8px;
     padding: 1rem 1.25rem;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
@@ -1244,6 +1236,18 @@ main {
     color: var(--text-primary);
     line-height: 1.4;
 }
+
+/* showToast() emits toast-info / toast-success / toast-warning / toast-error.
+   Without these every notice rendered in the error colour. */
+.toast-error   { border-left-color: var(--accent-red); }
+.toast-warning { border-left-color: var(--accent-yellow); }
+.toast-success { border-left-color: var(--accent-teal); }
+.toast-info    { border-left-color: var(--accent-purple); }
+
+.toast-error .toast-icon   { color: var(--accent-red); }
+.toast-warning .toast-icon { color: var(--accent-yellow); }
+.toast-success .toast-icon { color: var(--accent-teal); }
+.toast-info .toast-icon    { color: var(--accent-purple); }
 
 /* Revising state */
 .card.revising {
