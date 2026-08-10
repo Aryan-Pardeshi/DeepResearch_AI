@@ -410,6 +410,29 @@ function setupEventListeners() {
             showToast('Selected research prompt loaded into workspace!', 'info');
         });
     });
+
+    initTypewriterPlaceholders();
+}
+
+function initTypewriterPlaceholders() {
+    const prompts = [
+        "State your core research gap, problem, or empirical hypothesis...",
+        "Efficacy of cognitive behavioral therapy for healthcare worker burnout...",
+        "Impact of generative AI code assistants on software developer productivity...",
+        "Macroeconomic predictors of digital health platform adoption in rural systems...",
+        "Comparative analysis of transformer architectures for time-series forecasting..."
+    ];
+    let promptIdx = 0;
+    
+    setInterval(() => {
+        const inputs = [dom.rmPsInput, dom.queryInput].filter(Boolean);
+        inputs.forEach(input => {
+            if (input && document.activeElement !== input && !input.value) {
+                promptIdx = (promptIdx + 1) % prompts.length;
+                input.placeholder = prompts[promptIdx];
+            }
+        });
+    }, 4500);
 }
 
 // Admin token for the config API. The backend rejects config writes without it

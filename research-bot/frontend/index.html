@@ -124,28 +124,41 @@
         <!-- DEEPSEARCH MODE PANELS -->
         
         <!-- View 1: Landing Panel -->
-        <section id="landing-panel" class="panel active">
+        <section id="landing-panel" class="panel active" style="position: relative;">
+            <div class="hero-plasma-container">
+                <div class="plasma-orb plasma-orb-1"></div>
+                <div class="plasma-orb plasma-orb-2"></div>
+            </div>
             <h1 class="hero-title">Ask anything. We will plan, research, and synthesize.</h1>
             <p class="hero-subtitle">Multi-agent web research workspace driven by autonomous agent loops.</p>
             
-            <div class="search-box-container">
-                <textarea class="search-input" id="query-input" placeholder="What would you like to research today?"></textarea>
-                <div class="search-controls">
-                    <div class="filter-group">
-                        <span class="filter-label">Tavily Filters:</span>
-                        <div class="chips-container" id="filter-chips">
-                            <span class="chip active" data-topic="all">All</span>
-                            <span class="chip" data-topic="news">News</span>
-                            <span class="chip" data-topic="academic">Academic</span>
-                            <span class="chip" data-topic="finance">Finance</span>
-                            <span class="chip" data-topic="patent">Patent</span>
+            <div class="hero-card-gradient-border">
+                <div class="search-box-container">
+                    <textarea class="search-input" id="query-input" placeholder="What would you like to research today?"></textarea>
+                    <div class="search-controls">
+                        <div class="filter-group">
+                            <span class="filter-label">Tavily Filters:</span>
+                            <div class="chips-container" id="filter-chips">
+                                <span class="chip active" data-topic="all">All</span>
+                                <span class="chip" data-topic="news">News</span>
+                                <span class="chip" data-topic="academic">Academic</span>
+                                <span class="chip" data-topic="finance">Finance</span>
+                                <span class="chip" data-topic="patent">Patent</span>
+                            </div>
                         </div>
+                        <button class="btn-primary" id="plan-research-btn">
+                            <span>Plan Research</span>
+                            <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
+                        </button>
                     </div>
-                    <button class="btn-primary" id="plan-research-btn">
-                        <span>Plan Research</span>
-                        <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
-                    </button>
                 </div>
+            </div>
+
+            <div class="hero-metrics-strip">
+                <div class="hero-metric-item"><span>🤖</span> <strong>20+</strong> Autonomous Agents</div>
+                <div class="hero-metric-item"><span>📚</span> <strong>3</strong> Academic API Indexes</div>
+                <div class="hero-metric-item"><span>🛡️</span> <strong>100%</strong> Local Privacy Guarantee</div>
+                <div class="hero-metric-item"><span>⚡</span> <strong>Real-Time</strong> Live SSE Token Stream</div>
             </div>
         </section>
 
