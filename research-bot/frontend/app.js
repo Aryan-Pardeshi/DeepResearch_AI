@@ -16,7 +16,11 @@ cursorStyle.innerHTML = `
 document.head.appendChild(cursorStyle);
 
 // Configuration
-const API_BASE_URL = 'http://localhost:8000';
+// The backend serves this page, so the API lives on the same origin. Opening
+// index.html straight off disk is the one case that needs an explicit host.
+const API_BASE_URL = window.API_BASE_URL || (
+    window.location.protocol === 'file:' ? 'http://localhost:8000' : window.location.origin
+);
 let activeResearchController = null;
 let activeRMController = null;
 
@@ -59,38 +63,85 @@ const state = {
         conclusion: '',
         futureScope: [],
         references: [],
+        appendices: '',
         introduction: '',
         abstract: '',
         title: '',
-        activeStage: 'keyword_extractor'
+        activeStage: 'scope_definition'
     }
 };
 
-// Research Mode Pipeline 18 Stages Metadata
+// Research Mode Pipeline Stage Metadata (agent research flow order)
 const RM_STAGES = [
-    { id: 'keyword_extractor', name: '1. Keywords', role: 'extractor' },
+    { id: 'scope_definition', name: '1-3. Scope Definition', role: 'scoper' },
+    { id: 'keyword_extractor', name: 'Keyword Extraction', role: 'extractor' },
     { id: 'checkpoint_1', name: 'HITL Checkpoint 1', hitl: true },
-    { id: 'paper_fetcher', name: '2. Paper Fetcher', role: 'fetcher' },
-    { id: 'paper_screener', name: '3. Paper Screener', role: 'screener' },
-    { id: 'literature_review', name: '4. Lit Review', role: 'synthesizer' },
-    { id: 'gap_analysis', name: '5. Gap Analysis', role: 'analyst' },
-    { id: 'framework', name: '6. Framework', role: 'architect' },
+    { id: 'paper_fetcher', name: 'Corpus Retrieval', role: 'fetcher' },
+    { id: 'paper_screener', name: 'Corpus Screening', role: 'screener' },
+    { id: 'literature_review', name: '4. Literature Review', role: 'synthesizer' },
+    { id: 'gap_analysis', name: '5. Research Gap', role: 'analyst' },
+    { id: 'framework', name: '6. Conceptual Framework', role: 'architect' },
     { id: 'checkpoint_2', name: 'HITL Checkpoint 2', hitl: true },
     { id: 'hypotheses', name: '7. Hypotheses', role: 'formulator' },
     { id: 'checkpoint_3', name: 'HITL Checkpoint 3', hitl: true },
-    { id: 'methodology', name: '8. Methodology', role: 'methodologist' },
+    { id: 'research_design', name: '8. Research Design', role: 'methodologist' },
+    { id: 'data_collection', name: '9. Data Collection', role: 'methodologist' },
+    { id: 'data_analysis', name: '10. Data Analysis', role: 'methodologist' },
     { id: 'checkpoint_4', name: 'HITL Checkpoint 4', hitl: true },
-    { id: 'results', name: '9. Results', role: 'synthesizer' },
-    { id: 'discussion', name: '10. Discussion', role: 'interpreter' },
-    { id: 'implications', name: '11. Implications', role: 'evaluator' },
-    { id: 'limitations', name: '12. Limitations', role: 'critic' },
-    { id: 'conclusion', name: '13. Conclusion', role: 'summarizer' },
-    { id: 'future_scope', name: '14. Future Scope', role: 'visionary' },
-    { id: 'references', name: '15. References', role: 'indexer' },
-    { id: 'introduction', name: '16. Introduction', role: 'framer' },
-    { id: 'abstract', name: '17. Abstract', role: 'summarizer' },
-    { id: 'title', name: '18. Title', role: 'finalizer' }
+    { id: 'results', name: '11. Results', role: 'synthesizer' },
+    { id: 'discussion', name: '12. Discussion + Implications', role: 'interpreter' },
+    { id: 'limitations', name: '13. Limitations', role: 'critic' },
+    { id: 'conclusion', name: '14. Conclusion', role: 'summarizer' },
+    { id: 'future_scope', name: '15. Future Scope', role: 'visionary' },
+    { id: 'references', name: '16. References', role: 'indexer' },
+    { id: 'appendices', name: '17. Appendices', role: 'archivist' },
+    { id: 'introduction', name: '18. Introduction', role: 'framer' },
+    { id: 'abstract', name: '19. Abstract', role: 'summarizer' },
+    { id: 'title', name: '20. Title', role: 'finalizer' }
 ];
+
+// Nodes that run without their own tile in the tracker grid
+const RM_HIDDEN_STAGES = {
+    scope_reviser: { label: 'Revising Scope', anchor: 'checkpoint_1' }
+};
+
+// Maps the snake_case state payload from the backend onto the camelCase UI state
+const RM_STATE_KEY_MAP = {
+    problem_statement: 'problemStatement',
+    research_objectives: 'researchObjectives',
+    research_questions: 'researchQuestions',
+    keywords: 'keywords',
+    raw_papers_count: 'rawPapersCount',
+    screened_papers_count: 'screenedPapersCount',
+    literature_review: 'literatureReview',
+    research_gap: 'researchGap',
+    conceptual_framework: 'conceptualFramework',
+    hypotheses: 'hypotheses',
+    research_design: 'researchDesign',
+    data_collection_plan: 'dataCollectionPlan',
+    data_analysis_plan: 'dataAnalysisPlan',
+    results: 'results',
+    discussion: 'discussion',
+    implications: 'implications',
+    limitations: 'limitations',
+    conclusion: 'conclusion',
+    future_scope: 'futureScope',
+    references: 'references',
+    appendices: 'appendices',
+    introduction: 'introduction',
+    abstract: 'abstract',
+    title: 'title'
+};
+
+function applyRMStatePayload(payload) {
+    if (!payload) return;
+    Object.entries(RM_STATE_KEY_MAP).forEach(([snake, camel]) => {
+        const value = payload[snake];
+        if (value !== undefined && value !== null && value !== '') {
+            state.rm[camel] = value;
+        }
+    });
+}
 
 // Activity & Timer Monitors
 const researchTimer = {
@@ -136,6 +187,8 @@ document.addEventListener('DOMContentLoaded', () => {
     checkBackendHealth();
     checkConfigGate();
     renderRMPipelineTracker();
+    restoreRMSessionOnLoad();
+    if (window.lucide) lucide.createIcons();
 });
 
 function cacheDomElements() {
@@ -201,6 +254,9 @@ function cacheDomElements() {
         rmPsInput: document.getElementById('rm-ps-input'),
         rmObjsInput: document.getElementById('rm-objs-input'),
         rmRqsInput: document.getElementById('rm-rqs-input'),
+        rmModelPlanner: document.getElementById('rm-model-planner'),
+        rmModelResearcher: document.getElementById('rm-model-researcher'),
+        rmModelAggregator: document.getElementById('rm-model-aggregator'),
         rmStartBtn: document.getElementById('rm-start-btn'),
         rmPipelineStepsGrid: document.getElementById('rm-pipeline-steps-grid'),
         rmPipelineStatusTag: document.getElementById('rm-pipeline-status-tag'),
@@ -215,8 +271,26 @@ function cacheDomElements() {
         rmPaperOutput: document.getElementById('rm-paper-output'),
         rmCopyPaperBtn: document.getElementById('rm-copy-paper-btn'),
         rmExportPdfBtn: document.getElementById('rm-export-pdf-btn'),
+        rmExportDropdown: document.getElementById('rm-export-dropdown'),
+
+        statRetrieved: document.getElementById('stat-retrieved'),
+        statDedup: document.getElementById('stat-dedup'),
+        statScreened: document.getElementById('stat-screened'),
+        statIncluded: document.getElementById('stat-included'),
+        statFulltext: document.getElementById('stat-fulltext'),
+        rmCorpusStatsBar: document.getElementById('rm-corpus-stats-bar'),
+        rmLogDrawer: document.getElementById('rm-log-drawer'),
+        rmLogBody: document.getElementById('rm-log-body'),
+        rmLogCount: document.getElementById('rm-log-count'),
+        rmEvidenceCard: document.getElementById('rm-evidence-card'),
+        rmEvidenceMatrixView: document.getElementById('rm-evidence-matrix-view'),
+        paperDetailModal: document.getElementById('paper-detail-modal'),
+        modalPaperTitle: document.getElementById('modal-paper-title'),
+        modalPaperBody: document.getElementById('modal-paper-body'),
+        modalCloseBtn: document.getElementById('modal-close-btn'),
 
         toastContainer: document.getElementById('toast-container')
+
     };
 }
 
@@ -227,6 +301,10 @@ async function checkConfigGate() {
         if (!res.ok) return;
         const data = await res.json();
         
+        if (dom.rmModelPlanner && data.llm_model_planner) dom.rmModelPlanner.placeholder = data.llm_model_planner;
+        if (dom.rmModelResearcher && data.llm_model_researcher) dom.rmModelResearcher.placeholder = data.llm_model_researcher;
+        if (dom.rmModelAggregator && data.llm_model_aggregator) dom.rmModelAggregator.placeholder = data.llm_model_aggregator;
+
         if (!data.ok || (data.missing_required && data.missing_required.length > 0)) {
             // Populate form defaults if present
             if (dom.gateLlmBaseUrl) dom.gateLlmBaseUrl.value = data.llm_base_url || 'https://api.deepseek.com';
@@ -300,10 +378,39 @@ function setupEventListeners() {
 
     // Research Mode Actions
     dom.rmStartBtn?.addEventListener('click', handleRMStart);
-    dom.rmHitlReviseBtn?.addEventListener('click', () => handleRMApprove(dom.rmHitlFeedbackInput.value));
+    dom.rmHitlReviseBtn?.addEventListener('click', () => {
+        const feedback = dom.rmHitlFeedbackInput.value.trim();
+        if (!feedback) {
+            showToast('Type what you want changed, then request revisions.', 'warning');
+            return;
+        }
+        handleRMApprove(feedback);
+    });
     dom.rmHitlApproveBtn?.addEventListener('click', () => handleRMApprove('approve'));
     dom.rmCopyPaperBtn?.addEventListener('click', () => copyToClipboard(getPaperMarkdown(), dom.rmCopyPaperBtn));
     dom.rmExportPdfBtn?.addEventListener('click', handleRMExportPDF);
+}
+
+// Admin token for the config API. The backend rejects config writes without it
+// unless the deployment explicitly opted into open access for local use.
+function getConfigToken() {
+    return window.CONFIG_API_TOKEN || localStorage.getItem('config_api_token') || '';
+}
+
+function configHeaders() {
+    const headers = { 'Content-Type': 'application/json' };
+    const token = getConfigToken();
+    if (token) headers['X-Config-Token'] = token;
+    return headers;
+}
+
+async function promptForConfigToken() {
+    const token = window.prompt('This deployment requires an admin token to change configuration. Enter X-Config-Token:');
+    if (token && token.trim()) {
+        localStorage.setItem('config_api_token', token.trim());
+        return true;
+    }
+    return false;
 }
 
 // Setup Gate Submit
@@ -320,12 +427,24 @@ async function submitSetupGate() {
 
     dom.gateSaveStatus.textContent = 'Saving configuration locally...';
     try {
-        const res = await fetch(`${API_BASE_URL}/config/setup`, {
+        let res = await fetch(`${API_BASE_URL}/config/setup`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: configHeaders(),
             body: JSON.stringify(payload)
         });
+        if (res.status === 401 && await promptForConfigToken()) {
+            res = await fetch(`${API_BASE_URL}/config/setup`, {
+                method: 'POST',
+                headers: configHeaders(),
+                body: JSON.stringify(payload)
+            });
+        }
         const data = await res.json();
+        if (res.status === 401 || res.status === 403) {
+            localStorage.removeItem('config_api_token');
+            dom.gateSaveStatus.textContent = data.detail || 'Configuration API is locked on this deployment.';
+            return;
+        }
         if (data.ok) {
             dom.gateSaveStatus.textContent = 'Configuration saved!';
             setTimeout(() => {
@@ -351,14 +470,27 @@ async function saveSettingsModal() {
 
     dom.saveStatus.textContent = 'Saving...';
     try {
-        const res = await fetch(`${API_BASE_URL}/health/config`, {
+        let res = await fetch(`${API_BASE_URL}/health/config`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: configHeaders(),
             body: JSON.stringify(payload)
         });
+        if (res.status === 401 && await promptForConfigToken()) {
+            res = await fetch(`${API_BASE_URL}/health/config`, {
+                method: 'POST',
+                headers: configHeaders(),
+                body: JSON.stringify(payload)
+            });
+        }
         if (res.ok) {
             dom.saveStatus.textContent = 'Saved successfully!';
             setTimeout(() => dom.settingsModal.style.display = 'none', 1000);
+        } else if (res.status === 401 || res.status === 403) {
+            localStorage.removeItem('config_api_token');
+            const data = await res.json().catch(() => ({}));
+            dom.saveStatus.textContent = data.detail || 'Configuration API is locked on this deployment.';
+        } else {
+            dom.saveStatus.textContent = 'Failed to save settings.';
         }
     } catch (e) {
         dom.saveStatus.textContent = 'Error saving settings.';
@@ -368,13 +500,28 @@ async function saveSettingsModal() {
 // Theme handling
 function initTheme() {
     const theme = localStorage.getItem('deepresearch_theme') || 'dark';
-    if (theme === 'light') document.documentElement.classList.add('light-mode');
+    if (theme === 'light') {
+        document.documentElement.classList.add('light-mode');
+    } else {
+        document.documentElement.classList.remove('light-mode');
+    }
+    updateThemeIcon();
 }
 
 function toggleTheme() {
     document.documentElement.classList.toggle('light-mode');
     const isLight = document.documentElement.classList.contains('light-mode');
     localStorage.setItem('deepresearch_theme', isLight ? 'light' : 'dark');
+    updateThemeIcon();
+}
+
+function updateThemeIcon() {
+    const isLight = document.documentElement.classList.contains('light-mode');
+    const btn = document.getElementById('theme-toggle-btn');
+    if (btn) {
+        btn.innerHTML = `<i data-lucide="${isLight ? 'sun' : 'moon'}" style="width: 18px; height: 18px;"></i>`;
+        if (window.lucide) lucide.createIcons();
+    }
 }
 
 function switchPanel(targetPanel) {
@@ -385,7 +532,7 @@ function switchPanel(targetPanel) {
 // Health Check
 async function checkBackendHealth() {
     try {
-        const res = await fetch(`${API_BASE_URL}/`);
+        const res = await fetch(`${API_BASE_URL}/healthz`);
         if (res.ok) {
             dom.backendOfflineBanner.style.display = 'none';
         } else {
@@ -398,8 +545,174 @@ async function checkBackendHealth() {
 
 
 /* ==========================================================================
-   RESEARCH MODE PIPELINE LOGIC
+   RESEARCH MODE PIPELINE LOGIC & SESSION PERSISTENCE
    ========================================================================== */
+
+function saveRMSession() {
+    if (!state.rm.threadId) return;
+    try {
+        const sessionData = {
+            threadId: state.rm.threadId,
+            rmState: state.rm,
+            lastSeq: state.rm.lastSeq || 0,
+            timestamp: Date.now()
+        };
+        localStorage.setItem('rm_session', JSON.stringify(sessionData));
+    } catch (e) {
+        console.warn('Failed to save RM session:', e);
+    }
+}
+
+function clearRMSession() {
+    try {
+        localStorage.removeItem('rm_session');
+    } catch (e) {
+        console.warn('Failed to clear RM session:', e);
+    }
+}
+
+async function restoreRMSessionOnLoad() {
+    try {
+        const raw = localStorage.getItem('rm_session');
+        if (!raw) return;
+        const session = JSON.parse(raw);
+        if (!session || !session.threadId) return;
+
+        const res = await fetch(`${API_BASE_URL}/research-mode/result/${session.threadId}`);
+        if (!res.ok) {
+            if (res.status === 404) {
+                clearRMSession();
+            }
+            return;
+        }
+        const data = await res.json();
+        const values = data.values || {};
+        
+        state.rm.threadId = session.threadId;
+        if (session.rmState) {
+            Object.assign(state.rm, session.rmState);
+        }
+        applyRMStatePayload(values);
+        if (data.hitl_checkpoint) state.rm.hitlCheckpoint = data.hitl_checkpoint;
+        if (data.status) state.rm.status = data.status;
+        if (session.lastSeq !== undefined) state.rm.lastSeq = session.lastSeq;
+
+        // Switch UI to Research Mode tab & workspace panel
+        switchMode('researchmode');
+        switchPanel(dom.rmWorkspacePanel);
+
+        if (data.is_completed) {
+            updateRMPipelineTracker('title', RM_STAGES.map(s => s.id));
+            if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
+            renderRMPaperFinal();
+        } else if (data.is_checkpoint || data.hitl_checkpoint) {
+            const cp = (data.hitl_checkpoint || 'checkpoint_1').replace(/_(approved|revising)$/, '');
+            state.rm.hitlCheckpoint = cp;
+            const cpIdx = RM_STAGES.findIndex(s => s.id === cp);
+            const completedStages = cpIdx > 0 ? RM_STAGES.slice(0, cpIdx).map(s => s.id) : [];
+            updateRMPipelineTracker(cp, completedStages);
+            renderRMHitlPanel(cp);
+            renderRMPaperLive();
+        } else {
+            renderRMPaperLive();
+        }
+
+        showResumeBanner(data);
+    } catch (e) {
+        console.warn('Error restoring session on load:', e);
+    }
+}
+
+function showResumeBanner(data) {
+    let banner = document.getElementById('rm-resume-banner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'rm-resume-banner';
+        banner.className = 'original-query-banner';
+        banner.style.display = 'flex';
+        banner.style.justifyContent = 'space-between';
+        banner.style.alignItems = 'center';
+        banner.style.marginBottom = '1.25rem';
+
+        const workspace = document.getElementById('rm-workspace-panel');
+        if (workspace && workspace.firstChild) {
+            workspace.insertBefore(banner, workspace.firstChild);
+        }
+    }
+
+    const shortId = state.rm.threadId ? state.rm.threadId.slice(0, 8) : '';
+    const statusText = data.is_completed
+        ? 'Completed Academic Paper'
+        : (data.hitl_checkpoint ? `Checkpoint (${data.hitl_checkpoint})` : 'In Progress');
+
+    banner.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <i data-lucide="rotate-ccw" style="width: 18px; height: 18px; color: var(--academic-blue);"></i>
+            <span><strong>Session Resumed:</strong> Rehydrated session <code>${shortId}</code> — Status: <em>${statusText}</em></span>
+        </div>
+        <button id="rm-banner-reset-btn" class="btn-secondary" style="padding: 0.3rem 0.75rem; font-size: 0.8rem; display: flex; align-items: center; gap: 0.35rem;">
+            <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
+            <span>New Research</span>
+        </button>
+    `;
+
+    if (window.lucide) lucide.createIcons();
+
+    document.getElementById('rm-banner-reset-btn')?.addEventListener('click', resetResearchModeForm);
+}
+
+function resetResearchModeForm() {
+    clearRMSession();
+    state.rm.threadId = null;
+    state.rm.status = 'idle';
+    state.rm.hitlCheckpoint = null;
+    state.rm.problemStatement = '';
+    state.rm.researchObjectives = [];
+    state.rm.researchQuestions = [];
+    state.rm.keywords = [];
+    state.rm.rawPapersCount = 0;
+    state.rm.screenedPapersCount = 0;
+    state.rm.literatureReview = '';
+    state.rm.researchGap = '';
+    state.rm.conceptualFramework = '';
+    state.rm.hypotheses = [];
+    state.rm.researchDesign = '';
+    state.rm.dataCollectionPlan = '';
+    state.rm.dataAnalysisPlan = '';
+    state.rm.results = '';
+    state.rm.discussion = '';
+    state.rm.implications = '';
+    state.rm.limitations = '';
+    state.rm.conclusion = '';
+    state.rm.futureScope = [];
+    state.rm.references = [];
+    state.rm.appendices = '';
+    state.rm.introduction = '';
+    state.rm.abstract = '';
+    state.rm.title = '';
+    state.rm.lastSeq = 0;
+
+    if (dom.rmPsInput) dom.rmPsInput.value = '';
+    if (dom.rmObjsInput) dom.rmObjsInput.value = '';
+    if (dom.rmRqsInput) dom.rmRqsInput.value = '';
+
+    const banner = document.getElementById('rm-resume-banner');
+    if (banner) banner.remove();
+
+    if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
+    if (dom.rmCopyPaperBtn) dom.rmCopyPaperBtn.style.display = 'none';
+    if (dom.rmExportPdfBtn) dom.rmExportPdfBtn.style.display = 'none';
+    if (dom.rmPaperOutput) dom.rmPaperOutput.innerHTML = `
+        <div class="paper-placeholder-state">
+            <div class="spinner-ring"></div>
+            <p>Academic pipeline executing. Live sections will materialize as agents complete synthesis.</p>
+        </div>
+    `;
+
+    renderRMPipelineTracker();
+    switchPanel(dom.rmInputPanel);
+    showToast('Research session reset.', 'info');
+}
 
 function renderRMPipelineTracker() {
     if (!dom.rmPipelineStepsGrid) return;
@@ -423,6 +736,9 @@ function renderRMPipelineTracker() {
 }
 
 function updateRMPipelineTracker(activeStageId, completedStages = []) {
+    const hidden = RM_HIDDEN_STAGES[activeStageId];
+    const anchoredStageId = hidden ? hidden.anchor : activeStageId;
+
     RM_STAGES.forEach(stage => {
         const el = document.getElementById(`rm-step-${stage.id}`);
         if (!el) return;
@@ -430,14 +746,15 @@ function updateRMPipelineTracker(activeStageId, completedStages = []) {
         el.classList.remove('active', 'completed');
         if (completedStages.includes(stage.id)) {
             el.classList.add('completed');
-        } else if (stage.id === activeStageId) {
+        } else if (stage.id === anchoredStageId) {
             el.classList.add('active');
         }
     });
 
     if (dom.rmPipelineStatusTag) {
-        const current = RM_STAGES.find(s => s.id === activeStageId);
-        dom.rmPipelineStatusTag.textContent = current ? `Active: ${current.name}` : 'Pipeline Running';
+        const current = RM_STAGES.find(s => s.id === anchoredStageId);
+        const label = hidden ? hidden.label : (current ? current.name : null);
+        dom.rmPipelineStatusTag.textContent = label ? `Active: ${label}` : 'Pipeline Running';
     }
 }
 
@@ -451,14 +768,22 @@ async function handleRMStart() {
     const objs = dom.rmObjsInput.value.split('\n').map(s => s.trim()).filter(Boolean);
     const rqs = dom.rmRqsInput.value.split('\n').map(s => s.trim()).filter(Boolean);
 
+    const plannerModel = dom.rmModelPlanner?.value.trim();
+    const researcherModel = dom.rmModelResearcher?.value.trim();
+    const aggregatorModel = dom.rmModelAggregator?.value.trim();
+    const models = {};
+    if (plannerModel) models.planner = plannerModel;
+    if (researcherModel) models.researcher = researcherModel;
+    if (aggregatorModel) models.aggregator = aggregatorModel;
+
     dom.rmStartBtn.disabled = true;
-    dom.rmStartBtn.innerHTML = '<div class="spinner-ring sm"></div><span>Initializing Academic Agents...</span>';
+    dom.rmStartBtn.innerHTML = '<div class="spinner-ring sm"></div><span>Defining research scope...</span>';
 
     try {
         const res = await fetch(`${API_BASE_URL}/research-mode/start`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ problem_statement: ps, research_objectives: objs, research_questions: rqs })
+            body: JSON.stringify({ problem_statement: ps, research_objectives: objs, research_questions: rqs, models })
         });
 
         const data = await res.json();
@@ -475,9 +800,10 @@ async function handleRMStart() {
         state.rm.researchQuestions = data.research_questions || [];
         state.rm.keywords = data.keywords || [];
         state.rm.hitlCheckpoint = data.hitl_checkpoint;
+        saveRMSession();
 
         switchPanel(dom.rmWorkspacePanel);
-        updateRMPipelineTracker('keyword_extractor', ['keyword_extractor']);
+        updateRMPipelineTracker('checkpoint_1', ['scope_definition', 'keyword_extractor']);
         renderRMHitlPanel('checkpoint_1');
 
     } catch (e) {
@@ -492,10 +818,15 @@ function renderRMHitlPanel(checkpoint) {
     dom.rmHitlPanel.style.display = 'block';
     dom.rmHitlBody.innerHTML = '';
     dom.rmHitlFeedbackInput.value = '';
+    dom.rmHitlFeedbackInput.placeholder = 'Specify any edits or revisions for this phase...';
 
     if (checkpoint === 'checkpoint_1') {
-        dom.rmHitlTitle.textContent = 'Checkpoint 1: Problem Statement & Keywords Review';
+        dom.rmHitlTitle.textContent = 'Checkpoint 1: Scope Review — Problem, Objectives & Questions';
         dom.rmHitlBadge.textContent = 'Checkpoint 1 of 4';
+        dom.rmHitlFeedbackInput.placeholder = 'e.g. Make objective 2 focus on cost, not latency. Add a question about long-term stability.';
+
+        const objectives = state.rm.researchObjectives || [];
+        const questions = state.rm.researchQuestions || [];
 
         dom.rmHitlBody.innerHTML = `
             <div class="form-group">
@@ -503,9 +834,31 @@ function renderRMHitlPanel(checkpoint) {
                 <div class="problem-statement-text">${state.rm.problemStatement}</div>
             </div>
             <div class="form-group">
+                <label class="form-label">Research Objectives <span class="label-tag">auto-defined</span></label>
+                <div class="subtasks-list">
+                    ${objectives.map((o, i) => `
+                        <div class="subtask-item">
+                            <span class="subtask-number">O${i + 1}</span>
+                            <span class="subtask-content">${o}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Research Questions <span class="label-tag">auto-defined</span></label>
+                <div class="subtasks-list">
+                    ${questions.map((q, i) => `
+                        <div class="subtask-item">
+                            <span class="subtask-number">RQ${i + 1}</span>
+                            <span class="subtask-content">${q}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            <div class="form-group">
                 <label class="form-label">Extracted Academic Keywords (6-10)</label>
                 <div class="chips-container">
-                    ${state.rm.keywords.map(kw => `<span class="chip active">${kw}</span>`).join('')}
+                    ${(state.rm.keywords || []).map(kw => `<span class="chip active">${kw}</span>`).join('')}
                 </div>
             </div>
         `;
@@ -573,81 +926,168 @@ async function handleRMApprove(feedback) {
     if (activeRMController) activeRMController.abort();
     activeRMController = new AbortController();
 
-    try {
-        const response = await fetch(`${API_BASE_URL}/research-mode/approve`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ thread_id: state.rm.threadId, message: feedback || '' }),
-            signal: activeRMController.signal
-        });
+    let attempt = 0;
+    const maxRetries = 5;
+    let isTerminal = false;
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder('utf-8');
-        let buffer = '';
+    while (attempt <= maxRetries && !isTerminal) {
+        try {
+            const reqMessage = attempt === 0 ? (feedback || '') : '';
+            const reqPayload = { thread_id: state.rm.threadId, message: reqMessage };
+            if (state.rm.lastSeq !== undefined && state.rm.lastSeq !== null) {
+                reqPayload.from_seq = state.rm.lastSeq;
+            }
+            const reqHeaders = { 'Content-Type': 'application/json' };
+            if (state.rm.lastSeq !== undefined && state.rm.lastSeq !== null) {
+                reqHeaders['Last-Event-ID'] = String(state.rm.lastSeq);
+            }
 
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
+            const response = await fetch(`${API_BASE_URL}/research-mode/approve`, {
+                method: 'POST',
+                headers: reqHeaders,
+                body: JSON.stringify(reqPayload),
+                signal: activeRMController.signal
+            });
 
-            const events = buffer.split('\n\n');
-            buffer = events.pop();
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
 
-            for (const rawEvent of events) {
-                if (rawEvent.startsWith('data: ')) {
-                    try {
-                        const data = JSON.parse(rawEvent.slice(6));
-                        processRMSEEvent(data);
-                    } catch (e) {
-                        console.warn('RM SSE parse error:', e);
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+
+                const events = buffer.split('\n\n');
+                buffer = events.pop();
+
+                for (const rawEvent of events) {
+                    if (rawEvent.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(rawEvent.slice(6));
+                            const evt = processRMSEEvent(data);
+                            if (evt === 'checkpoint' || evt === 'completed' || evt === 'error') {
+                                isTerminal = true;
+                            }
+                            attempt = 0;
+                        } catch (e) {
+                            console.warn('RM SSE parse error:', e);
+                        }
                     }
                 }
             }
-        }
-    } catch (e) {
-        if (e.name !== 'AbortError') {
-            showToast('Error streaming Research Mode pipeline: ' + e.message, 'error');
+
+            if (isTerminal) break;
+            break;
+
+        } catch (e) {
+            if (e.name === 'AbortError') {
+                console.log('RM SSE stream aborted by user.');
+                break;
+            }
+            attempt++;
+            if (attempt > maxRetries) {
+                showToast('Connection lost. Auto-reconnect failed: ' + e.message, 'error');
+                break;
+            }
+            showToast(`Connection dropped. Auto-reconnecting (attempt ${attempt}/${maxRetries})...`, 'warning');
+            await new Promise(res => setTimeout(res, 1000 * Math.pow(1.5, attempt - 1)));
         }
     }
+}
+
+function appendLogLine(msg, level = 'info') {
+    if (!dom.rmLogBody) return;
+    const timeStr = new Date().toLocaleTimeString();
+    const div = document.createElement('div');
+    div.className = `rm-log-line ${level}`;
+    div.style.color = level === 'warn' ? '#fbbf24' : (level === 'success' ? '#34d399' : (level === 'error' ? '#f87171' : '#38bdf8'));
+    div.textContent = `[${timeStr}] ${msg}`;
+    dom.rmLogBody.appendChild(div);
+    dom.rmLogBody.scrollTop = dom.rmLogBody.scrollHeight;
+
+    const count = dom.rmLogBody.children.length;
+    if (dom.rmLogCount) dom.rmLogCount.textContent = `${count} events`;
+}
+
+function updateCorpusStats(stats) {
+    if (!stats) return;
+    if (dom.statRetrieved) dom.statRetrieved.textContent = stats.retrieved || 0;
+    if (dom.statDedup) dom.statDedup.textContent = stats.after_dedup || 0;
+    if (dom.statScreened) dom.statScreened.textContent = stats.screened || 0;
+    if (dom.statIncluded) dom.statIncluded.textContent = stats.included || 0;
+    if (dom.statFulltext) dom.statFulltext.textContent = stats.fulltext_fetched || 0;
+    if (dom.rmCorpusStatsBar) dom.rmCorpusStatsBar.style.display = 'flex';
+}
+
+function openPaperInspector(paper) {
+    if (!paper || !dom.paperDetailModal) return;
+    if (dom.modalPaperTitle) dom.modalPaperTitle.textContent = paper.title || 'Paper Details';
+    if (dom.modalPaperBody) {
+        dom.modalPaperBody.innerHTML = `
+            <div style="margin-bottom: 1rem;">
+                <h4 style="margin: 0 0 0.5rem 0; color: var(--academic-blue); font-size: 1.05rem;">${paper.title || 'Untitled'}</h4>
+                <p style="margin: 0.25rem 0; color: var(--text-muted);"><strong>Authors:</strong> ${Array.isArray(paper.authors) ? paper.authors.join(', ') : (paper.authors || 'N/A')}</p>
+                <p style="margin: 0.25rem 0; color: var(--text-muted);"><strong>Venue / Year:</strong> ${paper.venue || paper.journal || 'Academic Index'} (${paper.year || 'N/A'})</p>
+                <p style="margin: 0.25rem 0;"><strong>DOI:</strong> ${paper.doi ? `<a href="https://doi.org/${paper.doi}" target="_blank" style="color: var(--academic-blue);">${paper.doi}</a>` : 'N/A'}</p>
+                <p style="margin: 0.25rem 0;"><strong>PDF Source:</strong> ${paper.pdf_url ? `<a href="${paper.pdf_url}" target="_blank" style="color: var(--emerald-accent);">[Open Access PDF Link]</a>` : '<span style="color: var(--text-muted);">No PDF Direct Link</span>'}</p>
+            </div>
+            <div style="background: var(--bg-surface); padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 1rem;">
+                <p style="margin: 0 0 0.25rem 0; font-weight: 600;">Relevance Score: <span style="color: var(--academic-blue);">${paper.relevance_score || 'N/A'}/10</span></p>
+                <p style="margin: 0; color: var(--text-secondary);"><strong>Inclusion Rationale:</strong> ${paper.inclusion_reason || paper.rationale || 'Selected based on topic alignment.'}</p>
+            </div>
+            <div style="margin-top: 1rem;">
+                <h5 style="margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: 600;">Extracted Full-Text Excerpt</h5>
+                <pre style="white-space: pre-wrap; font-family: monospace; font-size: 0.82rem; background: #0f172a; color: #f8fafc; padding: 0.85rem; border-radius: 8px; max-height: 250px; overflow-y: auto;">${paper.fulltext_excerpt || paper.abstract || 'No full-text excerpt extracted for this paper.'}</pre>
+            </div>
+        `;
+    }
+    dom.paperDetailModal.style.display = 'flex';
+}
+
+if (dom.modalCloseBtn) {
+    dom.modalCloseBtn.onclick = () => {
+        if (dom.paperDetailModal) dom.paperDetailModal.style.display = 'none';
+    };
 }
 
 function processRMSEEvent(data) {
     if (data.event === 'node_start') {
         updateRMPipelineTracker(data.node);
+        appendLogLine(`Node started: ${data.node}`, 'info');
     } else if (data.event === 'node_update') {
-        const out = data.data || {};
-        Object.assign(state.rm, {
-            literatureReview: out.literature_review || state.rm.literatureReview,
-            researchGap: out.research_gap || state.rm.researchGap,
-            conceptualFramework: out.conceptual_framework || state.rm.conceptualFramework,
-            hypotheses: out.hypotheses || state.rm.hypotheses,
-            researchDesign: out.research_design || state.rm.researchDesign,
-            dataCollectionPlan: out.data_collection_plan || state.rm.dataCollectionPlan,
-            dataAnalysisPlan: out.data_analysis_plan || state.rm.dataAnalysisPlan,
-            results: out.results || state.rm.results,
-            discussion: out.discussion || state.rm.discussion,
-            implications: out.implications || state.rm.implications,
-            limitations: out.limitations || state.rm.limitations,
-            conclusion: out.conclusion || state.rm.conclusion,
-            futureScope: out.future_scope || state.rm.futureScope,
-            references: out.references || state.rm.references,
-            introduction: out.introduction || state.rm.introduction,
-            abstract: out.abstract || state.rm.abstract,
-            title: out.title || state.rm.title
-        });
+        applyRMStatePayload(data.data || {});
+        if (data.seq !== undefined) state.rm.lastSeq = data.seq;
+        appendLogLine(`Node updated: ${data.node}`, 'success');
+        if (data.data && data.data.corpus_stats) updateCorpusStats(data.data.corpus_stats);
         renderRMPaperLive();
+        saveRMSession();
     } else if (data.event === 'checkpoint') {
-        const cp = data.hitl_checkpoint || 'checkpoint_1';
+        const cp = (data.hitl_checkpoint || 'checkpoint_1').replace(/_(approved|revising)$/, '');
         state.rm.hitlCheckpoint = cp;
-        if (data.state) Object.assign(state.rm, data.state);
+        applyRMStatePayload(data.state);
+        if (data.seq !== undefined) state.rm.lastSeq = data.seq;
+        appendLogLine(`HITL Checkpoint reached: ${cp}`, 'warn');
+        if (data.state && data.state.corpus_stats) updateCorpusStats(data.state.corpus_stats);
         renderRMHitlPanel(cp);
+        saveRMSession();
     } else if (data.event === 'completed') {
-        if (data.state) Object.assign(state.rm, data.state);
+        applyRMStatePayload(data.state);
+        if (data.seq !== undefined) state.rm.lastSeq = data.seq;
+        appendLogLine(`Pipeline execution completed!`, 'success');
+        if (data.state && data.state.corpus_stats) updateCorpusStats(data.state.corpus_stats);
         updateRMPipelineTracker('title', RM_STAGES.map(s => s.id));
         renderRMPaperFinal();
+        saveRMSession();
     } else if (data.event === 'error') {
+        appendLogLine(`Pipeline Error: ${data.message}`, 'error');
         showToast(data.message || 'Pipeline error occurred.', 'error');
     }
+    return data.event;
 }
 
 function renderRMPaperLive() {
@@ -659,8 +1099,9 @@ function renderRMPaperLive() {
 
 function renderRMPaperFinal() {
     renderRMPaperLive();
-    dom.rmCopyPaperBtn.style.display = 'inline-flex';
-    dom.rmExportPdfBtn.style.display = 'inline-flex';
+    if (dom.rmCopyPaperBtn) dom.rmCopyPaperBtn.style.display = 'inline-flex';
+    if (dom.rmExportDropdown) dom.rmExportDropdown.style.display = 'inline-flex';
+    if (dom.rmExportPdfBtn) dom.rmExportPdfBtn.style.display = 'inline-flex';
     showToast('Academic Paper Synthesis Completed!', 'success');
 }
 
@@ -670,38 +1111,69 @@ function getPaperMarkdown() {
     if (s.abstract) md += `## Abstract\n${s.abstract}\n\n`;
     if (s.introduction) md += `## 1. Introduction\n${s.introduction}\n\n`;
     if (s.literatureReview) md += `## 2. Literature Review\n${s.literatureReview}\n\n`;
-    if (s.conceptualFramework) md += `## 3. Research Gap & Conceptual Framework\n### Research Gap\n${s.researchGap}\n\n### Conceptual Framework\n${s.conceptualFramework}\n\n`;
-    if (s.hypotheses && s.hypotheses.length) md += `## 4. Hypotheses\n${s.hypotheses.map((h, i) => `- **H${i+1}**: ${h}`).join('\n')}\n\n`;
-    if (s.researchDesign) md += `## 5. Methodology\n**Design**: ${s.researchDesign}\n\n**Data Collection**: ${s.dataCollectionPlan}\n\n**Data Analysis**: ${s.dataAnalysisPlan}\n\n`;
-    if (s.results) md += `## 6. Results\n${s.results}\n\n`;
-    if (s.discussion) md += `## 7. Discussion\n${s.discussion}\n\n`;
-    if (s.implications) md += `## 8. Implications\n${s.implications}\n\n`;
-    if (s.limitations) md += `## 9. Limitations\n${s.limitations}\n\n`;
-    if (s.conclusion) md += `## 10. Conclusion & Future Scope\n${s.conclusion}\n\n### Future Directions\n${Array.isArray(s.futureScope) ? s.futureScope.map(f => `- ${f}`).join('\n') : s.futureScope}\n\n`;
-    if (s.references && s.references.length) md += `## References\n${s.references.map(r => `- ${r}`).join('\n')}\n\n`;
+    if (s.researchGap) md += `## 3. Research Gap\n${s.researchGap}\n\n`;
+    if (s.researchObjectives && s.researchObjectives.length) md += `## 4. Research Objectives\n${s.researchObjectives.map((o, i) => `${i+1}. ${o}`).join('\n')}\n\n`;
+    if (s.researchQuestions && s.researchQuestions.length) md += `## 5. Research Questions\n${s.researchQuestions.map((q, i) => `**RQ${i+1}**: ${q}`).join('\n\n')}\n\n`;
+    if (s.conceptualFramework) md += `## 6. Conceptual Framework\n${s.conceptualFramework}\n\n`;
+    if (s.hypotheses && s.hypotheses.length) md += `## 7. Hypotheses\n${s.hypotheses.map((h, i) => `- **H${i+1}**: ${h}`).join('\n')}\n\n`;
+    if (s.researchDesign) md += `## 8. Methodology\n### 8.1 Research Design\n${s.researchDesign}\n\n### 8.2 Data Collection\n${s.dataCollectionPlan}\n\n### 8.3 Data Analysis\n${s.dataAnalysisPlan}\n\n`;
+    if (s.results) md += `## 9. Results\n${s.results}\n\n`;
+    if (s.discussion) md += `## 10. Discussion\n${s.discussion}\n\n${s.implications ? `### 10.1 Implications\n${s.implications}\n\n` : ''}`;
+    if (s.limitations) md += `## 11. Limitations\n${s.limitations}\n\n`;
+    if (s.conclusion) md += `## 12. Conclusion\n${s.conclusion}\n\n`;
+    if (s.futureScope && s.futureScope.length) md += `## 13. Future Scope\n${Array.isArray(s.futureScope) ? s.futureScope.map(f => `- ${f}`).join('\n') : s.futureScope}\n\n`;
+    if (s.references && s.references.length) md += `## 14. References\n${s.references.map(r => `- ${r}`).join('\n')}\n\n`;
+    if (s.appendices) md += `## 15. Appendices\n${s.appendices}\n\n`;
     return md;
 }
 
-async function handleRMExportPDF() {
+
+function toggleExportMenu(event) {
+    if (event) event.stopPropagation();
+    const menu = document.getElementById("rm-export-menu");
+    if (menu) {
+        menu.classList.toggle("show");
+    }
+}
+
+document.addEventListener("click", () => {
+    const menu = document.getElementById("rm-export-menu");
+    if (menu && menu.classList.contains("show")) {
+        menu.classList.remove("show");
+    }
+});
+
+async function exportReport(format = 'pdf') {
     if (!state.rm.threadId) return;
+    const menu = document.getElementById("rm-export-menu");
+    if (menu) menu.classList.remove("show");
+
+    const endpoint = format === 'docx' 
+        ? `${API_BASE_URL}/research-mode/export/docx/${state.rm.threadId}` 
+        : `${API_BASE_URL}/research-mode/export/${state.rm.threadId}`;
+    const ext = format === 'docx' ? 'docx' : 'pdf';
+
     try {
-        const res = await fetch(`${API_BASE_URL}/research-mode/export/${state.rm.threadId}`, { method: 'POST' });
+        const res = await fetch(endpoint, { method: 'POST' });
         if (res.ok) {
             const blob = await res.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `academic_paper_${state.rm.threadId.slice(0, 8)}.pdf`;
+            a.download = `academic_paper_${state.rm.threadId.slice(0, 8)}.${ext}`;
             document.body.appendChild(a);
             a.click();
             a.remove();
+            window.URL.revokeObjectURL(url);
+            showToast(`Exported ${ext.toUpperCase()} successfully!`, 'success');
         } else {
-            showToast('Failed to export PDF.', 'error');
+            showToast(`Failed to export ${ext.toUpperCase()}.`, 'error');
         }
     } catch (e) {
-        showToast('Error exporting PDF: ' + e.message, 'error');
+        showToast(`Error exporting ${ext.toUpperCase()}: ` + e.message, 'error');
     }
 }
+
 
 
 /* ==========================================================================
@@ -873,6 +1345,7 @@ function resetToLanding() {
     state.finalAnswer = '';
     state.workers = {};
     dom.queryInput.value = '';
+    clearRMSession();
     switchPanel(dom.landingPanel);
 }
 

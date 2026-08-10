@@ -11,6 +11,8 @@ class ResearchModeState(TypedDict, total=False):
     raw_papers: List[Dict[str, Any]]  # title, abstract, authors, year, doi, url, source
     screened_papers: List[Dict[str, Any]]
     literature_review: str
+    unverified_citations: List[str]
+
     research_gap: str
     conceptual_framework: str
     hypotheses: List[str]
@@ -24,6 +26,7 @@ class ResearchModeState(TypedDict, total=False):
     conclusion: str
     future_scope: List[str] | str
     references: List[str]  # Formatted APA citations
+    appendices: str
     introduction: str
     abstract: str
     title: str
@@ -31,3 +34,8 @@ class ResearchModeState(TypedDict, total=False):
     user_feedback: Optional[str]
     status: str  # "initializing", "awaiting_approval", "fetching_papers", "synthesizing", "completed", "error"
     error: Optional[str]
+
+    corpus_stats: Dict[str, int]
+    figures: Dict[str, str]     # figure name -> absolute image path
+    model_overrides: Dict[str, str]     # role -> model name
+

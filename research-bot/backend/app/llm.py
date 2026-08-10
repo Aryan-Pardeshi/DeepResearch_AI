@@ -1,8 +1,36 @@
 import os
+import logging
+from pathlib import Path
 from langchain_openai import ChatOpenAI
+from langchain_community.cache import SQLiteCache
+from langchain_core.globals import set_llm_cache
 from dotenv import load_dotenv
 
 load_dotenv()
+logger = logging.getLogger(__name__)
+
+
+class LoggingSQLiteCache(SQLiteCache):
+    def lookup(self, prompt: str, llm_string: str):
+        result = super().lookup(prompt, llm_string)
+        prefix = (prompt[:50] + "...") if len(prompt) > 50 else prompt
+        if result is not None:
+            logger.info(f"[LLM CACHE HIT] Prompt: {prefix!r}")
+        else:
+            logger.info(f"[LLM CACHE MISS] Prompt: {prefix!r}")
+        return result
+
+
+def init_llm_cache():
+    cache_path_str = os.getenv("LLM_CACHE_PATH", "./data/llm_cache.db")
+    cache_path = Path(cache_path_str).resolve()
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    set_llm_cache(LoggingSQLiteCache(database_path=str(cache_path)))
+    logger.info(f"LLM cache initialized at {cache_path}")
+
+
+init_llm_cache()
+
 
 
 def get_llm_config():
