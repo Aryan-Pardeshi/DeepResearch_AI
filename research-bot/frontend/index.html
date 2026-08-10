@@ -34,11 +34,6 @@
             </button>
         </div>
 
-        <div class="status-badge" id="app-status-badge">
-            <div class="status-dot" id="app-status-dot"></div>
-            <span id="app-status-text">Ready for query</span>
-        </div>
-
         <div class="header-actions">
             <button class="btn-icon theme-toggle" id="theme-toggle-btn" title="Toggle theme">
                 <i data-lucide="moon" style="width: 18px; height: 18px;"></i>
@@ -125,9 +120,9 @@
         
         <!-- View 1: Landing Panel -->
         <section id="landing-panel" class="panel active">
-            <h1 class="hero-title">Ask anything. We will plan, research, and synthesize.</h1>
+            <h1 class="hero-title">Ask anything. We will <span class="hero-accent">plan, research, and synthesize.</span></h1>
             <p class="hero-subtitle">Multi-agent web research workspace driven by autonomous agent loops.</p>
-            
+
             <div class="search-box-container">
                 <textarea class="search-input" id="query-input" placeholder="What would you like to research today?"></textarea>
                 <div class="search-controls">
@@ -147,6 +142,7 @@
                     </button>
                 </div>
             </div>
+
         </section>
 
         <!-- View 2: Approval Panel -->
@@ -267,8 +263,7 @@
         <!-- Research Mode View 1: Input Panel -->
         <section id="rm-input-panel" class="panel">
             <div class="rm-hero-header">
-                <div class="rm-badge"><i data-lucide="graduation-cap" style="width: 14px; height: 14px;"></i> Autonomous Academic Engine</div>
-                <h1 class="hero-title">Academic Research Paper Synthesis</h1>
+                <h1 class="hero-title">Academic <span class="hero-accent">Research Paper Synthesis</span></h1>
                 <p class="hero-subtitle">20 autonomous agents, 3 academic API indexes, and 4 Human-in-the-Loop approval checkpoints.</p>
             </div>
 
@@ -321,17 +316,29 @@
                     <i data-lucide="atom" style="width: 18px; height: 18px;"></i>
                     <span>Launch Autonomous Academic Pipeline</span>
                 </button>
-            </div>
 
-            <!-- Sleek Prompt Template Chips -->
-            <div style="margin-top: 1.5rem; text-align: left;">
-                <div style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Sample Research Prompts:</div>
-                <div class="template-chips-container">
-                    <span class="template-chip" data-prompt="Efficacy of cognitive behavioral therapy interventions for healthcare worker burnout: a systematic review of randomised controlled trials">🧬 Clinical CBT</span>
-                    <span class="template-chip" data-prompt="Impact of generative AI code assistants on software developer productivity and code security vulnerabilities in enterprise codebases">🤖 GenAI Security</span>
-                    <span class="template-chip" data-prompt="Macroeconomic predictors and systemic barrier factors influencing digital health platform adoption in rural healthcare systems">📈 Digital Health Markets</span>
-                    <span class="template-chip" data-prompt="Comparative analysis of transformer architectures for high-frequency financial time-series forecasting under noisy market conditions">🔬 Time-Series Forecasting</span>
+                <!-- The three indexes actually queried by academic_search.py. -->
+                <div class="index-strip">
+                    <span class="index-strip-label">Indexed sources</span>
+                    <div class="index-list">
+                        <a class="index-chip" href="https://openalex.org" target="_blank" rel="noopener noreferrer" title="OpenAlex — open catalogue of scholarly works">
+                            <img class="index-mark index-mark-openalex" src="assets/openalex.png" alt="" width="22" height="22" loading="lazy">
+                            <span class="index-name">OpenAlex</span>
+                        </a>
+                        <a class="index-chip" href="https://www.semanticscholar.org" target="_blank" rel="noopener noreferrer" title="Semantic Scholar — AI-powered research corpus">
+                            <img class="index-mark" src="assets/semantic-scholar.png" alt="" width="22" height="22" loading="lazy">
+                            <span class="index-name">Semantic Scholar</span>
+                        </a>
+                        <a class="index-chip" href="https://arxiv.org" target="_blank" rel="noopener noreferrer" title="arXiv — open-access preprint archive">
+                            <img class="index-mark" src="assets/arxiv.png" alt="" width="22" height="22" loading="lazy">
+                            <span class="index-name">arXiv</span>
+                        </a>
+                    </div>
                 </div>
+
+                <p class="index-footnote">
+                    Open-access full text resolved through Unpaywall, Europe PMC and CORE.
+                </p>
             </div>
         </section>
 

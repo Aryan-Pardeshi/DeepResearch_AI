@@ -188,15 +188,81 @@ document.addEventListener('DOMContentLoaded', () => {
     checkConfigGate();
     renderRMPipelineTracker();
     restoreRMSessionOnLoad();
+    rmPlaceholderCycle = initCyclingPlaceholder(dom.rmPsInput, RM_PLACEHOLDER_EXAMPLES);
+    dsPlaceholderCycle = initCyclingPlaceholder(dom.queryInput, DS_PLACEHOLDER_EXAMPLES);
     if (window.lucide) lucide.createIcons();
 });
+
+let rmPlaceholderCycle = null;
+let dsPlaceholderCycle = null;
+
+// Example prompts the Core Problem Statement box types out when idle and empty.
+const RM_PLACEHOLDER_EXAMPLES = [
+    'Efficacy of cognitive behavioral therapy interventions for healthcare worker burnout...',
+    'Impact of generative AI code assistants on software developer productivity...',
+    'Macroeconomic predictors of digital health platform adoption in rural systems...',
+    'Comparative analysis of transformer architectures for financial time-series forecasting...'
+];
+
+// Same idea for the DeepSearch query box.
+const DS_PLACEHOLDER_EXAMPLES = [
+    'What would you like to research today?',
+    'Latest developments in solid-state EV battery chemistry...',
+    'Competitive landscape for open-weight LLM inference providers...',
+    'Regulatory shifts affecting cross-border crypto payments in 2026...'
+];
+
+// Types each example into the placeholder, pauses, deletes it, moves to the next.
+// Stops while the field has focus or real content so it never fights the user.
+function initCyclingPlaceholder(el, examples, opts = {}) {
+    if (!el || !examples.length) return;
+    const typeSpeed = opts.typeSpeed || 32;
+    const deleteSpeed = opts.deleteSpeed || 16;
+    const holdMs = opts.holdMs || 1800;
+    const gapMs = opts.gapMs || 400;
+
+    let exampleIndex = 0;
+    let timerId = null;
+    let running = false;
+
+    function step(charIndex, deleting) {
+        const text = examples[exampleIndex];
+        el.placeholder = text.slice(0, charIndex);
+
+        if (!deleting && charIndex < text.length) {
+            timerId = setTimeout(() => step(charIndex + 1, false), typeSpeed);
+        } else if (!deleting) {
+            timerId = setTimeout(() => step(charIndex, true), holdMs);
+        } else if (deleting && charIndex > 0) {
+            timerId = setTimeout(() => step(charIndex - 1, true), deleteSpeed);
+        } else {
+            exampleIndex = (exampleIndex + 1) % examples.length;
+            timerId = setTimeout(() => step(0, false), gapMs);
+        }
+    }
+
+    function start() {
+        if (running || el.value) return;
+        running = true;
+        step(0, false);
+    }
+
+    function stop() {
+        running = false;
+        if (timerId) { clearTimeout(timerId); timerId = null; }
+    }
+
+    el.addEventListener('focus', stop);
+    el.addEventListener('input', () => { if (el.value) stop(); });
+    el.addEventListener('blur', () => { if (!el.value) start(); });
+
+    start();
+    return { start, stop };
+}
 
 function cacheDomElements() {
     dom = {
         // App header & settings
-        statusBadge: document.getElementById('app-status-badge'),
-        statusDot: document.getElementById('app-status-dot'),
-        statusText: document.getElementById('app-status-text'),
         themeToggleBtn: document.getElementById('theme-toggle-btn'),
         newResearchBtn: document.getElementById('new-research-btn'),
         backendOfflineBanner: document.getElementById('backend-offline-banner'),
@@ -395,44 +461,6 @@ function setupEventListeners() {
     dom.rmCopyPaperBtn?.addEventListener('click', () => copyToClipboard(getPaperMarkdown(), dom.rmCopyPaperBtn));
     dom.rmExportPdfBtn?.addEventListener('click', handleRMExportPDF);
 
-    // Template Prompt Chip Auto-Fill
-    document.querySelectorAll('.template-chip').forEach(chip => {
-        chip.addEventListener('click', () => {
-            const prompt = chip.getAttribute('data-prompt');
-            if (!prompt) return;
-            if (dom.rmPsInput) {
-                dom.rmPsInput.value = prompt;
-                dom.rmPsInput.focus();
-            }
-            if (dom.queryInput) {
-                dom.queryInput.value = prompt;
-            }
-            showToast('Selected research prompt loaded into workspace!', 'info');
-        });
-    });
-
-    initTypewriterPlaceholders();
-}
-
-function initTypewriterPlaceholders() {
-    const prompts = [
-        "State your core research gap, problem, or empirical hypothesis...",
-        "Efficacy of cognitive behavioral therapy for healthcare worker burnout...",
-        "Impact of generative AI code assistants on software developer productivity...",
-        "Macroeconomic predictors of digital health platform adoption in rural systems...",
-        "Comparative analysis of transformer architectures for time-series forecasting..."
-    ];
-    let promptIdx = 0;
-    
-    setInterval(() => {
-        const inputs = [dom.rmPsInput, dom.queryInput].filter(Boolean);
-        inputs.forEach(input => {
-            if (input && document.activeElement !== input && !input.value) {
-                promptIdx = (promptIdx + 1) % prompts.length;
-                input.placeholder = prompts[promptIdx];
-            }
-        });
-    }, 4500);
 }
 
 // Admin token for the config API. The backend rejects config writes without it
@@ -699,7 +727,7 @@ function resetResearchModeForm() {
     state.rm.title = '';
     state.rm.lastSeq = 0;
 
-    if (dom.rmPsInput) dom.rmPsInput.value = '';
+    if (dom.rmPsInput) { dom.rmPsInput.value = ''; rmPlaceholderCycle?.start(); }
     if (dom.rmObjsInput) dom.rmObjsInput.value = '';
     if (dom.rmRqsInput) dom.rmRqsInput.value = '';
 
@@ -1380,6 +1408,7 @@ function resetToLanding() {
     state.finalAnswer = '';
     state.workers = {};
     dom.queryInput.value = '';
+    dsPlaceholderCycle?.start();
     clearRMSession();
     switchPanel(dom.landingPanel);
 }
