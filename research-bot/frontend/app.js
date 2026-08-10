@@ -1024,9 +1024,14 @@ if (dom.modalCloseBtn) {
 }
 
 function processRMSEEvent(data) {
+    const trackerContainer = document.querySelector('.pipeline-tracker-container');
+    const paperCard = document.getElementById('rm-paper-card');
+
     if (data.event === 'node_start') {
         updateRMPipelineTracker(data.node);
         appendLogLine(`Node started: ${data.node}`, 'info');
+        if (trackerContainer) trackerContainer.classList.add('active-execution');
+        if (paperCard) paperCard.classList.add('active-execution');
     } else if (data.event === 'node_update') {
         applyRMStatePayload(data.data || {});
         if (data.seq !== undefined) state.rm.lastSeq = data.seq;
@@ -1049,10 +1054,14 @@ function processRMSEEvent(data) {
         appendLogLine(`Pipeline execution completed!`, 'success');
         if (data.state && data.state.corpus_stats) updateCorpusStats(data.state.corpus_stats);
         updateRMPipelineTracker('title', RM_STAGES.map(s => s.id));
+        if (trackerContainer) trackerContainer.classList.remove('active-execution');
+        if (paperCard) paperCard.classList.remove('active-execution');
         renderRMPaperFinal();
         saveRMSession();
     } else if (data.event === 'error') {
         appendLogLine(`Pipeline Error: ${data.message}`, 'error');
+        if (trackerContainer) trackerContainer.classList.remove('active-execution');
+        if (paperCard) paperCard.classList.remove('active-execution');
         showToast(data.message || 'Pipeline error occurred.', 'error');
     }
     return data.event;
