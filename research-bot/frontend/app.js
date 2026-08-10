@@ -1161,6 +1161,21 @@ async function exportReport(format = 'pdf') {
    DEEPSEARCH MODE HANDLERS & HELPERS
    ========================================================================== */
 
+// Shimmering placeholders while the planner works. The skeleton styles already
+// existed but nothing ever rendered them, so the panel just showed bare text.
+function renderPlanSkeleton() {
+    if (dom.approvalPsText) {
+        dom.approvalPsText.innerHTML =
+            '<span class="skeleton skeleton-ps" style="width:92%"></span>' +
+            '<span class="skeleton skeleton-ps" style="width:85%"></span>' +
+            '<span class="skeleton skeleton-ps"></span>';
+    }
+    if (dom.approvalSubtasksContainer) {
+        dom.approvalSubtasksContainer.innerHTML =
+            '<span class="skeleton skeleton-task" style="width:100%"></span>'.repeat(4);
+    }
+}
+
 async function handlePlanResearch() {
     const query = dom.queryInput.value.trim();
     if (!query) {
@@ -1172,8 +1187,7 @@ async function handlePlanResearch() {
     dom.approvalQueryDisplay.textContent = `"${query}"`;
     switchPanel(dom.approvalPanel);
 
-    dom.approvalPsText.textContent = 'Generating Problem Statement...';
-    dom.approvalSubtasksContainer.innerHTML = '<div class="spinner-ring"></div>';
+    renderPlanSkeleton();
 
     try {
         const res = await fetch(`${API_BASE_URL}/research/start`, {
@@ -1198,6 +1212,7 @@ async function handlePlanResearch() {
 }
 
 function renderApprovalPanel() {
+    dom.approvalPsText.innerHTML = '';
     dom.approvalPsText.textContent = state.ps;
     dom.approvalSubtasksContainer.innerHTML = '';
     state.plan.forEach((task, idx) => {
@@ -1215,7 +1230,7 @@ async function handleRevision() {
     const feedback = dom.feedbackInput.value.trim();
     if (!feedback) return;
 
-    dom.approvalSubtasksContainer.innerHTML = '<div class="spinner-ring"></div>';
+    renderPlanSkeleton();
     await submitPlanApprovalWithMessage(feedback);
 }
 

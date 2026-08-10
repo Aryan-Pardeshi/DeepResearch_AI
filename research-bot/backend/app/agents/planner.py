@@ -12,7 +12,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from backend.app.graph.state import ResearchState
 from typing import List, Optional
 from pydantic import BaseModel, Field
-from backend.app.llm import llm
+from backend.app.llm import llm, invoke_structured
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +89,6 @@ class ResearchPlan(BaseModel):
 
 
 def planner_node(state: ResearchState) -> dict:
-    planner_llm = llm.with_structured_output(ResearchPlan, method="json_mode")
 
     user_content = (
         f"Create a Problem statement (ps) and a research plan for: {state['query']}"
@@ -101,7 +100,7 @@ def planner_node(state: ResearchState) -> dict:
     messages = prompt.format_messages()
 
     try:
-        result = planner_llm.invoke(messages)
+        result = invoke_structured(llm, ResearchPlan, messages)
         new_ps = result.ps if result.ps is not None else state.get("ps", "")
         new_plan = (
             result.sub_tasks if result.sub_tasks is not None else state.get("plan", [])

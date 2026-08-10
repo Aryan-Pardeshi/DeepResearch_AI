@@ -1,7 +1,9 @@
 from typing import List, Literal
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from backend.app.graph.builder import research_graph
+# Resolved per call, not bound at import: lifespan recompiles the graph with the
+# SQLite checkpointer, and an import-time binding would pin the in-memory one.
+from backend.app.graph.builder import get_research_graph
 import uuid
 from pydantic import BaseModel
 import json
@@ -37,13 +39,13 @@ async def run_research(request: ResearchStartRequest):
     try:
         # Run the graph stream. Since astream is an async generator, we consume it directly.
         # The graph will run until it hits the interrupt/pause state.
-        async for event in research_graph.astream(
+        async for event in get_research_graph().astream(
             {"query": request.query, "search_topic": request.search_topic}, config=config
         ):
             pass
 
         # Reads the persisted snapshot from MemorySaver for that thread_id.
-        state = research_graph.get_state(config)
+        state = await get_research_graph().aget_state(config)
 
         # Values from current state (not yet persisted)
         plan = state.values.get("plan")
@@ -80,7 +82,7 @@ async def approve_plan(request: ResearchApproveRequest):
                 # 2. # Stream the graph events using the astream_events engine
                 #For aggrigator node streaming
                 # We use `astream_events(version="v2")` to capture both LLM token streams and node completions.
-                async for event in research_graph.astream_events(
+                async for event in get_research_graph().astream_events(
                     Command(resume={"message": request.message}),
                     config=config,
                     version="v2",
@@ -188,7 +190,7 @@ async def approve_plan(request: ResearchApproveRequest):
                             await asyncio.sleep(0.01)
 
                 # 3. Graph execution is finished. Retrieve the final state snapshot to send the final report/citations.
-                state = research_graph.get_state(config)
+                state = await get_research_graph().aget_state(config)
 
                 final_payload = {
                     "event": (
@@ -218,7 +220,7 @@ async def approve_plan(request: ResearchApproveRequest):
 @router.get("/research/result/{thread_id}")
 async def get_result(thread_id: str):
     config = {"configurable": {"thread_id": thread_id}}
-    state = research_graph.get_state(config)
+    state = await get_research_graph().aget_state(config)
     if not state.values:
         raise HTTPException(status_code=404, detail="Thread not found")
     return {
