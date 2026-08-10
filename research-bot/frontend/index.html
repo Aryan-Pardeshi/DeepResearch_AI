@@ -438,9 +438,25 @@
                     </div>
 
                     <div class="paper-render-container" id="rm-paper-output">
-                        <div class="paper-placeholder-state">
-                            <div class="spinner-ring"></div>
-                            <p>Academic pipeline executing. Live sections will materialize as agents complete synthesis.</p>
+                        <div class="paper-placeholder-state" id="rm-paper-placeholder">
+                            <div class="orbital-loader-container">
+                                <div class="orbital-ring"></div>
+                                <p style="margin-top: 1rem; color: var(--text-secondary); font-weight: 500; display: flex; align-items: center;">
+                                    <span>Academic pipeline active & synthesizing</span>
+                                    <span class="ai-wave-container">
+                                        <span class="ai-wave-bar"></span>
+                                        <span class="ai-wave-bar"></span>
+                                        <span class="ai-wave-bar"></span>
+                                        <span class="ai-wave-bar"></span>
+                                    </span>
+                                </p>
+                            </div>
+                            <div class="skeleton-preview" style="width: 100%; max-width: 650px; margin: 1rem auto 0 auto; opacity: 0.7;">
+                                <div class="skeleton-line" style="width: 65%; height: 20px;"></div>
+                                <div class="skeleton-line" style="width: 95%;"></div>
+                                <div class="skeleton-line" style="width: 88%;"></div>
+                                <div class="skeleton-line" style="width: 92%;"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
