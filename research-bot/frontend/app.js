@@ -198,12 +198,7 @@ function cacheDomElements() {
         statusDot: document.getElementById('app-status-dot'),
         statusText: document.getElementById('app-status-text'),
         themeToggleBtn: document.getElementById('theme-toggle-btn'),
-        settingsBtn: document.getElementById('settings-btn'),
         newResearchBtn: document.getElementById('new-research-btn'),
-        settingsModal: document.getElementById('settings-modal'),
-        settingsClose: document.getElementById('settings-modal-close'),
-        saveConfigBtn: document.getElementById('save-config-btn'),
-        saveStatus: document.getElementById('save-status'),
         backendOfflineBanner: document.getElementById('backend-offline-banner'),
         
         // Mode Tabs
@@ -306,6 +301,19 @@ async function checkConfigGate() {
         if (dom.rmModelAggregator && data.llm_model_aggregator) dom.rmModelAggregator.placeholder = data.llm_model_aggregator;
 
         if (!data.ok || (data.missing_required && data.missing_required.length > 0)) {
+            // The gate writes to the server's own .env, so it only makes sense where
+            // that is allowed. On a deployment with the config API locked it could
+            // neither save nor honour its "stored locally" promise, so it stays hidden
+            // and the operator is told to set the environment variables instead.
+            if (!data.config_writable) {
+                showToast(
+                    `Server is missing ${(data.missing_required || []).join(', ')}. ` +
+                    `Set them as environment variables on the host.`,
+                    'error'
+                );
+                return;
+            }
+
             // Populate form defaults if present
             if (dom.gateLlmBaseUrl) dom.gateLlmBaseUrl.value = data.llm_base_url || 'https://api.deepseek.com';
             if (dom.gateModelPlanner) dom.gateModelPlanner.value = data.llm_model_planner || 'deepseek-chat';
@@ -344,9 +352,6 @@ function setupEventListeners() {
     dom.themeToggleBtn?.addEventListener('click', toggleTheme);
 
     // Settings Modal
-    dom.settingsBtn?.addEventListener('click', () => dom.settingsModal.style.display = 'flex');
-    dom.settingsClose?.addEventListener('click', () => dom.settingsModal.style.display = 'none');
-    dom.saveConfigBtn?.addEventListener('click', saveSettingsModal);
 
     // Gate Modal Submit
     dom.gateSubmitBtn?.addEventListener('click', submitSetupGate);
@@ -459,43 +464,6 @@ async function submitSetupGate() {
     }
 }
 
-// Save Settings Modal
-async function saveSettingsModal() {
-    const payload = {
-        LLM_BASE_URL: document.getElementById('input-llm-base-url')?.value.trim(),
-        LLM_API_KEY: document.getElementById('input-deepseek-key')?.value.trim(),
-        TAVILY_API_KEY: document.getElementById('input-tavily-key')?.value.trim(),
-        OPENALEX_EMAIL: document.getElementById('input-openalex-email')?.value.trim()
-    };
-
-    dom.saveStatus.textContent = 'Saving...';
-    try {
-        let res = await fetch(`${API_BASE_URL}/health/config`, {
-            method: 'POST',
-            headers: configHeaders(),
-            body: JSON.stringify(payload)
-        });
-        if (res.status === 401 && await promptForConfigToken()) {
-            res = await fetch(`${API_BASE_URL}/health/config`, {
-                method: 'POST',
-                headers: configHeaders(),
-                body: JSON.stringify(payload)
-            });
-        }
-        if (res.ok) {
-            dom.saveStatus.textContent = 'Saved successfully!';
-            setTimeout(() => dom.settingsModal.style.display = 'none', 1000);
-        } else if (res.status === 401 || res.status === 403) {
-            localStorage.removeItem('config_api_token');
-            const data = await res.json().catch(() => ({}));
-            dom.saveStatus.textContent = data.detail || 'Configuration API is locked on this deployment.';
-        } else {
-            dom.saveStatus.textContent = 'Failed to save settings.';
-        }
-    } catch (e) {
-        dom.saveStatus.textContent = 'Error saving settings.';
-    }
-}
 
 // Theme handling
 function initTheme() {
