@@ -8,16 +8,15 @@ An AI-powered multi-agent research assistant that turns a query into a structure
 
 ## How It Works
 
-```
-Query → Validator → Planner (PS + sub-tasks) → HITL Approval → Parallel Researchers → Aggregator → Report
-```
-
 1. User submits a research query with optional topic filters (News, Academic, Finance, Patents)
 2. A **Planner Agent** generates a Problem Statement + up to 5 independent research sub-tasks
 3. User reviews and approves the plan (or requests revisions in natural language)
 4. Up to 5 **Parallel Research Workers** search the web simultaneously via Tavily
 5. An **Aggregator Agent** synthesizes all findings into a structured markdown report
 6. User can download the report as a `.md` file
+
+<img width="455" height="586" alt="image" src="https://github.com/user-attachments/assets/ed7e9a3b-d51c-47dd-a660-009d627cf0ed" />
+
 
 ---
 
