@@ -394,6 +394,22 @@ function setupEventListeners() {
     dom.rmHitlApproveBtn?.addEventListener('click', () => handleRMApprove('approve'));
     dom.rmCopyPaperBtn?.addEventListener('click', () => copyToClipboard(getPaperMarkdown(), dom.rmCopyPaperBtn));
     dom.rmExportPdfBtn?.addEventListener('click', handleRMExportPDF);
+
+    // Template Prompt Card Auto-Fill
+    document.querySelectorAll('.template-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const prompt = card.getAttribute('data-prompt');
+            if (!prompt) return;
+            if (dom.rmPsInput) {
+                dom.rmPsInput.value = prompt;
+                dom.rmPsInput.focus();
+            }
+            if (dom.queryInput) {
+                dom.queryInput.value = prompt;
+            }
+            showToast('Selected research prompt loaded into workspace!', 'info');
+        });
+    });
 }
 
 // Admin token for the config API. The backend rejects config writes without it
