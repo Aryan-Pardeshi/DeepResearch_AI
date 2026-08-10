@@ -1009,7 +1009,16 @@ async function handleRMApprove(feedback) {
     state.rm.hitlApproved = true;
     state.rm.hitlCheckpointPending = false;
     dom.rmHitlPanel.style.display = 'none';
+
+    const currentCp = (state.rm.hitlCheckpoint || 'checkpoint_1').replace(/_(approved|revising)$/, '');
+    const cpIdx = RM_STAGES.findIndex(s => s.id === currentCp);
+    const completedStages = cpIdx >= 0 ? RM_STAGES.slice(0, cpIdx + 1).map(s => s.id) : ['scope_definition', 'keyword_extractor', 'checkpoint_1'];
+    const nextStage = cpIdx >= 0 && cpIdx + 1 < RM_STAGES.length ? RM_STAGES[cpIdx + 1].id : 'paper_fetcher';
+
+    updateRMPipelineTracker(nextStage, completedStages);
+    appendLogLine(`Checkpoint '${currentCp}' approved. Resuming pipeline...`, 'info');
     saveRMSession();
+
     if (dom.rmPaperTitle) dom.rmPaperTitle.textContent = state.rm.title || 'Synthesizing Paper...';
     if (dom.rmPaperOutput && !getPaperMarkdown().trim()) {
         dom.rmPaperOutput.innerHTML = `
@@ -1036,6 +1045,7 @@ async function handleRMApprove(feedback) {
     let attempt = 0;
     const maxRetries = 5;
     let isTerminal = false;
+    let receivedEventsCount = 0;
 
     while (attempt <= maxRetries && !isTerminal) {
         try {
@@ -1076,6 +1086,7 @@ async function handleRMApprove(feedback) {
                     if (rawEvent.startsWith('data: ')) {
                         try {
                             const data = JSON.parse(rawEvent.slice(6));
+                            receivedEventsCount++;
                             const evt = processRMSEEvent(data);
                             if (evt === 'checkpoint' || evt === 'completed' || evt === 'error') {
                                 isTerminal = true;
@@ -1089,6 +1100,23 @@ async function handleRMApprove(feedback) {
             }
 
             if (isTerminal) break;
+
+            // Fallback sync if stream ended cleanly without events
+            if (receivedEventsCount === 0 && state.rm.threadId) {
+                try {
+                    const syncRes = await fetch(`${API_BASE_URL}/research-mode/result/${state.rm.threadId}`);
+                    if (syncRes.ok) {
+                        const syncData = await syncRes.json();
+                        if (syncData.values) applyRMStatePayload(syncData.values);
+                        if (syncData.is_checkpoint) {
+                            const cp = (syncData.hitl_checkpoint || 'checkpoint_1').replace(/_(approved|revising)$/, '');
+                            renderRMHitlPanel(cp);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('RM result sync failed:', e);
+                }
+            }
             break;
 
         } catch (e) {
