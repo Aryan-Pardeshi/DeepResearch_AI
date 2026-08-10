@@ -616,46 +616,68 @@ async function restoreRMSessionOnLoad() {
         const session = JSON.parse(raw);
         if (!session || !session.threadId) return;
 
-        const res = await fetch(`${API_BASE_URL}/research-mode/result/${session.threadId}`);
-        if (!res.ok) {
-            if (res.status === 404) {
-                clearRMSession();
-            }
-            return;
-        }
-        const data = await res.json();
-        const values = data.values || {};
-        
+        // 1. Immediately restore state from localStorage so progress is NEVER wiped on page reload
         state.rm.threadId = session.threadId;
         if (session.rmState) {
             Object.assign(state.rm, session.rmState);
         }
-        applyRMStatePayload(values);
-        if (data.hitl_checkpoint) state.rm.hitlCheckpoint = data.hitl_checkpoint;
-        if (data.status) state.rm.status = data.status;
         if (session.lastSeq !== undefined) state.rm.lastSeq = session.lastSeq;
 
-        // Switch UI to Research Mode tab & workspace panel
+        // 2. Switch view to Research Mode workspace panel
         switchMode('researchmode');
         switchPanel(dom.rmWorkspacePanel);
 
-        if (data.is_completed) {
-            updateRMPipelineTracker('title', RM_STAGES.map(s => s.id));
+        // 3. Render current progress from restored local state
+        const currentCp = (state.rm.hitlCheckpoint || 'checkpoint_1').replace(/_(approved|revising)$/, '');
+        const cpIdx = RM_STAGES.findIndex(s => s.id === currentCp);
+        const completedStages = cpIdx > 0 ? RM_STAGES.slice(0, cpIdx).map(s => s.id) : [];
+        updateRMPipelineTracker(currentCp, completedStages);
+
+        if (state.rm.status === 'completed') {
             if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
             renderRMPaperFinal();
-        } else if (data.is_checkpoint || data.hitl_checkpoint) {
-            const cp = (data.hitl_checkpoint || 'checkpoint_1').replace(/_(approved|revising)$/, '');
-            state.rm.hitlCheckpoint = cp;
-            const cpIdx = RM_STAGES.findIndex(s => s.id === cp);
-            const completedStages = cpIdx > 0 ? RM_STAGES.slice(0, cpIdx).map(s => s.id) : [];
-            updateRMPipelineTracker(cp, completedStages);
-            renderRMHitlPanel(cp);
-            renderRMPaperLive();
         } else {
-            renderRMPaperLive();
+            renderRMHitlPanel(currentCp);
+            if (typeof getPaperMarkdown === 'function' && getPaperMarkdown().trim().length > 50) {
+                renderRMPaperLive(false);
+            }
         }
 
-        showResumeBanner(data);
+        showResumeBanner({ hitl_checkpoint: currentCp, is_completed: state.rm.status === 'completed' });
+
+        // 4. Background-sync with backend if reachable (without wiping local storage on offline/404)
+        try {
+            const res = await fetch(`${API_BASE_URL}/research-mode/result/${session.threadId}`);
+            if (res.ok) {
+                const data = await res.json();
+                const values = data.values || {};
+                if (values && Object.keys(values).length > 0) {
+                    Object.assign(state.rm, values);
+                }
+                if (data.hitl_checkpoint) state.rm.hitlCheckpoint = data.hitl_checkpoint;
+                if (data.status) state.rm.status = data.status;
+
+                if (data.is_completed) {
+                    updateRMPipelineTracker('title', RM_STAGES.map(s => s.id));
+                    if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
+                    renderRMPaperFinal();
+                } else if (data.is_checkpoint || data.hitl_checkpoint) {
+                    const cp = (data.hitl_checkpoint || 'checkpoint_1').replace(/_(approved|revising)$/, '');
+                    state.rm.hitlCheckpoint = cp;
+                    const idx = RM_STAGES.findIndex(s => s.id === cp);
+                    const doneStages = idx > 0 ? RM_STAGES.slice(0, idx).map(s => s.id) : [];
+                    updateRMPipelineTracker(cp, doneStages);
+                    renderRMHitlPanel(cp);
+                    if (typeof getPaperMarkdown === 'function' && getPaperMarkdown().trim().length > 50) {
+                        renderRMPaperLive(false);
+                    }
+                }
+                saveRMSession();
+            }
+        } catch (syncErr) {
+            console.warn('Backend session sync skipped (using local cache):', syncErr);
+        }
+
     } catch (e) {
         console.warn('Error restoring session on load:', e);
     }
