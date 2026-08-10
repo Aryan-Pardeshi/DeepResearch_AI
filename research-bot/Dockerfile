@@ -5,7 +5,9 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=8000 \
     RESEARCH_DB_PATH=/app/data/research_state.db \
-    LLM_CACHE_PATH=/app/data/llm_cache.db
+    LLM_CACHE_PATH=/app/data/llm_cache.db \
+    FIGURES_DIR=/app/data/figures \
+    MPLCONFIGDIR=/tmp/matplotlib
 
 WORKDIR /app
 
@@ -20,9 +22,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend /app/backend
 COPY frontend /app/frontend
 
-# Checkpointer and LLM cache live here. Mount a volume over it, or both are lost
-# on every container rebuild.
-RUN mkdir -p /app/data
+# Checkpointer, LLM cache, and generated figures live here. Mount a volume over
+# it, or all three are lost on every container rebuild.
+# World-writable on purpose: Hugging Face Spaces runs the container as uid 1000,
+# not root, so a directory owned by root at build time is unwritable at runtime
+# and the SQLite checkpointer fails on first write.
+RUN mkdir -p /app/data /app/data/figures && chmod -R 777 /app/data
 
 EXPOSE 8000
 
