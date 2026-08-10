@@ -1058,15 +1058,19 @@ function processRMSEEvent(data) {
     return data.event;
 }
 
-function renderRMPaperLive() {
+function renderRMPaperLive(isStreaming = true) {
     if (dom.rmPaperTitle) dom.rmPaperTitle.textContent = state.rm.title || 'Synthesizing Academic Paper...';
     if (dom.rmPaperOutput) {
-        dom.rmPaperOutput.innerHTML = marked.parse(getPaperMarkdown());
+        let content = marked.parse(getPaperMarkdown());
+        if (isStreaming) {
+            content += '<span class="typing-cursor"></span>';
+        }
+        dom.rmPaperOutput.innerHTML = content;
     }
 }
 
 function renderRMPaperFinal() {
-    renderRMPaperLive();
+    renderRMPaperLive(false);
     if (dom.rmCopyPaperBtn) dom.rmCopyPaperBtn.style.display = 'inline-flex';
     if (dom.rmExportDropdown) dom.rmExportDropdown.style.display = 'inline-flex';
     if (dom.rmExportPdfBtn) dom.rmExportPdfBtn.style.display = 'inline-flex';
