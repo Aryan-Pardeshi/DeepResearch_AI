@@ -12,6 +12,9 @@ from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
 
 from langgraph.types import Command
+# Resolved lazily rather than importing the compiled graph: lifespan recompiles it
+# with the SQLite checkpointer, and a module-level binding would keep the old object.
+from backend.app.graph.research_mode_builder import get_research_mode_graph
 from backend.app.tools.pdf_generator import generate_paper_pdf
 from backend.app.tools.docx_generator import generate_paper_docx
 

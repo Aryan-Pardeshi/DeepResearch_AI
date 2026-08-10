@@ -87,3 +87,48 @@ llm = _LazyLLM()
 lazy_llm = llm
 llm_fast = _LazyLLM(role="researcher")
 llm_pro = _LazyLLM(role="aggregator")
+
+
+# Structured output is not implemented the same way everywhere. LLM_BASE_URL can
+# point at any OpenAI-compatible gateway, and they disagree: some reject
+# response_format={"type":"json_object"} outright with a 400 on the
+# response_format parameter, others do not implement json_schema. Rather than
+# hardcoding one method, try them in order and remember what worked.
+STRUCTURED_METHODS = ("json_schema", "function_calling", "json_mode")
+
+_structured_method_cache: dict[tuple[str, str], str] = {}
+
+
+def invoke_structured(base_llm, schema, prompt):
+    """Invokes an LLM with structured output, negotiating the method per provider.
+
+    Returns the parsed schema instance. Raises the last error only if no method
+    worked, so a provider that supports none of them still surfaces a real error.
+    """
+    model = getattr(base_llm, "model_name", "?")
+    base = str(getattr(base_llm, "openai_api_base", "") or "")
+    key = (base, model)
+
+    methods = STRUCTURED_METHODS
+    cached = _structured_method_cache.get(key)
+    if cached:
+        methods = (cached,) + tuple(m for m in STRUCTURED_METHODS if m != cached)
+
+    last_error = None
+    for method in methods:
+        try:
+            result = base_llm.with_structured_output(schema, method=method).invoke(prompt)
+            if result is None:
+                # The call succeeded but produced nothing usable; try the next method
+                # rather than handing a None back to the caller.
+                last_error = ValueError(f"{method} returned no parsed output")
+                continue
+            if _structured_method_cache.get(key) != method:
+                logger.info(f"Structured output via '{method}' for {model} at {base}")
+                _structured_method_cache[key] = method
+            return result
+        except Exception as e:
+            last_error = e
+            logger.debug(f"Structured output method '{method}' failed for {model}: {e}")
+
+    raise last_error if last_error else RuntimeError("Structured output failed")

@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 from typing import Optional
 from pydantic import BaseModel, Field
 from langchain_core.prompts import ChatPromptTemplate
-from backend.app.llm import llm_fast
+from backend.app.llm import llm_fast, invoke_structured
 
 # System prompt for query validation
 VALIDATOR_SYSTEM_PROMPT = """You are an input validation assistant for a specialized Research Bot.
@@ -55,13 +55,12 @@ def query_validator(state: ResearchState) -> dict:
         return {"status": "error", "error": "Not a valid research query. Please provide a specific research topic."}
         
     try:
-        validator_llm = llm_fast.with_structured_output(QueryValidation, method="json_mode")
         prompt = ChatPromptTemplate([
             ("system", VALIDATOR_SYSTEM_PROMPT),
             ("user", f"Input Query: {query}")
         ])
         messages = prompt.format_messages()
-        validation = validator_llm.invoke(messages)
+        validation = invoke_structured(llm_fast, QueryValidation, messages)
         
         if not validation.is_valid:
             error_msg = validation.error_message or "Not a valid research query. Please provide a specific research topic."
