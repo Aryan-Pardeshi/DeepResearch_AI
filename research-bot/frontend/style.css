@@ -2637,22 +2637,12 @@ main {
     border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-/* Single-line horizontal scrollable step chips row */
+/* Multi-line flex wrapped step chips layout (no side scrolling) */
 .pipeline-steps-grid {
     display: flex;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    gap: 0.4rem;
-    padding: 0.2rem 0 0.4rem 0;
-    scroll-behavior: smooth;
-}
-
-.pipeline-steps-grid::-webkit-scrollbar {
-    height: 4px;
-}
-.pipeline-steps-grid::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.4rem;
+    padding: 0.25rem 0 0.4rem 0;
 }
 
 .pipeline-step {
@@ -2665,7 +2655,6 @@ main {
     align-items: center;
     gap: 0.35rem;
     white-space: nowrap;
-    flex-shrink: 0;
     transition: var(--transition-smooth);
 }
 
@@ -2877,9 +2866,6 @@ select:focus-visible,
     }
     .form-grid .full-width {
         grid-column: span 1;
-    }
-    .pipeline-steps-grid {
-        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
     }
 }
 
