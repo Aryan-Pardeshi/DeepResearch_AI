@@ -395,10 +395,10 @@ function setupEventListeners() {
     dom.rmCopyPaperBtn?.addEventListener('click', () => copyToClipboard(getPaperMarkdown(), dom.rmCopyPaperBtn));
     dom.rmExportPdfBtn?.addEventListener('click', handleRMExportPDF);
 
-    // Template Prompt Card Auto-Fill
-    document.querySelectorAll('.template-card').forEach(card => {
-        card.addEventListener('click', () => {
-            const prompt = card.getAttribute('data-prompt');
+    // Template Prompt Chip Auto-Fill
+    document.querySelectorAll('.template-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            const prompt = chip.getAttribute('data-prompt');
             if (!prompt) return;
             if (dom.rmPsInput) {
                 dom.rmPsInput.value = prompt;
