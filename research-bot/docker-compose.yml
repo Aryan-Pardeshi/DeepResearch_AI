@@ -1,30 +1,34 @@
 services:
-  backend:
+  app:
     build:
       context: .
-      dockerfile: backend/Dockerfile
-    image: research-bot-backend
-    container_name: research-backend
+      dockerfile: Dockerfile
+    image: research-bot:latest
+    container_name: research-bot
+    restart: unless-stopped
     ports:
       - "8000:8000"
+    environment:
+      # Off unless you opt in from your own .env. The config API can rewrite
+      # LLM_API_KEY and LLM_BASE_URL, so this file must never ship with it enabled:
+      # a copy deployed to a server would expose that endpoint to the internet.
+      # Local use: put ALLOW_OPEN_CONFIG_API=1 in .env (gitignored).
+      # Deployed:  set CONFIG_API_TOKEN instead and leave this at 0.
+      ALLOW_OPEN_CONFIG_API: "${ALLOW_OPEN_CONFIG_API:-0}"
     env_file:
       - path: .env
         required: false
     volumes:
+      # Live code reload during development
       - ./backend:/app/backend
-    networks:
-      - research-net
+      - ./frontend:/app/frontend
+      # Durable graph checkpoints and LLM cache; survives rebuilds
+      - research-data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
 
-  frontend:
-    image: nginx:alpine
-    container_name: research-frontend
-    ports:
-      - "80:80"
-    volumes:
-      - ./frontend:/usr/share/nginx/html
-    networks:
-      - research-net
-
-networks:
-  research-net:
-    driver: bridge
+volumes:
+  research-data:

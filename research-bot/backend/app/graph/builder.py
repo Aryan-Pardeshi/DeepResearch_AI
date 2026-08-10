@@ -57,10 +57,27 @@ builder.add_edge("researcher", "aggregator")
 builder.add_edge("aggregator", END)
 
 
-checkpointer = MemorySaver()
+_checkpointer = MemorySaver()
+_compiled_graph = None
 
-# build graph
-research_graph = builder.compile(checkpointer=checkpointer)
+
+def set_checkpointer(checkpointer):
+    global _checkpointer, _compiled_graph
+    _checkpointer = checkpointer
+    _compiled_graph = builder.compile(checkpointer=_checkpointer)
+
+
+def get_research_graph():
+    global _compiled_graph
+    if _compiled_graph is None:
+        _compiled_graph = builder.compile(checkpointer=_checkpointer)
+    return _compiled_graph
+
+
+def __getattr__(name: str):
+    if name == "research_graph":
+        return get_research_graph()
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 #############################
 
@@ -75,6 +92,7 @@ if __name__ == "__main__":
     config = {"configurable": {"thread_id": "test_thread_revision_1"}}
 
     print("--- Running graph (Starting Planner) ---")
+    research_graph = get_research_graph()
     for event in research_graph.stream(
         {"query": "Recent breakthroughs in Quantum Computing in 2026"}, config=config
     ):
@@ -113,4 +131,5 @@ if __name__ == "__main__":
     print("Next step:", final_state.next)
     print("Plan Approved:", final_state.values.get("plan_approved"))
     print("Final Plan:", final_state.values.get("plan"))
+
 
