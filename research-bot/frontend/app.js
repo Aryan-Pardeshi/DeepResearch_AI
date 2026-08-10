@@ -420,6 +420,15 @@ function setupEventListeners() {
     // Theme toggle
     dom.themeToggleBtn?.addEventListener('click', toggleTheme);
 
+    // Collapsible tracker toggle label update
+    const trackerDetails = document.getElementById('rm-tracker-details');
+    const trackerToggleLbl = document.getElementById('tracker-toggle-lbl');
+    trackerDetails?.addEventListener('toggle', () => {
+        if (trackerToggleLbl) {
+            trackerToggleLbl.textContent = trackerDetails.open ? 'Collapse' : 'Expand';
+        }
+    });
+
     // Settings Modal
 
     // Gate Modal Submit

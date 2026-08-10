@@ -2553,31 +2553,37 @@ main {
     font-size: 1.05rem;
 }
 
-/* Signature Element: Pipeline Progress Tracker (Super Minimal & Compact) */
+/* Signature Element: Pipeline Progress Tracker (Collapsible & Expandable) */
 .pipeline-tracker-container {
     margin-bottom: 1rem;
-    padding: 0.85rem 1.1rem;
+    padding: 0.65rem 1.1rem;
     background: var(--glass-panel);
     border: 1px solid rgba(56, 189, 248, 0.18);
     border-radius: var(--radius-md);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    transition: var(--transition-smooth);
 }
 
-.tracker-header {
+.pipeline-tracker-container summary.tracker-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 0.5rem;
-    padding-bottom: 0;
-    border-bottom: none;
-    flex-wrap: wrap;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    padding: 0.2rem 0;
     gap: 0.5rem;
+}
+
+.pipeline-tracker-container summary.tracker-header::-webkit-details-marker {
+    display: none;
 }
 
 .tracker-title-group {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.6rem;
+    flex-wrap: wrap;
 }
 
 .tracker-title {
@@ -2595,6 +2601,40 @@ main {
     background: rgba(99, 102, 241, 0.12);
     color: var(--violet-pulse);
     border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+.tracker-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.04);
+    padding: 0.2rem 0.55rem;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: var(--transition-smooth);
+}
+
+.tracker-header-controls:hover {
+    background: rgba(56, 189, 248, 0.1);
+    color: var(--text-primary);
+    border-color: rgba(56, 189, 248, 0.3);
+}
+
+.tracker-chevron-icon {
+    transition: transform 0.25s ease;
+}
+
+.pipeline-tracker-container[open] .tracker-chevron-icon {
+    transform: rotate(180deg);
+}
+
+.tracker-collapsible-content {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 /* Single-line horizontal scrollable step chips row */
