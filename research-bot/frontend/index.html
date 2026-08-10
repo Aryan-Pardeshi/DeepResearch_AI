@@ -163,7 +163,11 @@
         </section>
 
         <!-- View 2: Approval Panel -->
-        <section id="approval-panel" class="panel">
+        <section id="approval-panel" class="panel" style="position: relative;">
+            <div class="hero-plasma-container">
+                <div class="plasma-orb plasma-orb-1"></div>
+                <div class="plasma-orb plasma-orb-2"></div>
+            </div>
             <div class="approval-header">
                 <h1 class="section-title">Research Design Console</h1>
                 <button class="btn-secondary btn-new-research" id="approval-new-research-btn">
@@ -177,7 +181,7 @@
             </div>
 
             <div class="approval-grid">
-                <div class="card">
+                <div class="card rm-glow-card">
                     <div class="card-header">
                         <i class="card-icon" data-lucide="book-open" style="width: 20px; height: 20px;"></i>
                         <h2 class="card-title">Problem Statement</h2>
@@ -185,7 +189,7 @@
                     <p class="problem-statement-text" id="approval-ps-text">Generating problem statement…</p>
                 </div>
 
-                <div class="card">
+                <div class="card rm-glow-card">
                     <div class="card-header">
                         <i class="card-icon" data-lucide="list-todo" style="width: 20px; height: 20px;"></i>
                         <h2 class="card-title">Proposed Research Plan</h2>
@@ -193,7 +197,7 @@
                     <div class="subtasks-list" id="approval-subtasks-container"></div>
                 </div>
 
-                <div class="card">
+                <div class="card rm-glow-card">
                     <div class="card-header">
                         <i class="card-icon" data-lucide="edit-3" style="width: 20px; height: 20px;"></i>
                         <h2 class="card-title">Revisions Console</h2>
@@ -218,8 +222,12 @@
         </section>
 
         <!-- View 3: Execution Workspace Panel -->
-        <section id="workspace-panel" class="panel">
-            <aside class="workers-sidebar">
+        <section id="workspace-panel" class="panel" style="position: relative;">
+            <div class="hero-plasma-container">
+                <div class="plasma-orb plasma-orb-1"></div>
+                <div class="plasma-orb plasma-orb-2"></div>
+            </div>
+            <aside class="workers-sidebar rm-glow-card">
                 <h2 class="sidebar-title">
                     <i data-lucide="cpu" style="width: 20px; height: 20px; color: var(--accent-purple);"></i>
                     <span>Parallel Researchers</span>
@@ -232,7 +240,7 @@
                 <div class="workers-list" id="workers-list-container"></div>
             </aside>
 
-            <article class="report-workspace">
+            <article class="report-workspace rm-glow-card">
                 <div class="report-workspace-header">
                     <h2 class="section-title" style="margin: 0;">Research Report</h2>
                     <div class="report-actions" style="display: flex; gap: 0.5rem;">
