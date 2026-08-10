@@ -737,15 +737,21 @@ function resetResearchModeForm() {
     const banner = document.getElementById('rm-resume-banner');
     if (banner) banner.remove();
 
-    if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
-    if (dom.rmCopyPaperBtn) dom.rmCopyPaperBtn.style.display = 'none';
-    if (dom.rmExportPdfBtn) dom.rmExportPdfBtn.style.display = 'none';
+    if (dom.rmPaperTitle) dom.rmPaperTitle.textContent = 'Academic Paper Workspace';
     if (dom.rmPaperOutput) dom.rmPaperOutput.innerHTML = `
-        <div class="paper-placeholder-state">
-            <div class="spinner-ring"></div>
-            <p>Academic pipeline executing. Live sections will materialize as agents complete synthesis.</p>
+        <div class="paper-placeholder-state" id="rm-paper-placeholder">
+            <div class="paper-idle-icon" style="margin-bottom: 0.5rem;">
+                <i data-lucide="file-clock" style="width: 36px; height: 36px; color: var(--academic-blue); opacity: 0.7;"></i>
+            </div>
+            <p style="color: var(--text-secondary); font-weight: 600; font-size: 0.95rem;">
+                Awaiting Checkpoint Approval
+            </p>
+            <p style="margin-top: 0.35rem; color: var(--text-muted); font-size: 0.82rem; max-width: 440px; line-height: 1.5; text-align: center;">
+                Review the problem statement and objectives above, then click <strong style="color: var(--text-secondary);">Approve &amp; Continue Pipeline</strong> to start paper synthesis.
+            </p>
         </div>
     `;
+    if (window.lucide) lucide.createIcons();
 
     renderRMPipelineTracker();
     switchPanel(dom.rmInputPanel);
@@ -965,6 +971,25 @@ async function handleRMApprove(feedback) {
     if (!state.rm.threadId) return;
 
     dom.rmHitlPanel.style.display = 'none';
+    if (dom.rmPaperTitle) dom.rmPaperTitle.textContent = state.rm.title || 'Synthesizing Paper...';
+    if (dom.rmPaperOutput && !getPaperMarkdown().trim()) {
+        dom.rmPaperOutput.innerHTML = `
+            <div class="paper-placeholder-state" id="rm-paper-placeholder">
+                <div class="orbital-loader-container">
+                    <div class="orbital-ring"></div>
+                    <p style="margin-top: 1rem; color: var(--text-secondary); font-weight: 500; display: flex; align-items: center;">
+                        <span>Academic pipeline active &amp; synthesizing</span>
+                        <span class="ai-wave-container">
+                            <span class="ai-wave-bar"></span>
+                            <span class="ai-wave-bar"></span>
+                            <span class="ai-wave-bar"></span>
+                            <span class="ai-wave-bar"></span>
+                        </span>
+                    </p>
+                </div>
+            </div>
+        `;
+    }
 
     if (activeRMController) activeRMController.abort();
     activeRMController = new AbortController();

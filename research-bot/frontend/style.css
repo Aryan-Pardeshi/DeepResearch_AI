@@ -2553,86 +2553,104 @@ main {
     font-size: 1.05rem;
 }
 
-/* Signature Element: Pipeline Progress Tracker */
+/* Signature Element: Pipeline Progress Tracker (Super Minimal & Compact) */
 .pipeline-tracker-container {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
+    padding: 0.85rem 1.1rem;
     background: var(--glass-panel);
-    border: 1px solid rgba(56, 189, 248, 0.2);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(56, 189, 248, 0.18);
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
 }
 
 .tracker-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.25rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    margin-bottom: 0.5rem;
+    padding-bottom: 0;
+    border-bottom: none;
+    flex-wrap: wrap;
+    gap: 0.5rem;
 }
 
 .tracker-title-group {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
+    gap: 0.5rem;
 }
 
 .tracker-title {
     font-family: var(--font-outfit);
-    font-size: 1.15rem;
+    font-size: 0.95rem;
     font-weight: 600;
     color: var(--text-primary);
 }
 
 .tracker-status-tag {
-    font-size: 0.8rem;
+    font-size: 0.72rem;
     font-weight: 600;
-    padding: 0.3rem 0.75rem;
+    padding: 0.15rem 0.6rem;
     border-radius: 50px;
-    background: rgba(99, 102, 241, 0.15);
+    background: rgba(99, 102, 241, 0.12);
     color: var(--violet-pulse);
-    border: 1px solid rgba(99, 102, 241, 0.3);
+    border: 1px solid rgba(99, 102, 241, 0.25);
 }
 
+/* Single-line horizontal scrollable step chips row */
 .pipeline-steps-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
-    gap: 0.6rem;
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 0.4rem;
+    padding: 0.2rem 0 0.4rem 0;
+    scroll-behavior: smooth;
+}
+
+.pipeline-steps-grid::-webkit-scrollbar {
+    height: 4px;
+}
+.pipeline-steps-grid::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
 }
 
 .pipeline-step {
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid var(--card-border);
-    border-radius: var(--radius-sm);
-    padding: 0.6rem;
+    border-radius: 20px;
+    padding: 0.25rem 0.65rem;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
     gap: 0.35rem;
-    text-align: center;
+    white-space: nowrap;
+    flex-shrink: 0;
     transition: var(--transition-smooth);
 }
 
 .pipeline-step.completed {
     border-color: rgba(52, 211, 153, 0.4);
-    background: rgba(52, 211, 153, 0.05);
+    background: rgba(52, 211, 153, 0.06);
 }
 
 .pipeline-step.active {
     border-color: var(--academic-blue);
-    background: rgba(56, 189, 248, 0.1);
-    box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+    background: rgba(56, 189, 248, 0.12);
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
     animation: active-step-pulse 2s infinite alternate;
 }
 
 .pipeline-step.hitl {
     border-color: rgba(251, 191, 36, 0.4);
-    background: rgba(251, 191, 36, 0.05);
+    background: rgba(251, 191, 36, 0.06);
 }
 
 .step-number {
-    font-size: 0.65rem;
+    font-size: 0.62rem;
     font-weight: 700;
     color: var(--text-muted);
+    letter-spacing: 0.02em;
 }
 
 .pipeline-step.completed .step-number { color: var(--emerald-verified); }
@@ -2640,10 +2658,10 @@ main {
 .pipeline-step.hitl .step-number { color: var(--amber-review); }
 
 .step-label {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 600;
     color: var(--text-secondary);
-    line-height: 1.2;
+    line-height: 1;
 }
 
 .pipeline-step.completed .step-label { color: var(--text-primary); }
@@ -2868,7 +2886,7 @@ select:focus-visible,
     border-top-color: var(--accent-purple);
     border-right-color: #a855f7;
     border-radius: 50%;
-    animation: orbitalRotate 0.9s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+    animation: orbitalRotate 2.2s linear infinite;
 }
 .skeleton-line {
     height: 14px;
