@@ -294,13 +294,13 @@ async def approve_research_mode(
         buf["listeners"].add(listener_queue)
 
         try:
-            # Replay missed buffered events if from_seq is present
-            if from_seq is not None:
-                missed = [e for e in buf.get("events", []) if e.get("seq", 0) > from_seq]
-                for evt in missed:
-                    seq_str = f"id: {evt['seq']}\n" if "seq" in evt else ""
-                    yield f"{seq_str}data: {json.dumps(evt)}\n\n"
-                    await asyncio.sleep(0.001)
+            # Replay missed buffered events (start from seq 0 if from_seq is None)
+            start_seq = 0 if from_seq is None else from_seq
+            missed = [e for e in buf.get("events", []) if e.get("seq", 0) > start_seq]
+            for evt in missed:
+                seq_str = f"id: {evt['seq']}\n" if "seq" in evt else ""
+                yield f"{seq_str}data: {json.dumps(evt)}\n\n"
+                await asyncio.sleep(0.001)
 
             # Stream live events
             task_ref = buf.get("task")
