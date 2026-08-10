@@ -182,8 +182,40 @@ async def fetch_arxiv_papers(client: httpx.AsyncClient, keyword: str, max_result
         logger.warning(f"ArXiv search skipped for '{keyword}': {e}")
     return papers
 
+async def fetch_tavily_web_papers(keyword: str, max_results: int = 5) -> List[Dict[str, Any]]:
+    """LAST RESORT FALLBACK: Fetches web articles via Tavily when academic database indexes return insufficient literature."""
+    papers = []
+    try:
+        from backend.app.tools.tavily_search import search_web
+        logger.info(f"Triggering LAST RESORT Tavily web search fallback for keyword: '{keyword}'")
+        res = search_web(query=f"academic research paper {keyword}", max_results=max_results)
+        results = res.get("results", []) if isinstance(res, dict) else []
+        for r in results:
+            title = r.get("title", "").strip()
+            content = r.get("content", "").strip()
+            url = r.get("url", "").strip()
+            if not title or not content:
+                continue
+            papers.append({
+                "title": title,
+                "abstract": content,
+                "authors": ["Web Source"],
+                "year": "2026",
+                "doi": "",
+                "url": url,
+                "pdf_url": url if url.lower().endswith(".pdf") else "",
+                "source": "tavily_web_fallback",
+                "citation_count": 0
+            })
+    except Exception as e:
+        logger.warning(f"Tavily web fallback search skipped for '{keyword}': {e}")
+    return papers
+
 async def search_academic_papers(keywords: List[str]) -> Tuple[List[Dict[str, Any]], Dict[str, int]]:
-    """Searches OpenAlex, Semantic Scholar, and ArXiv concurrently with strict timeouts and deduplication."""
+    """Searches OpenAlex, Semantic Scholar, and ArXiv concurrently with strict timeouts and deduplication.
+
+    Equipped with Tavily web search as a LAST RESORT fallback if academic indexes return < 5 papers.
+    """
     # All extracted keywords are queried; every request runs concurrently on one client
     selected_keywords = keywords[:MAX_SEARCH_KEYWORDS] if keywords else ["research"]
     
@@ -221,6 +253,20 @@ async def search_academic_papers(keywords: List[str]) -> Tuple[List[Dict[str, An
             seen_titles.add(norm_title)
 
         deduped.append(paper)
+
+    # LAST RESORT FALLBACK: If academic indexes returned fewer than 5 papers, trigger Tavily web search
+    if len(deduped) < 5 and selected_keywords:
+        logger.warning(f"Academic database search yield low ({len(deduped)} papers). Invoking LAST RESORT Tavily web search fallback...")
+        tavily_tasks = [fetch_tavily_web_papers(kw, max_results=5) for kw in selected_keywords[:3]]
+        tavily_results = await asyncio.gather(*tavily_tasks, return_exceptions=True)
+        for res in tavily_results:
+            if isinstance(res, list):
+                for paper in res:
+                    norm_title = _normalize_title(paper.get("title"))
+                    if norm_title and norm_title not in seen_titles:
+                        seen_titles.add(norm_title)
+                        combined.append(paper)
+                        deduped.append(paper)
 
     stats = {"retrieved": len(combined), "after_dedup": len(deduped)}
     logger.info(f"Academic search retrieved {len(combined)} raw papers, {len(deduped)} after deduplication.")

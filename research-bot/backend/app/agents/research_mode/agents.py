@@ -199,6 +199,7 @@ Research Questions:
 {json.dumps(rqs)}
 
 Extract 6 to 10 dense, academic search keywords and short search terms suitable for querying academic databases (OpenAlex, Semantic Scholar, ArXiv).
+NOTE ON WEB SEARCH: Literature search prioritizes academic database indexes (OpenAlex, Semantic Scholar, ArXiv). Tavily Web Search is equipped as a LAST RESORT fallback ONLY if academic indexes yield insufficient literature.
 Return ONLY a JSON list of strings. Example: ["superconductivity", "high temperature cuprates", "LK-99 replication"]"""
 
     try:
