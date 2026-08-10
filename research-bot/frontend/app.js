@@ -17,9 +17,12 @@ document.head.appendChild(cursorStyle);
 
 // Configuration
 // The backend serves this page, so the API lives on the same origin. Opening
-// index.html straight off disk is the one case that needs an explicit host.
+// index.html straight off disk or from a dev server on another port (e.g. 5500)
+// falls back to the default backend port (http://localhost:8000).
 const API_BASE_URL = window.API_BASE_URL || (
-    window.location.protocol === 'file:' ? 'http://localhost:8000' : window.location.origin
+    (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '8000'))
+        ? 'http://localhost:8000'
+        : window.location.origin
 );
 let activeResearchController = null;
 let activeRMController = null;
@@ -821,6 +824,11 @@ async function handleRMStart() {
             body: JSON.stringify({ problem_statement: ps, research_objectives: objs, research_questions: rqs, models })
         });
 
+        const contentType = res.headers.get('content-type') || '';
+        if (!res.ok || !contentType.includes('application/json')) {
+            throw new Error(`Server returned ${res.status} (${res.statusText || 'Non-JSON response'}). Make sure the backend server is running on ${API_BASE_URL}.`);
+        }
+
         const data = await res.json();
         if (data.error || data.status === 'error') {
             showToast(data.error || 'Failed to start Research Mode.', 'error');
@@ -1262,6 +1270,10 @@ async function handlePlanResearch() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ query: state.query, search_topic: state.searchTopic })
         });
+        const contentType = res.headers.get('content-type') || '';
+        if (!res.ok || !contentType.includes('application/json')) {
+            throw new Error(`Server returned ${res.status} (${res.statusText || 'Non-JSON response'}). Make sure the backend server is running on ${API_BASE_URL}.`);
+        }
         const data = await res.json();
         if (data.status === 'error') {
             showToast(data.error || 'Failed to create plan.', 'error');
