@@ -2962,3 +2962,83 @@ select:focus-visible,
 
 
 
+
+/* ==========================================================================
+   Worker cards, streaming tag and CDN-less markdown fallback
+   ========================================================================== */
+
+/* renderWorkers() emits .worker-status and .worker-task; neither had any rules,
+   so the researcher sidebar rendered as unstyled text. */
+.worker-status {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0.12rem 0.5rem;
+    border-radius: 50px;
+    flex-shrink: 0;
+    border: 1px solid transparent;
+}
+
+.worker-status.running {
+    background: rgba(99, 102, 241, 0.12);
+    border-color: rgba(99, 102, 241, 0.3);
+    color: var(--accent-purple);
+}
+
+.worker-status.completed {
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(16, 185, 129, 0.3);
+    color: var(--accent-teal);
+}
+
+.worker-task {
+    margin-top: 0.4rem;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--text-secondary);
+}
+
+.worker-queries {
+    margin-top: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.worker-query {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    padding-left: 0.75rem;
+    border-left: 2px solid var(--card-border);
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Pulses while token_stream events are arriving, so a slow node reads as busy
+   rather than hung. */
+.tracker-status-tag.streaming {
+    animation: tagPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes tagPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tracker-status-tag.streaming { animation: none; }
+}
+
+/* Shown instead of rendered markdown when the marked.js CDN is unreachable. */
+.markdown-fallback {
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: inherit;
+    font-size: 0.92rem;
+    line-height: 1.65;
+    color: var(--text-secondary);
+    margin: 0;
+}

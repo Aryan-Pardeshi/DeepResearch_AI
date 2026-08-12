@@ -70,7 +70,8 @@ const state = {
         introduction: '',
         abstract: '',
         title: '',
-        activeStage: 'scope_definition'
+        activeStage: 'scope_definition',
+        completedStages: []
     }
 };
 
@@ -103,9 +104,14 @@ const RM_STAGES = [
     { id: 'title', name: '20. Title', role: 'finalizer' }
 ];
 
-// Nodes that run without their own tile in the tracker grid
+// Graph nodes that run without their own tile in the tracker grid. Every node in
+// research_mode_builder.py must appear either in RM_STAGES or here, otherwise the
+// tracker cannot resolve the node and falls back to a bare "Pipeline Running".
 const RM_HIDDEN_STAGES = {
-    scope_reviser: { label: 'Revising Scope', anchor: 'checkpoint_1' }
+    scope_reviser: { label: 'Revising Scope', anchor: 'checkpoint_1' },
+    fulltext_fetcher: { label: 'Fetching Full Text', anchor: 'paper_screener' },
+    citation_verifier: { label: 'Verifying Citations', anchor: 'literature_review' },
+    figures: { label: 'Generating Figures', anchor: 'references' }
 };
 
 // Maps the snake_case state payload from the backend onto the camelCase UI state
@@ -136,14 +142,60 @@ const RM_STATE_KEY_MAP = {
     title: 'title'
 };
 
+// Keys copied through under their own name because the UI reads them directly.
+const RM_PASSTHROUGH_KEYS = ['corpus_stats', 'status', 'hitl_checkpoint'];
+
+// Single mapper for every snake_case payload the backend sends (SSE node_update,
+// SSE checkpoint/completed state, and the /research-mode/result rehydrate call).
+// Unknown keys are ignored on purpose: the raw graph state carries large arrays
+// (raw_papers, screened_papers, messages) that used to be copied verbatim into
+// state.rm and then straight into localStorage, blowing the storage quota.
 function applyRMStatePayload(payload) {
-    if (!payload) return;
+    if (!payload || typeof payload !== 'object') return;
     Object.entries(RM_STATE_KEY_MAP).forEach(([snake, camel]) => {
         const value = payload[snake];
         if (value !== undefined && value !== null && value !== '') {
             state.rm[camel] = value;
         }
     });
+    RM_PASSTHROUGH_KEYS.forEach(key => {
+        const value = payload[key];
+        if (value !== undefined && value !== null && value !== '') {
+            state.rm[key] = value;
+        }
+    });
+    // The backend sends counts under different names depending on the endpoint:
+    // SSE sends raw_papers_count, the rehydrate endpoint sends the arrays.
+    if (Array.isArray(payload.raw_papers)) state.rm.rawPapersCount = payload.raw_papers.length;
+    if (Array.isArray(payload.screened_papers)) state.rm.screenedPapersCount = payload.screened_papers.length;
+}
+
+// Escapes model- and user-authored text before it goes into an innerHTML string.
+// Titles, objectives and hypotheses regularly contain <, > and & (e.g. "p < 0.05"),
+// which silently swallowed the rest of the panel before this existed.
+function escapeHtml(value) {
+    if (value === undefined || value === null) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// marked and lucide come from a CDN. If that request is blocked the page must
+// still work instead of throwing on every render.
+function renderMarkdown(md) {
+    if (window.marked && typeof window.marked.parse === 'function') {
+        return window.marked.parse(md || '');
+    }
+    return `<pre class="markdown-fallback">${escapeHtml(md || '')}</pre>`;
+}
+
+function refreshIcons() {
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+    }
 }
 
 // Activity & Timer Monitors
@@ -193,7 +245,16 @@ document.addEventListener('DOMContentLoaded', () => {
     restoreRMSessionOnLoad();
     rmPlaceholderCycle = initCyclingPlaceholder(dom.rmPsInput, RM_PLACEHOLDER_EXAMPLES);
     dsPlaceholderCycle = initCyclingPlaceholder(dom.queryInput, DS_PLACEHOLDER_EXAMPLES);
-    if (window.lucide) lucide.createIcons();
+    updateNewRunVisibility();
+    refreshIcons();
+});
+
+// A single unhandled render error used to leave the page frozen with no clue why.
+window.addEventListener('error', (e) => {
+    console.error('Unhandled error:', e.error || e.message);
+});
+window.addEventListener('unhandledrejection', (e) => {
+    console.error('Unhandled promise rejection:', e.reason);
 });
 
 let rmPlaceholderCycle = null;
@@ -397,18 +458,27 @@ async function checkConfigGate() {
     }
 }
 
-// Mode Switcher Handler
+// Remembers the panel each mode was last on. Switching tabs used to hard-reset
+// to the landing/input panel, so flipping to the other mode and back during a
+// live run threw away the workspace view and looked like the run had vanished.
+const lastPanelByMode = { deepsearch: null, researchmode: null };
+
 function switchMode(newMode) {
+    const previous = state.mode;
+    const currentPanel = document.querySelector('.panel.active');
+    if (currentPanel && previous) lastPanelByMode[previous] = currentPanel;
+
     state.mode = newMode;
     if (newMode === 'deepsearch') {
         dom.tabDeepSearch.classList.add('active');
         dom.tabResearchMode.classList.remove('active');
-        switchPanel(dom.landingPanel);
+        switchPanel(lastPanelByMode.deepsearch || dom.landingPanel);
     } else {
         dom.tabResearchMode.classList.add('active');
         dom.tabDeepSearch.classList.remove('active');
-        switchPanel(dom.rmInputPanel);
+        switchPanel(lastPanelByMode.researchmode || dom.rmInputPanel);
     }
+    updateNewRunVisibility();
 }
 
 // Setup Event Listeners
@@ -445,7 +515,7 @@ function setupEventListeners() {
 
     dom.planResearchBtn?.addEventListener('click', handlePlanResearch);
     dom.feedbackInput?.addEventListener('input', () => {
-        const val = dom.feedbackInput.value.strip ? dom.feedbackInput.value.strip() : dom.feedbackInput.value.trim();
+        const val = dom.feedbackInput.value.trim();
         dom.submitFeedbackBtn.style.display = val ? 'flex' : 'none';
         dom.approvePlanBtn.style.display = val ? 'none' : 'flex';
     });
@@ -471,8 +541,24 @@ function setupEventListeners() {
     });
     dom.rmHitlApproveBtn?.addEventListener('click', () => handleRMApprove('approve'));
     dom.rmCopyPaperBtn?.addEventListener('click', () => copyToClipboard(getPaperMarkdown(), dom.rmCopyPaperBtn));
-    dom.rmExportPdfBtn?.addEventListener('click', handleRMExportPDF);
 
+    // Paper inspector modal. This was wired at module scope, before
+    // cacheDomElements() had run, so dom.modalCloseBtn was always undefined and
+    // the modal could never be dismissed once opened.
+    dom.modalCloseBtn?.addEventListener('click', closePaperInspector);
+    dom.paperDetailModal?.addEventListener('click', (e) => {
+        if (e.target === dom.paperDetailModal) closePaperInspector();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        if (dom.paperDetailModal && dom.paperDetailModal.style.display !== 'none') {
+            closePaperInspector();
+        }
+    });
+}
+
+function closePaperInspector() {
+    if (dom.paperDetailModal) dom.paperDetailModal.style.display = 'none';
 }
 
 // Admin token for the config API. The backend rejects config writes without it
@@ -572,22 +658,35 @@ function updateThemeIcon() {
 }
 
 function switchPanel(targetPanel) {
+    if (!targetPanel) return;
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     targetPanel.classList.add('active');
+    lastPanelByMode[state.mode] = targetPanel;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Health Check
+// Health Check. This ran exactly once at load, so a host that was still waking
+// up (Render free instances cold-start for ~30-60s) pinned the offline banner on
+// screen for the whole session even after the backend came up.
+let healthPollTimer = null;
+
 async function checkBackendHealth() {
+    let online = false;
     try {
-        const res = await fetch(`${API_BASE_URL}/healthz`);
-        if (res.ok) {
-            dom.backendOfflineBanner.style.display = 'none';
-        } else {
-            dom.backendOfflineBanner.style.display = 'flex';
-        }
+        const res = await fetch(`${API_BASE_URL}/healthz`, { cache: 'no-store' });
+        online = res.ok;
     } catch (e) {
-        dom.backendOfflineBanner.style.display = 'flex';
+        online = false;
     }
+
+    if (dom.backendOfflineBanner) {
+        dom.backendOfflineBanner.style.display = online ? 'none' : 'flex';
+    }
+
+    // Poll fast while it is down (cold start), slowly once it is up.
+    clearTimeout(healthPollTimer);
+    healthPollTimer = setTimeout(checkBackendHealth, online ? 60000 : 5000);
+    return online;
 }
 
 
@@ -658,16 +757,17 @@ async function restoreRMSessionOnLoad() {
         }
 
         showResumeBanner({ hitl_checkpoint: currentCp, is_completed: state.rm.status === 'completed' });
+        updateNewRunVisibility();
 
         // 4. Background-sync with backend if reachable (without wiping local storage on offline/404)
         try {
             const res = await fetch(`${API_BASE_URL}/research-mode/result/${session.threadId}`);
             if (res.ok) {
                 const data = await res.json();
-                const values = data.values || {};
-                if (values && Object.keys(values).length > 0) {
-                    Object.assign(state.rm, values);
-                }
+                // This endpoint returns the raw graph state in snake_case. Copying it
+                // straight onto state.rm (which is camelCase) meant a rehydrated
+                // session rendered an empty paper and empty checkpoint panels.
+                applyRMStatePayload(data.values || {});
                 if (data.hitl_checkpoint) state.rm.hitlCheckpoint = data.hitl_checkpoint;
                 if (data.status) state.rm.status = data.status;
 
@@ -765,6 +865,15 @@ function resetResearchModeForm() {
     state.rm.abstract = '';
     state.rm.title = '';
     state.rm.lastSeq = 0;
+    state.rm.completedStages = [];
+    state.rm.hitlApproved = false;
+    state.rm.hitlCheckpointPending = false;
+    state.rm.corpus_stats = null;
+
+    if (dom.rmCorpusStatsBar) dom.rmCorpusStatsBar.style.display = 'none';
+    if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
+    if (dom.rmCopyPaperBtn) dom.rmCopyPaperBtn.style.display = 'none';
+    if (dom.rmExportDropdown) dom.rmExportDropdown.style.display = 'none';
 
     if (dom.rmPsInput) { dom.rmPsInput.value = ''; rmPlaceholderCycle?.start(); }
     if (dom.rmObjsInput) dom.rmObjsInput.value = '';
@@ -815,16 +924,28 @@ function renderRMPipelineTracker() {
     });
 }
 
-function updateRMPipelineTracker(activeStageId, completedStages = []) {
+function updateRMPipelineTracker(activeStageId, completedStages) {
     const hidden = RM_HIDDEN_STAGES[activeStageId];
     const anchoredStageId = hidden ? hidden.anchor : activeStageId;
+    const activeIdx = RM_STAGES.findIndex(s => s.id === anchoredStageId);
+
+    // Completion is cumulative. It used to default to an empty array, so every
+    // node_start event cleared the ticks off all previously finished steps and
+    // the tracker appeared to restart from zero on each node.
+    const done = new Set(state.rm.completedStages || []);
+    if (Array.isArray(completedStages)) {
+        completedStages.forEach(id => done.add(id));
+    } else if (activeIdx > 0) {
+        RM_STAGES.slice(0, activeIdx).forEach(s => done.add(s.id));
+    }
+    state.rm.completedStages = Array.from(done);
 
     RM_STAGES.forEach(stage => {
         const el = document.getElementById(`rm-step-${stage.id}`);
         if (!el) return;
 
         el.classList.remove('active', 'completed');
-        if (completedStages.includes(stage.id)) {
+        if (done.has(stage.id)) {
             el.classList.add('completed');
         } else if (stage.id === anchoredStageId) {
             el.classList.add('active');
@@ -836,6 +957,28 @@ function updateRMPipelineTracker(activeStageId, completedStages = []) {
         const label = hidden ? hidden.label : (current ? current.name : null);
         dom.rmPipelineStatusTag.textContent = label ? `Active: ${label}` : 'Pipeline Running';
     }
+}
+
+// Human-readable name for a raw graph node id, for the event log.
+function rmStageLabel(nodeId) {
+    if (!nodeId) return 'unknown';
+    const hidden = RM_HIDDEN_STAGES[nodeId];
+    if (hidden) return hidden.label;
+    const stage = RM_STAGES.find(s => s.id === nodeId);
+    return stage ? stage.name : nodeId;
+}
+
+// Some nodes stream for minutes with no node_update in between. Without this the
+// tracker sat on a static label and the run looked hung.
+let rmTokenActivityTimer = null;
+function noteRMTokenActivity(nodeId) {
+    if (!dom.rmPipelineStatusTag) return;
+    dom.rmPipelineStatusTag.textContent = `Writing: ${rmStageLabel(nodeId)}…`;
+    dom.rmPipelineStatusTag.classList.add('streaming');
+    clearTimeout(rmTokenActivityTimer);
+    rmTokenActivityTimer = setTimeout(() => {
+        dom.rmPipelineStatusTag?.classList.remove('streaming');
+    }, 2500);
 }
 
 async function handleRMStart() {
@@ -887,9 +1030,11 @@ async function handleRMStart() {
         state.rm.hitlCheckpoint = data.hitl_checkpoint;
         saveRMSession();
 
+        state.rm.completedStages = [];
         switchPanel(dom.rmWorkspacePanel);
         updateRMPipelineTracker('checkpoint_1', ['scope_definition', 'keyword_extractor']);
         renderRMHitlPanel('checkpoint_1');
+        updateNewRunVisibility();
 
     } catch (e) {
         showToast('Error connecting to Research Mode service: ' + e.message, 'error');
@@ -916,7 +1061,7 @@ function renderRMHitlPanel(checkpoint) {
         dom.rmHitlBody.innerHTML = `
             <div class="form-group">
                 <label class="form-label">Problem Statement</label>
-                <div class="problem-statement-text">${state.rm.problemStatement}</div>
+                <div class="problem-statement-text">${escapeHtml(state.rm.problemStatement)}</div>
             </div>
             <div class="form-group">
                 <label class="form-label">Research Objectives <span class="label-tag">auto-defined</span></label>
@@ -924,7 +1069,7 @@ function renderRMHitlPanel(checkpoint) {
                     ${objectives.map((o, i) => `
                         <div class="subtask-item">
                             <span class="subtask-number">O${i + 1}</span>
-                            <span class="subtask-content">${o}</span>
+                            <span class="subtask-content">${escapeHtml(o)}</span>
                         </div>
                     `).join('')}
                 </div>
@@ -935,7 +1080,7 @@ function renderRMHitlPanel(checkpoint) {
                     ${questions.map((q, i) => `
                         <div class="subtask-item">
                             <span class="subtask-number">RQ${i + 1}</span>
-                            <span class="subtask-content">${q}</span>
+                            <span class="subtask-content">${escapeHtml(q)}</span>
                         </div>
                     `).join('')}
                 </div>
@@ -943,7 +1088,7 @@ function renderRMHitlPanel(checkpoint) {
             <div class="form-group">
                 <label class="form-label">Extracted Academic Keywords (6-10)</label>
                 <div class="chips-container">
-                    ${(state.rm.keywords || []).map(kw => `<span class="chip active">${kw}</span>`).join('')}
+                    ${(state.rm.keywords || []).map(kw => `<span class="chip active">${escapeHtml(kw)}</span>`).join('')}
                 </div>
             </div>
         `;
@@ -954,15 +1099,15 @@ function renderRMHitlPanel(checkpoint) {
         dom.rmHitlBody.innerHTML = `
             <div class="form-group">
                 <label class="form-label">Synthesized Literature Review Snippet</label>
-                <div class="problem-statement-text">${(state.rm.literatureReview || '').slice(0, 400)}...</div>
+                <div class="problem-statement-text">${escapeHtml((state.rm.literatureReview || '').slice(0, 400))}...</div>
             </div>
             <div class="form-group">
                 <label class="form-label">Identified Research Gap</label>
-                <div class="problem-statement-text">${state.rm.researchGap}</div>
+                <div class="problem-statement-text">${escapeHtml(state.rm.researchGap)}</div>
             </div>
             <div class="form-group">
                 <label class="form-label">Proposed Conceptual Framework</label>
-                <div class="problem-statement-text">${state.rm.conceptualFramework}</div>
+                <div class="problem-statement-text">${escapeHtml(state.rm.conceptualFramework)}</div>
             </div>
         `;
     } else if (checkpoint === 'checkpoint_3') {
@@ -976,7 +1121,7 @@ function renderRMHitlPanel(checkpoint) {
                     ${(state.rm.hypotheses || []).map((h, i) => `
                         <div class="subtask-item">
                             <span class="subtask-number">H${i+1}</span>
-                            <span class="subtask-content">${h}</span>
+                            <span class="subtask-content">${escapeHtml(h)}</span>
                         </div>
                     `).join('')}
                 </div>
@@ -989,18 +1134,29 @@ function renderRMHitlPanel(checkpoint) {
         dom.rmHitlBody.innerHTML = `
             <div class="form-group">
                 <label class="form-label">Research Design</label>
-                <div class="problem-statement-text">${state.rm.researchDesign}</div>
+                <div class="problem-statement-text">${escapeHtml(state.rm.researchDesign)}</div>
             </div>
             <div class="form-group">
                 <label class="form-label">Data Collection Plan</label>
-                <div class="problem-statement-text">${state.rm.dataCollectionPlan}</div>
+                <div class="problem-statement-text">${escapeHtml(state.rm.dataCollectionPlan)}</div>
             </div>
             <div class="form-group">
                 <label class="form-label">Data Analysis Plan</label>
-                <div class="problem-statement-text">${state.rm.dataAnalysisPlan}</div>
+                <div class="problem-statement-text">${escapeHtml(state.rm.dataAnalysisPlan)}</div>
             </div>
         `;
+    } else {
+        // Guards against an unrecognised checkpoint id silently rendering an
+        // empty review panel with nothing but an approve button.
+        dom.rmHitlTitle.textContent = 'Checkpoint Review Required';
+        dom.rmHitlBadge.textContent = 'Review';
+        dom.rmHitlBody.innerHTML = `
+            <p class="rm-hint">The pipeline is paused at <code>${escapeHtml(checkpoint)}</code>.
+            Approve to continue, or describe the changes you want first.</p>
+        `;
     }
+
+    refreshIcons();
 }
 
 async function handleRMApprove(feedback) {
@@ -1184,66 +1340,30 @@ function openPaperInspector(paper) {
     dom.paperDetailModal.style.display = 'flex';
 }
 
-if (dom.modalCloseBtn) {
-    dom.modalCloseBtn.onclick = () => {
-        if (dom.paperDetailModal) dom.paperDetailModal.style.display = 'none';
-    };
-}
-
-function applyRMStatePayload(payload) {
-    if (!payload || typeof payload !== 'object') return;
-
-    const mapKey = (k, v) => {
-        if (v === undefined || v === null) return;
-        if (k === 'problem_statement') state.rm.problemStatement = v;
-        else if (k === 'research_objectives') state.rm.researchObjectives = v;
-        else if (k === 'research_questions') state.rm.researchQuestions = v;
-        else if (k === 'keywords') state.rm.keywords = v;
-        else if (k === 'raw_papers_count') state.rm.rawPapersCount = v;
-        else if (k === 'screened_papers_count') state.rm.screenedPapersCount = v;
-        else if (k === 'literature_review') state.rm.literatureReview = v;
-        else if (k === 'research_gap') state.rm.researchGap = v;
-        else if (k === 'conceptual_framework') state.rm.conceptualFramework = v;
-        else if (k === 'hypotheses') state.rm.hypotheses = v;
-        else if (k === 'research_design') state.rm.researchDesign = v;
-        else if (k === 'data_collection_plan') state.rm.dataCollectionPlan = v;
-        else if (k === 'data_analysis_plan') state.rm.dataAnalysisPlan = v;
-        else if (k === 'results') state.rm.results = v;
-        else if (k === 'discussion') state.rm.discussion = v;
-        else if (k === 'implications') state.rm.implications = v;
-        else if (k === 'limitations') state.rm.limitations = v;
-        else if (k === 'conclusion') state.rm.conclusion = v;
-        else if (k === 'future_scope') state.rm.futureScope = v;
-        else if (k === 'references') state.rm.references = v;
-        else if (k === 'appendices') state.rm.appendices = v;
-        else if (k === 'introduction') state.rm.introduction = v;
-        else if (k === 'abstract') state.rm.abstract = v;
-        else if (k === 'title') state.rm.title = v;
-        else {
-            const camelKey = k.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-            state.rm[camelKey] = v;
-            state.rm[k] = v;
-        }
-    };
-
-    for (const [k, v] of Object.entries(payload)) {
-        mapKey(k, v);
-    }
-}
-
 function processRMSEEvent(data) {
     const trackerContainer = document.querySelector('.pipeline-tracker-container');
     const paperCard = document.getElementById('rm-paper-card');
 
+    // Every buffered event carries a seq. Only some of them used to update
+    // lastSeq, so a reconnect asked the server to replay from a stale point and
+    // the tracker jumped backwards through nodes it had already passed.
+    if (data.seq !== undefined && data.seq !== null) state.rm.lastSeq = data.seq;
+
     if (data.event === 'node_start') {
         updateRMPipelineTracker(data.node);
-        appendLogLine(`Node started: ${data.node}`, 'info');
+        appendLogLine(`Node started: ${rmStageLabel(data.node)}`, 'info');
         if (trackerContainer) trackerContainer.classList.add('active-execution');
         if (paperCard) paperCard.classList.add('active-execution');
+        saveRMSession();
+    } else if (data.event === 'token_stream') {
+        // Not buffered server-side and not part of the paper state; it is the only
+        // signal that a long node is still alive, so it drives the status tag.
+        noteRMTokenActivity(data.node);
+    } else if (data.event === 'resume') {
+        appendLogLine('Pipeline resumed.', 'info');
     } else if (data.event === 'node_update') {
         applyRMStatePayload(data.data || {});
-        if (data.seq !== undefined) state.rm.lastSeq = data.seq;
-        appendLogLine(`Node updated: ${data.node}`, 'success');
+        appendLogLine(`Node updated: ${rmStageLabel(data.node)}`, 'success');
         if (data.data && data.data.corpus_stats) updateCorpusStats(data.data.corpus_stats);
         renderRMPaperLive();
         saveRMSession();
@@ -1253,17 +1373,22 @@ function processRMSEEvent(data) {
         state.rm.hitlCheckpointPending = true;
         state.rm.hitlApproved = false;
         applyRMStatePayload(data.state || {});
-        if (data.seq !== undefined) state.rm.lastSeq = data.seq;
         appendLogLine(`HITL Checkpoint reached: ${cp}`, 'warn');
         if (data.state && data.state.corpus_stats) updateCorpusStats(data.state.corpus_stats);
+        updateRMPipelineTracker(cp);
+        if (trackerContainer) trackerContainer.classList.remove('active-execution');
+        if (paperCard) paperCard.classList.remove('active-execution');
         renderRMHitlPanel(cp);
+        // The pipeline blocks here until the user acts, and the panel can be far
+        // below the fold on a long paper, so it has to announce itself.
+        showToast('Checkpoint reached — your review is required to continue.', 'warning');
+        dom.rmHitlPanel?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         saveRMSession();
     } else if (data.event === 'completed') {
         state.rm.status = 'completed';
         state.rm.hitlCheckpointPending = false;
         state.rm.hitlApproved = true;
         applyRMStatePayload(data.state || {});
-        if (data.seq !== undefined) state.rm.lastSeq = data.seq;
         appendLogLine(`Pipeline execution completed!`, 'success');
         if (data.state && data.state.corpus_stats) updateCorpusStats(data.state.corpus_stats);
         updateRMPipelineTracker('title', RM_STAGES.map(s => s.id));
@@ -1275,7 +1400,13 @@ function processRMSEEvent(data) {
         appendLogLine(`Pipeline Error: ${data.message}`, 'error');
         if (trackerContainer) trackerContainer.classList.remove('active-execution');
         if (paperCard) paperCard.classList.remove('active-execution');
+        if (dom.rmPipelineStatusTag) dom.rmPipelineStatusTag.textContent = 'Pipeline stopped — error';
+        // The run is dead, so the "synthesizing" spinner must not keep spinning
+        // forever. Show whatever was produced before the failure instead.
+        state.rm.status = 'error';
+        renderRMPaperLive(false);
         showToast(data.message || 'Pipeline error occurred.', 'error');
+        saveRMSession();
     }
     return data.event;
 }
@@ -1283,11 +1414,18 @@ function processRMSEEvent(data) {
 function renderRMPaperLive(isStreaming = true) {
     if (dom.rmPaperTitle) dom.rmPaperTitle.textContent = state.rm.title || 'Synthesizing Academic Paper...';
     if (dom.rmPaperOutput) {
-        let content = marked.parse(getPaperMarkdown());
+        // Re-rendering the whole document threw away the reader's scroll position
+        // on every node_update, yanking them back to the top mid-read.
+        const scroller = dom.rmPaperOutput;
+        const prevScroll = scroller.scrollTop;
+        const wasAtBottom = scroller.scrollHeight - scroller.clientHeight - prevScroll < 40;
+
+        let content = renderMarkdown(getPaperMarkdown());
         if (isStreaming) {
             content += '<span class="typing-cursor"></span>';
         }
-        dom.rmPaperOutput.innerHTML = content;
+        scroller.innerHTML = content;
+        scroller.scrollTop = wasAtBottom ? scroller.scrollHeight : prevScroll;
     }
 }
 
@@ -1400,6 +1538,7 @@ async function handlePlanResearch() {
     dom.approvalQueryDisplay.textContent = `"${query}"`;
     switchPanel(dom.approvalPanel);
 
+    setDeepSearchBusy(true);
     renderPlanSkeleton();
 
     try {
@@ -1422,22 +1561,28 @@ async function handlePlanResearch() {
         state.ps = data.ps;
         state.plan = data.plan || [];
         renderApprovalPanel();
+        updateNewRunVisibility();
 
     } catch (e) {
         showToast('Error planning research: ' + e.message, 'error');
+        // The panel already switched and is showing shimmer placeholders that
+        // will never resolve, so send the user back to the query box.
+        switchPanel(dom.landingPanel);
+    } finally {
+        setDeepSearchBusy(false);
     }
 }
 
 function renderApprovalPanel() {
     dom.approvalPsText.innerHTML = '';
-    dom.approvalPsText.textContent = state.ps;
+    dom.approvalPsText.textContent = state.ps || '';
     dom.approvalSubtasksContainer.innerHTML = '';
     state.plan.forEach((task, idx) => {
         const item = document.createElement('div');
         item.className = 'subtask-item';
         item.innerHTML = `
             <div class="subtask-number">${idx + 1}</div>
-            <div class="subtask-content">${task}</div>
+            <div class="subtask-content">${escapeHtml(task)}</div>
         `;
         dom.approvalSubtasksContainer.appendChild(item);
     });
@@ -1448,18 +1593,29 @@ async function handleRevision() {
     if (!feedback) return;
 
     renderPlanSkeleton();
-    await submitPlanApprovalWithMessage(feedback);
+    // A revision keeps the user on the approval panel: the graph loops back to the
+    // planner and interrupts again. Sending them to the execution workspace (as
+    // this used to) left them staring at an empty report that never filled in.
+    await submitPlanApprovalWithMessage(feedback, { isRevision: true });
 }
 
 async function submitPlanApproval() {
-    await submitPlanApprovalWithMessage('approve');
+    await submitPlanApprovalWithMessage('approve', { isRevision: false });
 }
 
-async function submitPlanApprovalWithMessage(message) {
+async function submitPlanApprovalWithMessage(message, { isRevision = false } = {}) {
     if (!state.threadId) return;
 
-    switchPanel(dom.workspacePanel);
-    researchTimer.start();
+    setDeepSearchBusy(true);
+
+    if (!isRevision) {
+        state.finalAnswer = '';
+        state.workers = {};
+        renderWorkers();
+        if (dom.reportOutput) dom.reportOutput.innerHTML = '';
+        switchPanel(dom.workspacePanel);
+        researchTimer.start();
+    }
 
     try {
         const response = await fetch(`${API_BASE_URL}/research/approve`, {
@@ -1467,6 +1623,12 @@ async function submitPlanApprovalWithMessage(message) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ thread_id: state.threadId, message: message })
         });
+
+        // Without this a 500 from the backend produced an unreadable body, no
+        // events, and a workspace that sat blank with the timer still running.
+        if (!response.ok || !response.body) {
+            throw new Error(`Server returned ${response.status} ${response.statusText || ''}`.trim());
+        }
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder('utf-8');
@@ -1481,93 +1643,195 @@ async function submitPlanApprovalWithMessage(message) {
             buffer = events.pop();
 
             for (const rawEvent of events) {
-                if (rawEvent.startsWith('data: ')) {
+                for (const line of rawEvent.split('\n')) {
+                    if (!line.startsWith('data: ')) continue;
                     try {
-                        const data = JSON.parse(rawEvent.slice(6));
-                        processDeepSearchSSEEvent(data);
-                    } catch (e) {}
+                        processDeepSearchSSEEvent(JSON.parse(line.slice(6)));
+                    } catch (e) {
+                        console.warn('DeepSearch SSE parse error:', e);
+                    }
                 }
             }
         }
     } catch (e) {
-        showToast('SSE Error: ' + e.message, 'error');
+        researchTimer.stop();
+        if (dom.reportStreamingIndicator) dom.reportStreamingIndicator.style.display = 'none';
+        showToast('Research stream failed: ' + e.message, 'error');
+        // Nothing arrived, so put the user back where they can retry instead of
+        // stranding them on an empty workspace.
+        if (isRevision || !state.finalAnswer) switchPanel(dom.approvalPanel);
+    } finally {
+        setDeepSearchBusy(false);
     }
+}
+
+// Disables the approve/revise controls while a stream is open so a double click
+// cannot start two concurrent runs against the same thread.
+function setDeepSearchBusy(busy) {
+    [dom.approvePlanBtn, dom.submitFeedbackBtn, dom.planResearchBtn].forEach(btn => {
+        if (btn) btn.disabled = busy;
+    });
 }
 
 function processDeepSearchSSEEvent(data) {
     if (data.event === 'node_start') {
-        if (data.node.startsWith('researcher')) {
-            state.workers[data.node] = { task: data.task, status: 'running', logs: [] };
+        if (data.node && data.node.startsWith('researcher')) {
+            const existing = state.workers[data.node];
+            state.workers[data.node] = {
+                task: data.task,
+                status: 'running',
+                logs: existing ? existing.logs : []
+            };
             renderWorkers();
         }
+    } else if (data.event === 'node_update') {
+        // The backend sends node_update for every finished node. Nothing consumed
+        // it, so researcher cards stayed pinned at "running" for the whole run.
+        if (data.node && data.node.startsWith('researcher') && state.workers[data.node]) {
+            state.workers[data.node].status = 'completed';
+            renderWorkers();
+        }
+        if (data.node === 'aggregator' && dom.reportStreamingIndicator) {
+            dom.reportStreamingIndicator.style.display = 'none';
+        }
     } else if (data.event === 'researcher_search') {
+        // data.task is the researcher's query string, which is what node_start
+        // stored on the worker record.
         const wKey = Object.keys(state.workers).find(k => state.workers[k].task === data.task);
-        if (wKey) {
+        if (wKey && data.query) {
             state.workers[wKey].logs.push(data.query);
             renderWorkers();
         }
     } else if (data.event === 'aggregator_token') {
-        dom.reportStreamingIndicator.style.display = 'flex';
+        if (dom.reportStreamingIndicator) dom.reportStreamingIndicator.style.display = 'flex';
         state.finalAnswer += data.token;
-        dom.reportOutput.innerHTML = marked.parse(state.finalAnswer) + '<span class="streaming-cursor">|</span>';
+        dom.reportOutput.innerHTML = renderMarkdown(state.finalAnswer) + '<span class="streaming-cursor">|</span>';
+    } else if (data.event === 'awaiting_approval') {
+        // The planner revised the plan and interrupted again. This event had no
+        // handler at all, so "Request Revision" simply hung forever.
+        researchTimer.stop();
+        state.ps = data.ps || state.ps;
+        state.plan = data.plan || state.plan;
+        renderApprovalPanel();
+        switchPanel(dom.approvalPanel);
+        if (dom.feedbackInput) dom.feedbackInput.value = '';
+        if (dom.submitFeedbackBtn) dom.submitFeedbackBtn.style.display = 'none';
+        if (dom.approvePlanBtn) dom.approvePlanBtn.style.display = 'flex';
+        showToast('Plan revised. Review it and approve when ready.', 'info');
     } else if (data.event === 'completed') {
         researchTimer.stop();
-        dom.reportStreamingIndicator.style.display = 'none';
+        if (dom.reportStreamingIndicator) dom.reportStreamingIndicator.style.display = 'none';
         state.finalAnswer = data.final_answer || state.finalAnswer;
-        dom.reportOutput.innerHTML = marked.parse(state.finalAnswer);
+        dom.reportOutput.innerHTML = renderMarkdown(state.finalAnswer);
+        // Any researcher still marked running finished with the graph.
+        Object.values(state.workers).forEach(w => { if (w.status === 'running') w.status = 'completed'; });
+        renderWorkers();
         dom.copyMdBtn.style.display = 'inline-flex';
         dom.downloadMdBtn.style.display = 'inline-flex';
         dom.workspaceNewResearchBtn.style.display = 'inline-flex';
         if (data.citations) renderCitations(data.citations);
+    } else if (data.event === 'error') {
+        researchTimer.stop();
+        if (dom.reportStreamingIndicator) dom.reportStreamingIndicator.style.display = 'none';
+        showToast(data.message || 'Research pipeline error.', 'error');
     }
 }
 
 function renderWorkers() {
+    if (!dom.workersListContainer) return;
     dom.workersListContainer.innerHTML = '';
     Object.entries(state.workers).forEach(([id, w]) => {
         const card = document.createElement('div');
         card.className = 'worker-card';
+        const searches = (w.logs || []).slice(-3);
         card.innerHTML = `
             <div class="worker-header">
-                <strong>${id}</strong>
+                <strong>${escapeHtml(id.replace('_', ' '))}</strong>
                 <span class="worker-status ${w.status}">${w.status}</span>
             </div>
-            <div class="worker-task">${w.task}</div>
+            <div class="worker-task">${escapeHtml(w.task)}</div>
+            ${searches.length ? `<div class="worker-queries">${
+                searches.map(q => `<span class="worker-query">${escapeHtml(q)}</span>`).join('')
+            }</div>` : ''}
         `;
         dom.workersListContainer.appendChild(card);
     });
 }
 
 function renderCitations(citations) {
+    if (!dom.workspaceSourcesContainer) return;
     dom.workspaceSourcesContainer.innerHTML = '';
     citations.forEach(url => {
         const card = document.createElement('a');
         card.className = 'source-card';
         card.href = url;
         card.target = '_blank';
-        card.innerHTML = `<i data-lucide="link"></i><span>${url}</span>`;
+        card.rel = 'noopener noreferrer';
+        card.innerHTML = `<i data-lucide="link"></i><span>${escapeHtml(url)}</span>`;
         dom.workspaceSourcesContainer.appendChild(card);
     });
     dom.workspaceSourcesSection.style.display = 'block';
-    lucide.createIcons();
+    refreshIcons();
 }
 
+// "New Run" is shared by both modes. It used to always wipe the Research Mode
+// session and drop the user on the DeepSearch landing page, so pressing it from
+// a live Research Mode run destroyed that run.
 function resetToLanding() {
+    if (state.mode === 'researchmode') {
+        resetResearchModeForm();
+        updateNewRunVisibility();
+        return;
+    }
     researchTimer.reset();
     state.threadId = null;
+    state.ps = '';
+    state.plan = [];
     state.finalAnswer = '';
     state.workers = {};
+    renderWorkers();
+    if (dom.reportOutput) dom.reportOutput.innerHTML = '';
+    if (dom.workspaceSourcesSection) dom.workspaceSourcesSection.style.display = 'none';
+    [dom.copyMdBtn, dom.downloadMdBtn, dom.workspaceNewResearchBtn].forEach(b => {
+        if (b) b.style.display = 'none';
+    });
     dom.queryInput.value = '';
     dsPlaceholderCycle?.start();
-    clearRMSession();
     switchPanel(dom.landingPanel);
+    updateNewRunVisibility();
 }
 
-function copyToClipboard(text, btnEl) {
-    navigator.clipboard.writeText(text);
+// The header button is markup-hidden and nothing ever revealed it, so there was
+// no way out of a run except a reload.
+function updateNewRunVisibility() {
+    if (!dom.newResearchBtn) return;
+    const active = state.mode === 'researchmode' ? !!state.rm.threadId : !!state.threadId;
+    dom.newResearchBtn.style.display = active ? 'flex' : 'none';
+}
+
+async function copyToClipboard(text, btnEl) {
     const orig = btnEl.innerHTML;
-    btnEl.innerHTML = '<span>Copied!</span>';
-    setTimeout(() => btnEl.innerHTML = orig, 2000);
+    try {
+        // navigator.clipboard is undefined on insecure origins; this threw and
+        // left the button showing "Copied!" for a copy that never happened.
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+        } else {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            ta.remove();
+        }
+        btnEl.innerHTML = '<span>Copied!</span>';
+    } catch (e) {
+        btnEl.innerHTML = '<span>Copy failed</span>';
+        showToast('Could not copy to clipboard: ' + e.message, 'error');
+    }
+    setTimeout(() => { btnEl.innerHTML = orig; refreshIcons(); }, 2000);
 }
 
 function downloadMarkdownReport() {
@@ -1582,9 +1846,16 @@ function downloadMarkdownReport() {
 }
 
 function showToast(msg, type = 'info') {
+    // showToast is called from error paths that can fire before the DOM cache is
+    // built. Throwing here used to mask the original error.
+    const container = dom.toastContainer || document.getElementById('toast-container');
+    if (!container) {
+        console.warn(`[toast:${type}] ${msg}`);
+        return;
+    }
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.textContent = msg;
-    dom.toastContainer.appendChild(toast);
+    container.appendChild(toast);
     setTimeout(() => toast.remove(), 4000);
 }

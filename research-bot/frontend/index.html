@@ -12,6 +12,13 @@
 </head>
 <body>
 
+    <!-- Backend Offline Banner. The styles for this existed but the element did
+         not, so a backend that was down or still cold-starting gave no signal. -->
+    <div class="backend-offline-banner" id="backend-offline-banner" style="display:none;">
+        <i data-lucide="wifi-off" style="width: 18px; height: 18px; flex-shrink: 0;"></i>
+        <span><strong>Backend unreachable.</strong> Waiting for the research service to respond — a sleeping host can take up to a minute to wake.</span>
+    </div>
+
     <!-- Header -->
     <header>
         <div class="logo-container">
