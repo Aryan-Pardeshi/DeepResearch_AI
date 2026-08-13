@@ -547,7 +547,7 @@ main {
 .problem-statement-text {
     font-size: 1rem;
     line-height: 1.6;
-    color: var(--text-secondary);
+    color: var(--text-primary);
 }
 
 /* Model text is rendered as markdown (see renderMarkdownSafe in app.js), so
@@ -3245,3 +3245,77 @@ select:focus-visible,
 .citation-link:hover {
     border-bottom-style: solid;
 }
+
+/* Paper typography. .paper-render-container had zero rules before this —
+   marked.parse() output rendered with bare browser UA defaults: no heading
+   hierarchy, no paragraph rhythm, emphasis invisible against body weight. */
+.paper-render-container {
+    color: var(--text-primary);
+    font-size: 0.98rem;
+    line-height: 1.75;
+    max-width: 780px;
+    margin: 0 auto;
+}
+.paper-render-container h1 {
+    font-family: var(--font-outfit);
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.3;
+    margin: 0 0 1.25rem 0;
+    color: var(--text-primary);
+}
+.paper-render-container h2 {
+    font-family: var(--font-outfit);
+    font-size: 1.3rem;
+    font-weight: 600;
+    line-height: 1.35;
+    margin: 2rem 0 0.85rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--card-border);
+    color: var(--text-primary);
+}
+.paper-render-container h2:first-child {
+    margin-top: 0;
+}
+.paper-render-container h3 {
+    font-family: var(--font-outfit);
+    font-size: 1.08rem;
+    font-weight: 600;
+    line-height: 1.4;
+    margin: 1.5rem 0 0.6rem 0;
+    color: var(--text-primary);
+}
+.paper-render-container p {
+    margin: 0 0 1rem 0;
+}
+.paper-render-container p:last-child {
+    margin-bottom: 0;
+}
+.paper-render-container strong {
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.paper-render-container em {
+    font-style: italic;
+}
+.paper-render-container ul,
+.paper-render-container ol {
+    margin: 0 0 1rem 0;
+    padding-left: 1.5rem;
+}
+.paper-render-container li {
+    margin-bottom: 0.4rem;
+    line-height: 1.65;
+}
+.paper-render-container li:last-child {
+    margin-bottom: 0;
+}
+.paper-render-container a {
+    color: var(--academic-blue);
+}
+.paper-render-container hr {
+    border: none;
+    border-top: 1px solid var(--card-border);
+    margin: 1.75rem 0;
+}
+
