@@ -916,6 +916,7 @@ function resetResearchModeForm() {
     state.rm.title = '';
     state.rm.lastSeq = 0;
     state.rm.completedStages = [];
+    state.rm.screenedPapers = [];
     state.rm.hitlApproved = false;
     state.rm.hitlCheckpointPending = false;
     state.rm.corpus_stats = null;
