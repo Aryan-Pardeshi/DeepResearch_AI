@@ -1603,6 +1603,39 @@ function processRMSEEvent(data) {
     return data.event;
 }
 
+// Best-effort only: matches "(Lastname, YYYY)" and "(Lastname et al., YYYY)"
+// against screened papers' first-author last name + year. Model-generated
+// citation text won't always map cleanly to a specific screened paper
+// (paraphrased names, multi-author collisions, references outside the
+// screened set) — unmatched citations are left as plain text, unchanged
+// from today's behavior.
+function linkCitations(html) {
+    const papers = getScreenedPapers();
+    if (papers.length === 0) return html;
+
+    const byLastNameYear = new Map();
+    papers.forEach((p, idx) => {
+        const firstAuthor = Array.isArray(p.authors) ? p.authors[0] : p.authors;
+        if (!firstAuthor || !p.year) return;
+        const lastName = String(firstAuthor).trim().split(/\s+/).pop();
+        if (!lastName) return;
+        const key = `${lastName.toLowerCase()}|${p.year}`;
+        if (!byLastNameYear.has(key)) byLastNameYear.set(key, idx);
+    });
+
+    if (byLastNameYear.size === 0) return html;
+
+    return html.replace(
+        /\(([A-Z][a-zA-Z'-]+)(?:\s+et al\.)?,\s*(\d{4})\)/g,
+        (match, lastName, year) => {
+            const key = `${lastName.toLowerCase()}|${year}`;
+            const paperIdx = byLastNameYear.get(key);
+            if (paperIdx === undefined) return match;
+            return `<a href="#" class="citation-link" data-paper-index="${paperIdx}">${match}</a>`;
+        }
+    );
+}
+
 function renderRMPaperLive(isStreaming = true) {
     if (dom.rmPaperTitle) dom.rmPaperTitle.textContent = state.rm.title || 'Synthesizing Academic Paper...';
     if (dom.rmPaperOutput) {
@@ -1612,11 +1645,21 @@ function renderRMPaperLive(isStreaming = true) {
         const prevScroll = scroller.scrollTop;
         const wasAtBottom = scroller.scrollHeight - scroller.clientHeight - prevScroll < 40;
 
-        let content = renderMarkdown(getPaperMarkdown());
+        let content = linkCitations(renderMarkdown(getPaperMarkdown()));
         if (isStreaming) {
             content += '<span class="typing-cursor"></span>';
         }
         scroller.innerHTML = content;
+
+        scroller.querySelectorAll('.citation-link').forEach((link) => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const idx = parseInt(link.dataset.paperIndex, 10);
+                const papers = getScreenedPapers();
+                if (papers[idx]) openPaperInspector(papers[idx]);
+            });
+        });
+
         scroller.scrollTop = wasAtBottom ? scroller.scrollHeight : prevScroll;
     }
 }

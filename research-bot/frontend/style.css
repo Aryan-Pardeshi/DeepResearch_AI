@@ -3235,3 +3235,13 @@ select:focus-visible,
     font-size: 0.72rem;
     color: var(--text-muted);
 }
+
+/* Inline citation links in paper view */
+.citation-link {
+    color: var(--academic-blue);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--academic-blue);
+}
+.citation-link:hover {
+    border-bottom-style: solid;
+}
