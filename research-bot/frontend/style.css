@@ -3188,3 +3188,50 @@ select:focus-visible,
     min-width: 32px;
     text-align: right;
 }
+
+/* Sources library panel */
+.rm-sources-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.75rem;
+    padding: 1rem 1.5rem 1.5rem;
+}
+.source-card-item {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    padding: 0.75rem;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+.source-card-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+}
+.source-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+.source-card-score {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--academic-blue);
+}
+.source-card-title {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    line-height: 1.4;
+    margin-bottom: 0.35rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.source-card-meta {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
