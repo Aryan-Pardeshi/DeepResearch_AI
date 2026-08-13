@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Deep Research Assistant & Academic Lab</title>
-    <link rel="stylesheet" href="style.css?v=2.4.0">
+    <link rel="stylesheet" href="style.css?v=2.4.4">
     <!-- Marked.js for markdown parsing -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- Lucide icons -->
@@ -390,6 +390,22 @@
                     </div>
                 </div>
 
+                <!-- Sources Library: all screened papers, browsable throughout the run -->
+                <details class="rm-sources-panel card" id="rm-sources-panel" style="display: none; margin-bottom: 1.5rem;">
+                    <summary class="tracker-header">
+                        <div class="tracker-title-group">
+                            <i data-lucide="library" style="width: 18px; height: 18px; color: var(--academic-blue);"></i>
+                            <h2 class="tracker-title">Sources</h2>
+                            <span class="tracker-status-tag" id="rm-sources-count-tag">0 papers</span>
+                        </div>
+                        <div class="tracker-header-controls">
+                            <span class="tracker-toggle-lbl" id="rm-sources-toggle-lbl">Expand</span>
+                            <i data-lucide="chevron-down" class="tracker-chevron-icon" style="width: 15px; height: 15px;"></i>
+                        </div>
+                    </summary>
+                    <div class="rm-sources-grid" id="rm-sources-grid"></div>
+                </details>
+
                 <!-- HITL Review Panel -->
                 <div class="rm-hitl-panel card" id="rm-hitl-panel" style="display: none;">
                     <div class="card-header border-bottom">
@@ -486,6 +502,6 @@
     <div class="toast-container" id="toast-container"></div>
 
     <!-- Application Script -->
-    <script src="app.js?v=2.4.3"></script>
+    <script src="app.js?v=2.4.4"></script>
 </body>
 </html>

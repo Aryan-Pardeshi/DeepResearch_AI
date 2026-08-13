@@ -480,6 +480,9 @@ function cacheDomElements() {
         rmLogCount: document.getElementById('rm-log-count'),
         rmEvidenceCard: document.getElementById('rm-evidence-card'),
         rmEvidenceMatrixView: document.getElementById('rm-evidence-matrix-view'),
+        rmSourcesPanel: document.getElementById('rm-sources-panel'),
+        rmSourcesGrid: document.getElementById('rm-sources-grid'),
+        rmSourcesCountTag: document.getElementById('rm-sources-count-tag'),
         paperDetailModal: document.getElementById('paper-detail-modal'),
         modalPaperTitle: document.getElementById('modal-paper-title'),
         modalPaperBody: document.getElementById('modal-paper-body'),
@@ -853,6 +856,7 @@ async function restoreRMSessionOnLoad() {
                 // straight onto state.rm (which is camelCase) meant a rehydrated
                 // session rendered an empty paper and empty checkpoint panels.
                 applyRMStatePayload(data.values || {});
+                renderRMSourcesPanel();
                 if (data.status) state.rm.status = data.status;
 
                 if (data.is_completed) {
@@ -973,6 +977,7 @@ function resetResearchModeForm() {
     if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
     if (dom.rmCopyPaperBtn) dom.rmCopyPaperBtn.style.display = 'none';
     if (dom.rmExportDropdown) dom.rmExportDropdown.style.display = 'none';
+    renderRMSourcesPanel();
 
     if (dom.rmPsInput) { dom.rmPsInput.value = ''; rmPlaceholderCycle?.start(); }
     if (dom.rmObjsInput) dom.rmObjsInput.value = '';
@@ -1021,6 +1026,41 @@ function renderRMPipelineTracker() {
         `;
         dom.rmPipelineStepsGrid.appendChild(stepEl);
     });
+}
+
+function renderRMSourcesPanel() {
+    if (!dom.rmSourcesPanel) return;
+    const papers = getScreenedPapers();
+
+    if (papers.length === 0) {
+        dom.rmSourcesPanel.style.display = 'none';
+        return;
+    }
+
+    dom.rmSourcesPanel.style.display = 'block';
+    if (dom.rmSourcesCountTag) {
+        dom.rmSourcesCountTag.textContent = `${papers.length} papers`;
+    }
+
+    dom.rmSourcesGrid.innerHTML = papers.map((p, i) => `
+        <div class="source-card-item" data-paper-index="${i}">
+            <div class="source-card-header">
+                ${sourceBadgeHtml(p.source)}
+                <span class="source-card-score">${p.relevance_score != null ? p.relevance_score + '/10' : ''}</span>
+            </div>
+            <div class="source-card-title">${escapeHtml(p.title || 'Untitled')}</div>
+            <div class="source-card-meta">${escapeHtml(String(p.year || ''))}${p.authors && p.authors.length ? ' · ' + escapeHtml(Array.isArray(p.authors) ? p.authors[0] : String(p.authors)) : ''}</div>
+        </div>
+    `).join('');
+
+    dom.rmSourcesGrid.querySelectorAll('.source-card-item').forEach((card) => {
+        card.addEventListener('click', () => {
+            const idx = parseInt(card.dataset.paperIndex, 10);
+            openPaperInspector(papers[idx]);
+        });
+    });
+
+    refreshIcons();
 }
 
 function updateRMPipelineTracker(activeStageId, completedStages) {
@@ -1514,6 +1554,7 @@ function processRMSEEvent(data) {
         appendLogLine('Pipeline resumed.', 'info');
     } else if (data.event === 'node_update') {
         applyRMStatePayload(data.data || {});
+        renderRMSourcesPanel();
         appendLogLine(`Node updated: ${rmStageLabel(data.node)}`, 'success');
         if (data.data && data.data.corpus_stats) updateCorpusStats(data.data.corpus_stats);
         renderRMPaperLive();
