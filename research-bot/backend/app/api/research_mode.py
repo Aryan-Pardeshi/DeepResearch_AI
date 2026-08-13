@@ -332,15 +332,33 @@ async def get_research_mode_result(thread_id: str):
         raise HTTPException(status_code=404, detail="Research Mode thread not found")
 
     values = state.values
-    is_checkpoint = bool(state.next)
+
+    # state.next is non-empty whenever there is a following node queued, which is
+    # true both while genuinely paused at an interrupt() AND while a node is still
+    # actively executing between checkpoints (the checkpointer persists after each
+    # completed superstep, so "next" just names what comes after the last one that
+    # finished). values["hitl_checkpoint"] has the same problem: checkpoint_N_node
+    # writes it once and nothing clears it, so it stays truthy long after that
+    # checkpoint was approved and the pipeline moved on. Together these made every
+    # page reload during an active run (or a browser missing the checkpoint SSE
+    # event, see the frontend id:-prefix bug) redisplay the stale HITL panel for a
+    # checkpoint that had already been passed. state.interrupts is the only field
+    # that reflects whether the graph is truly blocked inside interrupt() right now.
+    pending_interrupt = state.interrupts[0] if state.interrupts else None
+    is_checkpoint = pending_interrupt is not None
     is_completed = not bool(state.next) and values.get("status") == "completed"
+
+    hitl_checkpoint = None
+    if is_checkpoint:
+        interrupt_payload = pending_interrupt.value if isinstance(pending_interrupt.value, dict) else {}
+        hitl_checkpoint = interrupt_payload.get("checkpoint") or values.get("hitl_checkpoint")
 
     return {
         "values": values,
         "next": list(state.next) if state.next else [],
         "is_checkpoint": is_checkpoint,
         "is_completed": is_completed,
-        "hitl_checkpoint": values.get("hitl_checkpoint"),
+        "hitl_checkpoint": hitl_checkpoint,
         "status": values.get("status")
     }
 

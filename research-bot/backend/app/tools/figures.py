@@ -91,6 +91,7 @@ def render_evidence_table(papers: List[Dict[str, Any]], hypotheses: List[str], o
 
     h_labels = [f"H{i+1}" for i in range(len(hypotheses))] if hypotheses else ["H1"]
     col_labels = ["Paper Title (Top 15)"] + h_labels
+    n_hyp_cols = len(h_labels)
 
     cell_text = []
     for p in sorted_papers:
@@ -100,22 +101,42 @@ def render_evidence_table(papers: List[Dict[str, Any]], hypotheses: List[str], o
         row = [title]
         for idx, h in enumerate(hypotheses or ["H1"]):
             h_key = f"H{idx+1}"
-            val = sup_map.get(h_key) or sup_map.get(h) or ""
-            row.append(str(val))
+            raw_val = str(sup_map.get(h_key) or sup_map.get(h) or "")
+            # Support values are typically short ("Yes"/"Supports"), but nothing
+            # bounded them, so a verbose model response here overflowed into the
+            # neighboring column exactly like the untruncated title did.
+            val = (raw_val[:22] + "...") if len(raw_val) > 25 else raw_val
+            row.append(val)
         cell_text.append(row)
 
-    fig, ax = plt.subplots(figsize=(10, max(2.5, 0.4 * len(cell_text) + 1.0)))
+    # ax.table() splits width evenly across columns by default. The title column
+    # needs far more room than the five short H1-H5 verdict columns, so without
+    # explicit colWidths every column was squeezed to the same narrow slice and
+    # the (already truncated) titles were cut again mid-word.
+    title_width = 0.46
+    hyp_width = (1.0 - title_width) / max(n_hyp_cols, 1)
+    col_widths = [title_width] + [hyp_width] * n_hyp_cols
+
+    fig, ax = plt.subplots(figsize=(11.5, max(2.5, 0.4 * len(cell_text) + 1.0)))
     ax.axis("off")
 
     table = ax.table(
         cellText=cell_text,
         colLabels=col_labels,
+        colWidths=col_widths,
         loc="center",
         cellLoc="left"
     )
     table.auto_set_font_size(False)
     table.set_fontsize(9)
     table.scale(1.2, 1.4)
+
+    # cellLoc="left" above applies uniformly; re-center just the H1-H5 columns
+    # (both header and body) so short verdicts don't look stranded against the
+    # left edge of their narrow column.
+    for (row_idx, col_idx), cell in table.get_celld().items():
+        if col_idx > 0:
+            cell.get_text().set_ha("center")
 
     plt.title("Evidence Mapping by Hypothesis", fontsize=11, fontweight="bold", pad=10)
     plt.savefig(output_path, dpi=200, bbox_inches="tight")

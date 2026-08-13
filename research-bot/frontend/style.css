@@ -548,7 +548,68 @@ main {
     font-size: 1rem;
     line-height: 1.6;
     color: var(--text-secondary);
-    white-space: pre-wrap;
+}
+
+/* Model text is rendered as markdown (see renderMarkdownSafe in app.js), so
+   reset the block elements marked emits inside these compact fields. Without
+   this, default <p>/<ul> margins double the spacing inside small cards. */
+.problem-statement-text > p:first-child,
+.subtask-content > p:first-child {
+    margin-top: 0;
+}
+.problem-statement-text > p:last-child,
+.subtask-content > p:last-child {
+    margin-bottom: 0;
+}
+.problem-statement-text > ul,
+.problem-statement-text > ol,
+.subtask-content > ul,
+.subtask-content > ol {
+    margin: 0.4rem 0;
+    padding-left: 1.25rem;
+}
+.problem-statement-text > ul:last-child,
+.problem-statement-text > ol:last-child,
+.subtask-content > ul:last-child,
+.subtask-content > ol:last-child {
+    margin-bottom: 0;
+}
+
+/* Model output regularly opens a section with a markdown "# Heading" line
+   (e.g. literature review snippets restating their own title). Rendered
+   through marked with no reset, that hit the browser's native h1/h2 UA
+   styles — 2rem+, bold, full text-primary white — inside a compact card
+   sized for 1rem body text, blowing out the checkpoint panel's layout.
+   Scale headings down to sit just above the body copy instead of a
+   separate oversized block, keeping them the bright/white shade rather
+   than the paragraph's dimmer secondary gray so they still read as a
+   heading, just not a page-title-sized one. */
+.problem-statement-text h1,
+.problem-statement-text h2,
+.problem-statement-text h3,
+.problem-statement-text h4,
+.problem-statement-text h5,
+.problem-statement-text h6,
+.subtask-content h1,
+.subtask-content h2,
+.subtask-content h3,
+.subtask-content h4,
+.subtask-content h5,
+.subtask-content h6 {
+    font-family: inherit;
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--text-primary);
+    margin: 0 0 0.5rem 0;
+}
+.problem-statement-text > h1:first-child,
+.problem-statement-text > h2:first-child,
+.problem-statement-text > h3:first-child,
+.subtask-content > h1:first-child,
+.subtask-content > h2:first-child,
+.subtask-content > h3:first-child {
+    margin-top: 0;
 }
 
 /* Subtasks List */
