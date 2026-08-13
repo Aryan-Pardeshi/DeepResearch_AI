@@ -71,7 +71,8 @@ const state = {
         abstract: '',
         title: '',
         activeStage: 'scope_definition',
-        completedStages: []
+        completedStages: [],
+        screenedPapers: []
     }
 };
 
@@ -164,10 +165,28 @@ function applyRMStatePayload(payload) {
             state.rm[key] = value;
         }
     });
+    // paper_fetcher sends raw_papers before screening; paper_screener and
+    // fulltext_fetcher both send screened_papers (the latter adds
+    // content_excerpt). Whichever arrives most recently wins — screened_papers
+    // is always the more complete list once it exists.
+    if (Array.isArray(payload.screened_papers)) {
+        state.rm.screenedPapers = payload.screened_papers;
+    } else if (Array.isArray(payload.raw_papers) && state.rm.screenedPapers.length === 0) {
+        state.rm.screenedPapers = payload.raw_papers;
+    }
     // The backend sends counts under different names depending on the endpoint:
     // SSE sends raw_papers_count, the rehydrate endpoint sends the arrays.
     if (Array.isArray(payload.raw_papers)) state.rm.rawPapersCount = payload.raw_papers.length;
     if (Array.isArray(payload.screened_papers)) state.rm.screenedPapersCount = payload.screened_papers.length;
+}
+
+// Papers arrive from the backend already relevance-ranked in practice, but
+// don't rely on that — sort explicitly so the checkpoint strip and library
+// panel always show the strongest matches first regardless of arrival order.
+function getScreenedPapers() {
+    return [...state.rm.screenedPapers].sort(
+        (a, b) => (b.relevance_score || 0) - (a.relevance_score || 0)
+    );
 }
 
 // Escapes model- and user-authored text before it goes into an innerHTML string.
@@ -712,9 +731,10 @@ async function checkBackendHealth() {
 function saveRMSession() {
     if (!state.rm.threadId) return;
     try {
+        const { screenedPapers, ...persistableRmState } = state.rm;
         const sessionData = {
             threadId: state.rm.threadId,
-            rmState: state.rm,
+            rmState: persistableRmState,
             lastSeq: state.rm.lastSeq || 0,
             timestamp: Date.now()
         };
