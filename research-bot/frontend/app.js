@@ -1195,20 +1195,43 @@ function renderRMHitlPanel(checkpoint) {
         dom.rmHitlTitle.textContent = 'Checkpoint 2: Literature Review & Framework Review';
         dom.rmHitlBadge.textContent = 'Checkpoint 2 of 4';
 
+        const topPapers = getScreenedPapers().slice(0, 10);
+        const evidenceRows = topPapers.map((p, i) => `
+            <div class="evidence-row" data-paper-index="${i}">
+                ${sourceBadgeHtml(p.source)}
+                <span class="evidence-title">${escapeHtml(p.title || 'Untitled')}</span>
+                <span class="evidence-year">${escapeHtml(String(p.year || ''))}</span>
+                <span class="evidence-score">${p.relevance_score != null ? p.relevance_score + '/10' : ''}</span>
+            </div>
+        `).join('');
+
         dom.rmHitlBody.innerHTML = `
+            ${topPapers.length ? `
+            <div class="form-group">
+                <label class="form-label">Evidence Used <span class="label-tag">${state.rm.screenedPapers.length} papers screened</span></label>
+                <div class="evidence-list">${evidenceRows}</div>
+            </div>
+            ` : ''}
             <div class="form-group">
                 <label class="form-label">Synthesized Literature Review Snippet</label>
-                <div class="problem-statement-text">${renderMarkdownSafe((state.rm.literatureReview || '').slice(0, 400))}...</div>
+                ${renderTruncatable(state.rm.literatureReview)}
             </div>
             <div class="form-group">
                 <label class="form-label">Identified Research Gap</label>
-                <div class="problem-statement-text">${renderMarkdownSafe(state.rm.researchGap)}</div>
+                ${renderTruncatable(state.rm.researchGap)}
             </div>
             <div class="form-group">
                 <label class="form-label">Proposed Conceptual Framework</label>
-                <div class="problem-statement-text">${renderMarkdownSafe(state.rm.conceptualFramework)}</div>
+                ${renderTruncatable(state.rm.conceptualFramework)}
             </div>
         `;
+
+        dom.rmHitlBody.querySelectorAll('.evidence-row').forEach((row) => {
+            row.addEventListener('click', () => {
+                const idx = parseInt(row.dataset.paperIndex, 10);
+                openPaperInspector(topPapers[idx]);
+            });
+        });
     } else if (checkpoint === 'checkpoint_3') {
         dom.rmHitlTitle.textContent = 'Checkpoint 3: Hypotheses Review';
         dom.rmHitlBadge.textContent = 'Checkpoint 3 of 4';
