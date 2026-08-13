@@ -192,6 +192,21 @@ function renderMarkdown(md) {
     return `<pre class="markdown-fallback">${escapeHtml(md || '')}</pre>`;
 }
 
+// Same as renderMarkdown but HTML-escapes first, so model text that contains
+// `<`, `>` or `&` (e.g. "p < 0.05") can't inject markup, while **bold**,
+// lists and other markdown still render. When marked wraps the result in a
+// single <p>, the tags are dropped so one-line fields (e.g. a checkpoint
+// summary) sit flush without picking up block margins.
+function renderMarkdownSafe(md) {
+    const safe = escapeHtml(md || '');
+    if (window.marked && typeof window.marked.parse === 'function') {
+        const html = window.marked.parse(safe).trim();
+        const single = html.match(/^<p>([\s\S]*)<\/p>$/);
+        return single ? single[1] : html;
+    }
+    return `<pre class="markdown-fallback">${safe}</pre>`;
+}
+
 function refreshIcons() {
     if (window.lucide && typeof window.lucide.createIcons === 'function') {
         window.lucide.createIcons();
@@ -735,31 +750,33 @@ async function restoreRMSessionOnLoad() {
         switchMode('researchmode');
         switchPanel(dom.rmWorkspacePanel);
 
-        // 3. Render current progress from restored local state
+        // 3. Render current progress from restored local state. This local cache
+        // can only say "the last checkpoint we knew about was X" — it cannot tell
+        // us whether the pipeline is still paused there or has since moved past
+        // it (see the /research-mode/result fix below for why). So this pass
+        // shows the paper/tracker as last known, but leaves the HITL panel alone;
+        // step 4 below is the only thing authorized to decide whether that panel
+        // should actually be visible.
         const currentCp = (state.rm.hitlCheckpoint || 'checkpoint_1').replace(/_(approved|revising)$/, '');
         const cpIdx = RM_STAGES.findIndex(s => s.id === currentCp);
         const completedStages = cpIdx > 0 ? RM_STAGES.slice(0, cpIdx).map(s => s.id) : [];
         updateRMPipelineTracker(currentCp, completedStages);
-
+        if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
         if (state.rm.status === 'completed') {
-            if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
             renderRMPaperFinal();
-        } else if (state.rm.hitlApproved && !state.rm.hitlCheckpointPending) {
-            if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
-            if (typeof getPaperMarkdown === 'function' && getPaperMarkdown().trim().length > 50) {
-                renderRMPaperLive(false);
-            }
-        } else {
-            renderRMHitlPanel(currentCp);
-            if (typeof getPaperMarkdown === 'function' && getPaperMarkdown().trim().length > 50) {
-                renderRMPaperLive(false);
-            }
+        } else if (typeof getPaperMarkdown === 'function' && getPaperMarkdown().trim().length > 50) {
+            renderRMPaperLive(false);
         }
 
         showResumeBanner({ hitl_checkpoint: currentCp, is_completed: state.rm.status === 'completed' });
         updateNewRunVisibility();
 
-        // 4. Background-sync with backend if reachable (without wiping local storage on offline/404)
+        // 4. Ask the backend for ground truth and reconcile. values["hitl_checkpoint"]
+        // and a non-empty state.next are both true for the entire rest of the run
+        // after a checkpoint is passed, not just while paused there — so this now
+        // relies on the backend's is_checkpoint, which is only true when the graph
+        // is genuinely blocked inside interrupt() (see research_mode.py). Three
+        // outcomes: finished, genuinely paused, or still executing.
         try {
             const res = await fetch(`${API_BASE_URL}/research-mode/result/${session.threadId}`);
             if (res.ok) {
@@ -768,16 +785,18 @@ async function restoreRMSessionOnLoad() {
                 // straight onto state.rm (which is camelCase) meant a rehydrated
                 // session rendered an empty paper and empty checkpoint panels.
                 applyRMStatePayload(data.values || {});
-                if (data.hitl_checkpoint) state.rm.hitlCheckpoint = data.hitl_checkpoint;
                 if (data.status) state.rm.status = data.status;
 
                 if (data.is_completed) {
+                    state.rm.hitlCheckpoint = 'title';
                     updateRMPipelineTracker('title', RM_STAGES.map(s => s.id));
                     if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
                     renderRMPaperFinal();
-                } else if (data.is_checkpoint || data.hitl_checkpoint) {
-                    const cp = (data.hitl_checkpoint || 'checkpoint_1').replace(/_(approved|revising)$/, '');
+                } else if (data.is_checkpoint && data.hitl_checkpoint) {
+                    const cp = data.hitl_checkpoint.replace(/_(approved|revising)$/, '');
                     state.rm.hitlCheckpoint = cp;
+                    state.rm.hitlCheckpointPending = true;
+                    state.rm.hitlApproved = false;
                     const idx = RM_STAGES.findIndex(s => s.id === cp);
                     const doneStages = idx > 0 ? RM_STAGES.slice(0, idx).map(s => s.id) : [];
                     updateRMPipelineTracker(cp, doneStages);
@@ -785,6 +804,17 @@ async function restoreRMSessionOnLoad() {
                     if (typeof getPaperMarkdown === 'function' && getPaperMarkdown().trim().length > 50) {
                         renderRMPaperLive(false);
                     }
+                } else {
+                    // Not finished, not paused: a node is actively running on the
+                    // backend right now. Show live progress and reopen the event
+                    // stream so it keeps updating instead of sitting frozen.
+                    if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
+                    state.rm.hitlApproved = true;
+                    state.rm.hitlCheckpointPending = false;
+                    if (typeof getPaperMarkdown === 'function' && getPaperMarkdown().trim().length > 50) {
+                        renderRMPaperLive(true);
+                    }
+                    reconnectRMStream();
                 }
                 saveRMSession();
             }
@@ -1061,7 +1091,7 @@ function renderRMHitlPanel(checkpoint) {
         dom.rmHitlBody.innerHTML = `
             <div class="form-group">
                 <label class="form-label">Problem Statement</label>
-                <div class="problem-statement-text">${escapeHtml(state.rm.problemStatement)}</div>
+                <div class="problem-statement-text">${renderMarkdownSafe(state.rm.problemStatement)}</div>
             </div>
             <div class="form-group">
                 <label class="form-label">Research Objectives <span class="label-tag">auto-defined</span></label>
@@ -1069,7 +1099,7 @@ function renderRMHitlPanel(checkpoint) {
                     ${objectives.map((o, i) => `
                         <div class="subtask-item">
                             <span class="subtask-number">O${i + 1}</span>
-                            <span class="subtask-content">${escapeHtml(o)}</span>
+                            <span class="subtask-content">${renderMarkdownSafe(o)}</span>
                         </div>
                     `).join('')}
                 </div>
@@ -1080,7 +1110,7 @@ function renderRMHitlPanel(checkpoint) {
                     ${questions.map((q, i) => `
                         <div class="subtask-item">
                             <span class="subtask-number">RQ${i + 1}</span>
-                            <span class="subtask-content">${escapeHtml(q)}</span>
+                            <span class="subtask-content">${renderMarkdownSafe(q)}</span>
                         </div>
                     `).join('')}
                 </div>
@@ -1099,15 +1129,15 @@ function renderRMHitlPanel(checkpoint) {
         dom.rmHitlBody.innerHTML = `
             <div class="form-group">
                 <label class="form-label">Synthesized Literature Review Snippet</label>
-                <div class="problem-statement-text">${escapeHtml((state.rm.literatureReview || '').slice(0, 400))}...</div>
+                <div class="problem-statement-text">${renderMarkdownSafe((state.rm.literatureReview || '').slice(0, 400))}...</div>
             </div>
             <div class="form-group">
                 <label class="form-label">Identified Research Gap</label>
-                <div class="problem-statement-text">${escapeHtml(state.rm.researchGap)}</div>
+                <div class="problem-statement-text">${renderMarkdownSafe(state.rm.researchGap)}</div>
             </div>
             <div class="form-group">
                 <label class="form-label">Proposed Conceptual Framework</label>
-                <div class="problem-statement-text">${escapeHtml(state.rm.conceptualFramework)}</div>
+                <div class="problem-statement-text">${renderMarkdownSafe(state.rm.conceptualFramework)}</div>
             </div>
         `;
     } else if (checkpoint === 'checkpoint_3') {
@@ -1121,7 +1151,7 @@ function renderRMHitlPanel(checkpoint) {
                     ${(state.rm.hypotheses || []).map((h, i) => `
                         <div class="subtask-item">
                             <span class="subtask-number">H${i+1}</span>
-                            <span class="subtask-content">${escapeHtml(h)}</span>
+                            <span class="subtask-content">${renderMarkdownSafe(h)}</span>
                         </div>
                     `).join('')}
                 </div>
@@ -1134,15 +1164,15 @@ function renderRMHitlPanel(checkpoint) {
         dom.rmHitlBody.innerHTML = `
             <div class="form-group">
                 <label class="form-label">Research Design</label>
-                <div class="problem-statement-text">${escapeHtml(state.rm.researchDesign)}</div>
+                <div class="problem-statement-text">${renderMarkdownSafe(state.rm.researchDesign)}</div>
             </div>
             <div class="form-group">
                 <label class="form-label">Data Collection Plan</label>
-                <div class="problem-statement-text">${escapeHtml(state.rm.dataCollectionPlan)}</div>
+                <div class="problem-statement-text">${renderMarkdownSafe(state.rm.dataCollectionPlan)}</div>
             </div>
             <div class="form-group">
                 <label class="form-label">Data Analysis Plan</label>
-                <div class="problem-statement-text">${escapeHtml(state.rm.dataAnalysisPlan)}</div>
+                <div class="problem-statement-text">${renderMarkdownSafe(state.rm.dataAnalysisPlan)}</div>
             </div>
         `;
     } else {
@@ -1195,6 +1225,14 @@ async function handleRMApprove(feedback) {
         `;
     }
 
+    await openRMEventStream(feedback);
+}
+
+// Opens (or reconnects to) the Research Mode SSE stream. Shared by handleRMApprove
+// (after the user acts on a checkpoint) and reconnectRMStream (page reload while
+// the pipeline is still running server-side) so both get the same retry and
+// event-parsing behavior instead of two copies drifting apart.
+async function openRMEventStream(message) {
     if (activeRMController) activeRMController.abort();
     activeRMController = new AbortController();
 
@@ -1205,7 +1243,7 @@ async function handleRMApprove(feedback) {
 
     while (attempt <= maxRetries && !isTerminal) {
         try {
-            const reqMessage = attempt === 0 ? (feedback || '') : '';
+            const reqMessage = attempt === 0 ? (message || '') : '';
             const reqPayload = { thread_id: state.rm.threadId, message: reqMessage };
             if (state.rm.lastSeq !== undefined && state.rm.lastSeq !== null) {
                 reqPayload.from_seq = state.rm.lastSeq;
@@ -1239,9 +1277,17 @@ async function handleRMApprove(feedback) {
                 buffer = events.pop();
 
                 for (const rawEvent of events) {
-                    if (rawEvent.startsWith('data: ')) {
+                    // Every buffered event (node_start, node_update, checkpoint,
+                    // completed, error, resume) is prefixed with its own "id: N"
+                    // line before "data: ", so rawEvent never actually starts with
+                    // "data: " for those. Only token_stream (unbuffered, no id:
+                    // line) ever matched here — every other event was silently
+                    // dropped, which is why the tracker/paper/checkpoint panel
+                    // never advanced past the very first node_start.
+                    for (const line of rawEvent.split('\n')) {
+                        if (!line.startsWith('data: ')) continue;
                         try {
-                            const data = JSON.parse(rawEvent.slice(6));
+                            const data = JSON.parse(line.slice(6));
                             receivedEventsCount++;
                             const evt = processRMSEEvent(data);
                             if (evt === 'checkpoint' || evt === 'completed' || evt === 'error') {
@@ -1289,6 +1335,19 @@ async function handleRMApprove(feedback) {
             await new Promise(res => setTimeout(res, 1000 * Math.pow(1.5, attempt - 1)));
         }
     }
+}
+
+// Re-attaches to an already-running pipeline after a page reload. The backend
+// keeps executing in its own asyncio task regardless of whether any browser is
+// listening, so without this the frontend was permanently frozen on whatever it
+// last saw before the reload — new node_update/checkpoint/completed events had
+// nowhere to land until the user manually clicked something. from_seq (read from
+// state.rm.lastSeq, restored from localStorage) makes the backend replay only
+// what was missed instead of restreaming from the start.
+async function reconnectRMStream() {
+    if (!state.rm.threadId) return;
+    appendLogLine('Reconnecting to live pipeline…', 'info');
+    await openRMEventStream('');
 }
 
 function appendLogLine(msg, level = 'info') {
@@ -1575,14 +1634,14 @@ async function handlePlanResearch() {
 
 function renderApprovalPanel() {
     dom.approvalPsText.innerHTML = '';
-    dom.approvalPsText.textContent = state.ps || '';
+    dom.approvalPsText.innerHTML = renderMarkdownSafe(state.ps);
     dom.approvalSubtasksContainer.innerHTML = '';
     state.plan.forEach((task, idx) => {
         const item = document.createElement('div');
         item.className = 'subtask-item';
         item.innerHTML = `
             <div class="subtask-number">${idx + 1}</div>
-            <div class="subtask-content">${escapeHtml(task)}</div>
+            <div class="subtask-content">${renderMarkdownSafe(task)}</div>
         `;
         dom.approvalSubtasksContainer.appendChild(item);
     });

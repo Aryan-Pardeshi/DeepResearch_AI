@@ -246,3 +246,4 @@ research-bot/scratch/
 research-bot/test_*.docx
 e2e_*.pdf
 e2e_*.docx
+research-bot/backend/app/static/exports/
