@@ -3103,3 +3103,42 @@ select:focus-visible,
     color: var(--text-secondary);
     margin: 0;
 }
+
+/* Source badges — reused brand marks for individual paper rows (checkpoint
+   2 evidence strip, sources library panel). Smaller than the landing page's
+   .index-mark since these sit inline next to a paper title. */
+.source-badge {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+    flex-shrink: 0;
+    vertical-align: middle;
+}
+
+/* Collapsed-by-default long-text blocks in checkpoint panels. */
+.truncatable {
+    max-height: 8.5em;
+    overflow: hidden;
+    position: relative;
+    mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+}
+.truncatable.expanded {
+    max-height: none;
+    mask-image: none;
+    -webkit-mask-image: none;
+}
+.truncate-toggle {
+    display: block;
+    margin: 0.4rem 0 1rem 0;
+    padding: 0;
+    background: none;
+    border: none;
+    color: var(--accent-purple);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.truncate-toggle:hover {
+    text-decoration: underline;
+}

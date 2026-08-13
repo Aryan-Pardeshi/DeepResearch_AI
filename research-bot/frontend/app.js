@@ -226,6 +226,43 @@ function renderMarkdownSafe(md) {
     return `<pre class="markdown-fallback">${safe}</pre>`;
 }
 
+const SOURCE_BADGE_MAP = {
+    openalex: { src: 'assets/openalex.png', label: 'OpenAlex', cls: 'index-mark-openalex' },
+    semantic_scholar: { src: 'assets/semantic-scholar.png', label: 'Semantic Scholar', cls: '' },
+    arxiv: { src: 'assets/arxiv.png', label: 'arXiv', cls: '' }
+};
+
+// Reuses the same brand marks the landing page already downloaded (see
+// assets/*.png) so a paper's origin index is visually recognizable instead
+// of a plain text label like "openalex".
+function sourceBadgeHtml(source) {
+    const entry = SOURCE_BADGE_MAP[source];
+    if (!entry) return '';
+    return `<img class="source-badge ${entry.cls}" src="${entry.src}" alt="${entry.label}" title="${entry.label}" width="14" height="14" loading="lazy">`;
+}
+
+let truncatableIdCounter = 0;
+
+// Checkpoint 2 was showing researchGap/conceptualFramework in full — observed
+// at ~2500 words on screen in one live test run. literatureReview already had
+// a hard 400-char cut with no way to read past it. This gives every long
+// snippet the same collapsed-by-default treatment with an actual way out.
+function renderTruncatable(text, opts = {}) {
+    const charLimit = opts.charLimit || 400;
+    const safeText = text || '';
+    const id = `trunc-${++truncatableIdCounter}`;
+    const rendered = renderMarkdownSafe(safeText);
+
+    if (safeText.length <= charLimit) {
+        return `<div class="problem-statement-text">${rendered}</div>`;
+    }
+
+    return `
+        <div class="problem-statement-text truncatable" id="${id}">${rendered}</div>
+        <button type="button" class="truncate-toggle" data-truncate-target="${id}">Show full text</button>
+    `;
+}
+
 function refreshIcons() {
     if (window.lucide && typeof window.lucide.createIcons === 'function') {
         window.lucide.createIcons();
@@ -545,6 +582,17 @@ function setupEventListeners() {
             e.target.classList.add('active');
             state.searchTopic = [e.target.dataset.topic];
         }
+    });
+
+    // Delegated so it works for truncatable blocks rendered at any point
+    // after this listener is attached (checkpoint panels, library panel).
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.truncate-toggle');
+        if (!btn) return;
+        const target = document.getElementById(btn.dataset.truncateTarget);
+        if (!target) return;
+        const expanded = target.classList.toggle('expanded');
+        btn.textContent = expanded ? 'Show less' : 'Show full text';
     });
 
     dom.planResearchBtn?.addEventListener('click', handlePlanResearch);
