@@ -235,7 +235,7 @@ cython_debug/
 # VS Code
 .vscode/
 api_tests.py
-r e s e a r c h - b o t / . e n v  
+research-bot/.env
 
 # Data directory and databases
 data/
