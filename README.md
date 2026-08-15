@@ -6,7 +6,6 @@ An AI-powered multi-agent research workspace with **two modes**: fast web resear
 
 > Hosted on Render's free tier — the first request after idle takes ~50s to cold-start.
 
-<video src="https://github.com/user-attachments/assets/730c43ce-b750-4934-bc41-670b04a34db1" controls="controls" style="max-width: 100%;"></video>
 
 ---
 
