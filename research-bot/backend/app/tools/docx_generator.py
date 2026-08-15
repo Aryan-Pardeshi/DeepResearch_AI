@@ -1,4 +1,5 @@
 import logging
+import re
 from pathlib import Path
 from typing import Dict, Any, List
 import docx
@@ -78,6 +79,82 @@ def generate_paper_docx(state: Dict[str, Any], output_path: str) -> str:
 
         doc.add_paragraph() # Spacer
 
+    # Markdown -> DOCX body rendering so model text with # / * / ** markers is
+    # formatted instead of printed literally (the bug: bodies used add_run raw,
+    # so only the section headings from add_heading ever rendered).
+    _HEADING_RE = re.compile(r"^(#{1,6})\s+(.*)$")
+    _BULLET_RE = re.compile(r"^[-*\u2022]\s+(.*)$")
+    _NUMBERED_RE = re.compile(r"^(\d+)[.)]\s+(.*)$")
+    _INLINE_RE = re.compile(r"(\*\*\*|\*\*|__|_|\*|`)(.*?)\1", re.DOTALL)
+
+    def _add_inline_runs(paragraph, text: str):
+        """Splits a line on inline markdown (*, **, __, _, `) into styled runs."""
+        pos = 0
+        for m in _INLINE_RE.finditer(text):
+            if m.start() > pos:
+                paragraph.add_run(text[pos:m.start()])
+            marker = m.group(1)
+            inner = m.group(2)
+            run = paragraph.add_run(inner)
+            if marker in ("***", "**", "__"):
+                run.bold = True
+                if marker == "***":
+                    run.italic = True
+            elif marker == "*":
+                run.italic = True
+            elif marker == "_":
+                run.italic = True
+            elif marker == "`":
+                run.font.name = "Consolas"
+            pos = m.end()
+        if pos < len(text):
+            paragraph.add_run(text[pos:])
+
+    def _add_markdown_block(text: str):
+        """Renders a markdown string as DOCX paragraphs (headings, lists, prose)."""
+        text = (text or "").strip()
+        if not text:
+            return
+        paragraph_lines: List[str] = []
+        for raw in text.splitlines():
+            line = raw.rstrip()
+            stripped = line.strip()
+            if not stripped:
+                _flush_paragraph_buffer(paragraph_lines)
+                paragraph_lines = []
+                continue
+            if re.fullmatch(r"(-{3,}|\*{3,}|_{3,})", stripped):
+                _flush_paragraph_buffer(paragraph_lines)
+                paragraph_lines = []
+                continue
+            heading = _HEADING_RE.match(stripped)
+            bullet = _BULLET_RE.match(stripped)
+            numbered = _NUMBERED_RE.match(stripped)
+            if heading:
+                _flush_paragraph_buffer(paragraph_lines)
+                level = min(len(heading.group(1)), 6)
+                p = doc.add_heading(level=max(level, 2))
+                _add_inline_runs(p, heading.group(2).strip())
+                continue
+            if bullet:
+                _flush_paragraph_buffer(paragraph_lines)
+                p = doc.add_paragraph(style="List Bullet")
+                _add_inline_runs(p, bullet.group(1).strip())
+                continue
+            if numbered:
+                _flush_paragraph_buffer(paragraph_lines)
+                p = doc.add_paragraph(style="List Number")
+                _add_inline_runs(p, numbered.group(2).strip())
+                continue
+            paragraph_lines.append(stripped)
+        _flush_paragraph_buffer(paragraph_lines)
+
+    def _flush_paragraph_buffer(lines: List[str]):
+        if not lines:
+            return
+        p = doc.add_paragraph()
+        _add_inline_runs(p, " ".join(lines))
+
     # Helper for adding formatted sections
     def add_section(heading_title: str, content: Any, is_list: bool = False):
         if not content:
@@ -91,17 +168,12 @@ def generate_paper_docx(state: Dict[str, Any], output_path: str) -> str:
         h.paragraph_format.space_before = Pt(12)
         h.paragraph_format.space_after = Pt(6)
 
-        if is_list and isinstance(content, list):
+        if isinstance(content, list):
             for item in content:
                 p = doc.add_paragraph(style='List Bullet')
-                p.add_run(str(item))
-        elif isinstance(content, list):
-            for item in content:
-                p = doc.add_paragraph()
-                p.add_run(str(item))
+                _add_inline_runs(p, str(item))
         else:
-            p = doc.add_paragraph()
-            p.add_run(str(content))
+            _add_markdown_block(str(content))
 
     # Core Academic Sections
     add_section("1. Introduction", state.get("introduction"))
