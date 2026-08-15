@@ -238,11 +238,22 @@ function escapeHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
-// marked and lucide come from a CDN. If that request is blocked the page must
-// still work instead of throwing on every render.
+// marked, DOMPurify and lucide come from a CDN. If that request is blocked the page must
+// fail closed safely instead of passing unescaped content to HTML sinks.
+function sanitizeHtml(rawHtml) {
+    if (window.DOMPurify && typeof window.DOMPurify.sanitize === 'function') {
+        return window.DOMPurify.sanitize(rawHtml);
+    }
+    return escapeHtml(rawHtml || '');
+}
+
 function renderMarkdown(md) {
     if (window.marked && typeof window.marked.parse === 'function') {
-        return window.marked.parse(md || '');
+        const raw = window.marked.parse(md || '');
+        if (window.DOMPurify && typeof window.DOMPurify.sanitize === 'function') {
+            return window.DOMPurify.sanitize(raw);
+        }
+        return `<pre class="markdown-fallback">${escapeHtml(md || '')}</pre>`;
     }
     return `<pre class="markdown-fallback">${escapeHtml(md || '')}</pre>`;
 }
@@ -257,7 +268,11 @@ function renderMarkdownSafe(md) {
     if (window.marked && typeof window.marked.parse === 'function') {
         const html = window.marked.parse(safe).trim();
         const single = html.match(/^<p>([\s\S]*)<\/p>$/);
-        return single ? single[1] : html;
+        const unwrapped = single ? single[1] : html;
+        if (window.DOMPurify && typeof window.DOMPurify.sanitize === 'function') {
+            return window.DOMPurify.sanitize(unwrapped);
+        }
+        return escapeHtml(unwrapped);
     }
     return `<pre class="markdown-fallback">${safe}</pre>`;
 }
@@ -2001,21 +2016,44 @@ function updateCorpusStats(stats) {
 
 function openPaperInspector(paper) {
     if (!paper || !dom.paperDetailModal) return;
+    const title = escapeHtml(paper.title || 'Paper Details');
     if (dom.modalPaperTitle) dom.modalPaperTitle.textContent = paper.title || 'Paper Details';
     if (dom.modalPaperBody) {
+        const authors = Array.isArray(paper.authors) ? paper.authors.map(escapeHtml).join(', ') : escapeHtml(paper.authors || 'N/A');
+        const venue = escapeHtml(paper.venue || paper.journal || 'Academic Index');
+        const year = escapeHtml(String(paper.year || 'N/A'));
+        const doi = paper.doi ? `<a href="https://doi.org/${encodeURIComponent(paper.doi)}" target="_blank" rel="noopener noreferrer" style="color: var(--academic-blue);">${escapeHtml(paper.doi)}</a>` : 'N/A';
+        
+        let pdfLink = '<span style="color: var(--text-muted);">No PDF Direct Link</span>';
+        if (typeof paper.pdf_url === 'string' && paper.pdf_url.trim()) {
+            try {
+                const parsedUrl = new URL(paper.pdf_url.trim());
+                if (parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') {
+                    const safeHref = escapeHtml(parsedUrl.href);
+                    pdfLink = `<a href="${safeHref}" target="_blank" rel="noopener noreferrer" style="color: var(--emerald-accent);">[Open Access PDF Link]</a>`;
+                }
+            } catch (e) {
+                // Invalid URL, retains no-link fallback
+            }
+        }
+
+        const score = escapeHtml(String(paper.relevance_score ?? 'N/A'));
+        const excerpt = escapeHtml(paper.fulltext_excerpt || paper.abstract || 'No full-text excerpt extracted for this paper.');
+
         dom.modalPaperBody.innerHTML = `
             <div style="margin-bottom: 1rem;">
-                <h4 style="margin: 0 0 0.5rem 0; color: var(--academic-blue); font-size: 1.05rem;">${paper.title || 'Untitled'}</h4>
-                <p style="margin: 0.25rem 0; color: var(--text-muted);"><strong>Authors:</strong> ${Array.isArray(paper.authors) ? paper.authors.join(', ') : (paper.authors || 'N/A')}</p>
-                <p style="margin: 0.25rem 0; color: var(--text-muted);"><strong>Venue / Year:</strong> ${paper.venue || paper.journal || 'Academic Index'} (${paper.year || 'N/A'})</p>
-                <p style="margin: 0.25rem 0;"><strong>DOI:</strong> ${paper.doi ? `<a href="https://doi.org/${paper.doi}" target="_blank" style="color: var(--academic-blue);">${paper.doi}</a>` : 'N/A'}</p>
-                <p style="margin: 0.25rem 0;"><strong>PDF Source:</strong> ${paper.pdf_url ? `<a href="${paper.pdf_url}" target="_blank" style="color: var(--emerald-accent);">[Open Access PDF Link]</a>` : '<span style="color: var(--text-muted);">No PDF Direct Link</span>'}</p>
+                <h4 style="margin: 0 0 0.5rem 0; color: var(--academic-blue); font-size: 1.05rem;">${title}</h4>
+                <p style="margin: 0.25rem 0; color: var(--text-muted);"><strong>Authors:</strong> ${authors}</p>
+                <p style="margin: 0.25rem 0; color: var(--text-muted);"><strong>Venue / Year:</strong> ${venue} (${year})</p>
+                <p style="margin: 0.25rem 0;"><strong>DOI:</strong> ${doi}</p>
+                <p style="margin: 0.25rem 0;"><strong>PDF Source:</strong> ${pdfLink}</p>
             </div>
             <div style="background: var(--bg-surface); padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 1rem;">
-                <p style="margin: 0 0 0.25rem 0; font-weight: 600;">Relevance Score: <span style="color: var(--academic-blue);">${paper.relevance_score || 'N/A'}/10</span></p>
-            <div style="margin-top: 1rem;">
-                <h5 style="margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: 600;">Extracted Full-Text Excerpt</h5>
-                <pre style="white-space: pre-wrap; font-family: monospace; font-size: 0.82rem; background: #0f172a; color: #f8fafc; padding: 0.85rem; border-radius: 8px; max-height: 250px; overflow-y: auto;">${paper.fulltext_excerpt || paper.abstract || 'No full-text excerpt extracted for this paper.'}</pre>
+                <p style="margin: 0 0 0.25rem 0; font-weight: 600;">Relevance Score: <span style="color: var(--academic-blue);">${score}/10</span></p>
+                <div style="margin-top: 1rem;">
+                    <h5 style="margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: 600;">Extracted Full-Text Excerpt</h5>
+                    <pre style="white-space: pre-wrap; font-family: monospace; font-size: 0.82rem; background: #0f172a; color: #f8fafc; padding: 0.85rem; border-radius: 8px; max-height: 250px; overflow-y: auto;">${excerpt}</pre>
+                </div>
             </div>
         `;
     }
