@@ -5,11 +5,20 @@ from fastapi.responses import StreamingResponse
 # SQLite checkpointer, and an import-time binding would pin the in-memory one.
 from backend.app.graph.builder import get_research_graph
 import uuid
-from pydantic import BaseModel
 import json
 import asyncio
+import re
 
 from langgraph.types import Command
+
+THREAD_ID_PATTERN = re.compile(r"[a-zA-Z0-9\-_]{1,64}")
+
+
+def _validate_thread_id(thread_id: str) -> str:
+    if not thread_id or not THREAD_ID_PATTERN.fullmatch(thread_id):
+        raise HTTPException(status_code=400, detail="Invalid thread ID format")
+    return thread_id
+
 
 class ResearchStartRequest(BaseModel):
     query: str
@@ -63,15 +72,16 @@ async def run_research(request: ResearchStartRequest):
 # SSE
 @router.post("/research/approve")
 async def approve_plan(request: ResearchApproveRequest):
-    config = {"configurable": {"thread_id": request.thread_id}}
+    thread_id = _validate_thread_id(request.thread_id)
+    config = {"configurable": {"thread_id": thread_id}}
 
     async def event_generator():
         current_task = asyncio.current_task()
-        active_tasks[request.thread_id] = current_task
+        active_tasks[thread_id] = current_task
         try:
             try:
                 # 1. Notify the frontend immediately that we are resuming graph execution for this thread
-                yield f"data: {json.dumps({'event': 'resume', 'thread_id': request.thread_id})}\n\n"
+                yield f"data: {json.dumps({'event': 'resume', 'thread_id': thread_id})}\n\n"
                 # This is a workaround for SSE over HTTP
                 await asyncio.sleep(0.01)
                 
@@ -219,7 +229,8 @@ async def approve_plan(request: ResearchApproveRequest):
 
 @router.get("/research/result/{thread_id}")
 async def get_result(thread_id: str):
-    config = {"configurable": {"thread_id": thread_id}}
+    valid_id = _validate_thread_id(thread_id)
+    config = {"configurable": {"thread_id": valid_id}}
     state = await get_research_graph().aget_state(config)
     if not state.values:
         raise HTTPException(status_code=404, detail="Thread not found")
@@ -233,8 +244,9 @@ async def get_result(thread_id: str):
 
 @router.post("/research/cancel")
 async def cancel_research(request: CancelRequest):
-    task = active_tasks.get(request.thread_id)
+    valid_id = _validate_thread_id(request.thread_id)
+    task = active_tasks.get(valid_id)
     if task:
         task.cancel()
-        return {"status": "success", "message": f"Cancelled research for thread {request.thread_id}"}
-    return {"status": "not_running", "message": f"No active research found for thread {request.thread_id}"}
+        return {"status": "success", "message": f"Cancelled research for thread {valid_id}"}
+    return {"status": "not_running", "message": f"No active research found for thread {valid_id}"}

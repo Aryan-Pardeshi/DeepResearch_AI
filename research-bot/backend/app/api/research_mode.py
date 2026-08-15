@@ -4,6 +4,7 @@ import json
 import time
 import asyncio
 import logging
+import re
 from pathlib import Path
 from typing import List, Optional, Dict, Any, Set
 
@@ -22,6 +23,14 @@ from backend.app.tools.docx_generator import generate_paper_docx
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+THREAD_ID_PATTERN = re.compile(r"[a-zA-Z0-9\-_]{1,64}")
+
+
+def _validate_thread_id(thread_id: str) -> str:
+    if not thread_id or not THREAD_ID_PATTERN.fullmatch(thread_id):
+        raise HTTPException(status_code=400, detail="Invalid thread ID format")
+    return thread_id
 
 # Active streaming tasks per thread_id
 active_research_tasks: Dict[str, asyncio.Task] = {}
@@ -314,7 +323,7 @@ async def approve_research_mode(
         except ValueError:
             pass
 
-    thread_id = request.thread_id
+    thread_id = _validate_thread_id(request.thread_id)
     if thread_id not in thread_buffers:
         thread_buffers[thread_id] = {
             "events": [],
@@ -374,7 +383,8 @@ async def approve_research_mode(
 @router.get("/research-mode/result/{thread_id}")
 @router.get("/research/mode/result/{thread_id}")
 async def get_research_mode_result(thread_id: str):
-    config = {"configurable": {"thread_id": thread_id}}
+    valid_id = _validate_thread_id(thread_id)
+    config = {"configurable": {"thread_id": valid_id}}
     graph = get_research_mode_graph()
     state = await graph.aget_state(config)
     if not state or not state.values:
@@ -398,21 +408,22 @@ async def get_research_mode_result(thread_id: str):
 @router.post("/research-mode/export/{thread_id}")
 @router.post("/research/mode/export/{thread_id}")
 async def export_research_mode_pdf(thread_id: str):
-    config = {"configurable": {"thread_id": thread_id}}
+    valid_id = _validate_thread_id(thread_id)
+    config = {"configurable": {"thread_id": valid_id}}
     graph = get_research_mode_graph()
     state = await graph.aget_state(config)
     if not state or not state.values:
         raise HTTPException(status_code=404, detail="Research Mode thread not found")
 
-    temp_dir = Path(__file__).resolve().parent.parent / "static" / "exports"
+    temp_dir = Path(__file__).resolve().parent.parent.parent.parent / "data" / "exports"
     temp_dir.mkdir(parents=True, exist_ok=True)
-    pdf_path = temp_dir / f"paper_{thread_id}.pdf"
+    pdf_path = temp_dir / f"paper_{valid_id}.pdf"
 
     try:
         generate_paper_pdf(state.values, str(pdf_path))
         return FileResponse(
             path=str(pdf_path),
-            filename=f"research_paper_{thread_id[:8]}.pdf",
+            filename=f"research_paper_{valid_id[:8]}.pdf",
             media_type="application/pdf"
         )
     except Exception as e:
@@ -423,21 +434,22 @@ async def export_research_mode_pdf(thread_id: str):
 @router.post("/research-mode/export/docx/{thread_id}")
 @router.post("/research/mode/export/docx/{thread_id}")
 async def export_research_mode_docx(thread_id: str):
-    config = {"configurable": {"thread_id": thread_id}}
+    valid_id = _validate_thread_id(thread_id)
+    config = {"configurable": {"thread_id": valid_id}}
     graph = get_research_mode_graph()
     state = await graph.aget_state(config)
     if not state or not state.values:
         raise HTTPException(status_code=404, detail="Research Mode thread not found")
 
-    temp_dir = Path(__file__).resolve().parent.parent / "static" / "exports"
+    temp_dir = Path(__file__).resolve().parent.parent.parent.parent / "data" / "exports"
     temp_dir.mkdir(parents=True, exist_ok=True)
-    docx_path = temp_dir / f"paper_{thread_id}.docx"
+    docx_path = temp_dir / f"paper_{valid_id}.docx"
 
     try:
         generate_paper_docx(state.values, str(docx_path))
         return FileResponse(
             path=str(docx_path),
-            filename=f"research_paper_{thread_id[:8]}.docx",
+            filename=f"research_paper_{valid_id[:8]}.docx",
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
     except Exception as e:
