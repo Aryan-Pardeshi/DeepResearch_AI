@@ -1,0 +1,19 @@
+{
+  "name": "DeepResearch — AI Multi-Agent Research Assistant",
+  "short_name": "DeepResearch",
+  "description": "Autonomous multi-agent research workspace driven by LangGraph, DeepSeek, OpenAlex, Semantic Scholar, and arXiv.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "orientation": "any",
+  "categories": ["education", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
