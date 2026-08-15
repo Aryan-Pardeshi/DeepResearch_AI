@@ -117,6 +117,7 @@ const RM_HIDDEN_STAGES = {
 
 // Maps the snake_case state payload from the backend onto the camelCase UI state
 const RM_STATE_KEY_MAP = {
+    hitl_checkpoint: 'hitlCheckpoint',
     problem_statement: 'problemStatement',
     research_objectives: 'researchObjectives',
     research_questions: 'researchQuestions',
@@ -193,6 +194,26 @@ function applyRMStatePayload(payload) {
             fulltext_fetched: state.rm.screenedPapersCount || 0
         });
     }
+}
+
+// Accurately infers the active checkpoint from explicit checkpoint keys and state content
+function inferCurrentRMCheckpoint(suggestedCp) {
+    const raw = (suggestedCp || state.rm.hitlCheckpoint || state.rm.hitl_checkpoint || '').replace(/_(approved|revising)$/, '');
+    // If explicitly pointing to downstream checkpoints (2, 3, 4), trust it
+    if (raw === 'checkpoint_2' || raw === 'checkpoint_3' || raw === 'checkpoint_4') {
+        return raw;
+    }
+    // If raw is empty, or raw is 'checkpoint_1', verify whether downstream stages already generated data
+    if (state.rm.researchDesign || state.rm.dataCollectionPlan || state.rm.dataAnalysisPlan) {
+        return 'checkpoint_4';
+    }
+    if (state.rm.hypotheses && Array.isArray(state.rm.hypotheses) && state.rm.hypotheses.length > 0) {
+        return 'checkpoint_3';
+    }
+    if (state.rm.literatureReview || state.rm.conceptualFramework || (state.rm.screenedPapers && state.rm.screenedPapers.length > 0)) {
+        return 'checkpoint_2';
+    }
+    return raw || 'checkpoint_1';
 }
 
 // Papers arrive from the backend already relevance-ranked in practice, but
@@ -967,18 +988,17 @@ async function restoreRMSessionOnLoad() {
         switchMode('researchmode');
         switchPanel(dom.rmWorkspacePanel);
 
-        // 3. Render current progress from restored local state. This local cache
-        // can only say "the last checkpoint we knew about was X" — it cannot tell
-        // us whether the pipeline is still paused there or has since moved past
-        // it (see the /research-mode/result fix below for why). So this pass
-        // shows the paper/tracker as last known, but leaves the HITL panel alone;
-        // step 4 below is the only thing authorized to decide whether that panel
-        // should actually be visible.
-        const currentCp = (state.rm.hitlCheckpoint || 'checkpoint_1').replace(/_(approved|revising)$/, '');
+        // 3. Render current progress from restored local state.
+        const currentCp = inferCurrentRMCheckpoint(state.rm.hitlCheckpoint);
+        state.rm.hitlCheckpoint = currentCp;
         const cpIdx = RM_STAGES.findIndex(s => s.id === currentCp);
         const completedStages = cpIdx > 0 ? RM_STAGES.slice(0, cpIdx).map(s => s.id) : [];
         updateRMPipelineTracker(currentCp, completedStages);
-        if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
+        if (state.rm.hitlCheckpointPending || (!state.rm.hitlApproved && state.rm.status !== 'completed')) {
+            renderRMHitlPanel(currentCp);
+        } else {
+            if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
+        }
 
         // Rehydrate corpus stats immediately from local cache on reload
         if (state.rm.corpus_stats) {
@@ -1034,15 +1054,15 @@ async function restoreRMSessionOnLoad() {
                     updateRMPipelineTracker('title', RM_STAGES.map(s => s.id));
                     if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
                     renderRMPaperFinal();
-                } else if (data.is_checkpoint && data.hitl_checkpoint) {
-                    const cp = data.hitl_checkpoint.replace(/_(approved|revising)$/, '');
-                    state.rm.hitlCheckpoint = cp;
+                } else if (data.is_checkpoint) {
+                    const resolvedCp = inferCurrentRMCheckpoint(data.hitl_checkpoint);
+                    state.rm.hitlCheckpoint = resolvedCp;
                     state.rm.hitlCheckpointPending = true;
                     state.rm.hitlApproved = false;
-                    const idx = RM_STAGES.findIndex(s => s.id === cp);
+                    const idx = RM_STAGES.findIndex(s => s.id === resolvedCp);
                     const doneStages = idx > 0 ? RM_STAGES.slice(0, idx).map(s => s.id) : [];
-                    updateRMPipelineTracker(cp, doneStages);
-                    renderRMHitlPanel(cp);
+                    updateRMPipelineTracker(resolvedCp, doneStages);
+                    renderRMHitlPanel(resolvedCp);
                     if (typeof getPaperMarkdown === 'function' && getPaperMarkdown().trim().length > 50) {
                         renderRMPaperLive(false);
                     }
@@ -1062,6 +1082,9 @@ async function restoreRMSessionOnLoad() {
             }
         } catch (syncErr) {
             console.warn('Backend session sync skipped (using local cache):', syncErr);
+            if (state.rm.hitlCheckpointPending || (!state.rm.hitlApproved && state.rm.status !== 'completed')) {
+                renderRMHitlPanel(currentCp);
+            }
         }
 
     } catch (e) {
@@ -1677,7 +1700,8 @@ async function handleRMApprove(feedback) {
     state.rm.hitlCheckpointPending = false;
     dom.rmHitlPanel.style.display = 'none';
 
-    const currentCp = (state.rm.hitlCheckpoint || 'checkpoint_1').replace(/_(approved|revising)$/, '');
+    const currentCp = inferCurrentRMCheckpoint(state.rm.hitlCheckpoint);
+    state.rm.hitlCheckpoint = currentCp;
     const cpIdx = RM_STAGES.findIndex(s => s.id === currentCp);
     const completedStages = cpIdx >= 0 ? RM_STAGES.slice(0, cpIdx + 1).map(s => s.id) : ['scope_definition', 'keyword_extractor', 'checkpoint_1'];
     const nextStage = cpIdx >= 0 && cpIdx + 1 < RM_STAGES.length ? RM_STAGES[cpIdx + 1].id : 'paper_fetcher';
@@ -1929,11 +1953,11 @@ function processRMSEEvent(data) {
         renderRMPaperLive();
         saveRMSession();
     } else if (data.event === 'checkpoint') {
-        const cp = (data.hitl_checkpoint || 'checkpoint_1').replace(/_(approved|revising)$/, '');
+        applyRMStatePayload(data.state || {});
+        const cp = inferCurrentRMCheckpoint(data.hitl_checkpoint);
         state.rm.hitlCheckpoint = cp;
         state.rm.hitlCheckpointPending = true;
         state.rm.hitlApproved = false;
-        applyRMStatePayload(data.state || {});
         appendLogLine(`HITL Checkpoint reached: ${cp}`, 'warn');
         if (data.state && data.state.corpus_stats) updateCorpusStats(data.state.corpus_stats);
         updateRMPipelineTracker(cp);
