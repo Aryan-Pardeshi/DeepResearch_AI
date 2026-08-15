@@ -108,21 +108,29 @@ flowchart TB
 A 25-agent academic pipeline. You steer it at four checkpoints; it does everything else.
 
 ```mermaid
-flowchart LR
-    START(["Problem Statement"]) --> SCOPE["<b>1 · Scope</b><br/>definition & keywords"]
-    SCOPE --> CP1{"🧑 CP 1"}
-    CP1 -.->|"revise"| SCOPE
-    CP1 -->|"approved"| CORPUS["<b>2 · Literature</b><br/>corpus, review & framework"]
-    CORPUS --> CP2{"🧑 CP 2"}
-    CP2 -.->|"revise"| CORPUS
-    CP2 -->|"approved"| HYP["<b>3 · Hypotheses</b><br/>empirical hypotheses"]
-    HYP --> CP3{"🧑 CP 3"}
-    CP3 -.->|"revise"| HYP
-    CP3 -->|"approved"| METH["<b>4 · Methodology</b><br/>design & analysis plan"]
-    METH --> CP4{"🧑 CP 4"}
-    CP4 -.->|"revise"| METH
-    CP4 -->|"approved"| WRITE["<b>5 · Paper Assembly</b><br/>synthesis, refs & figures"]
-    WRITE --> DONE(["📄 Complete Paper"])
+flowchart TB
+    subgraph L1 ["Phase 1 & 2 · Scope & Literature Review"]
+        direction LR
+        START(["Problem Statement"]) --> SCOPE["<b>1 · Scope</b><br/>definition & keywords"]
+        SCOPE --> CP1{"🧑 Checkpoint 1"}
+        CP1 -.->|"revise"| SCOPE
+        CP1 -->|"approved"| CORPUS["<b>2 · Literature</b><br/>corpus, review & framework"]
+        CORPUS --> CP2{"🧑 Checkpoint 2"}
+        CP2 -.->|"revise"| CORPUS
+    end
+
+    subgraph L2 ["Phase 3 to 5 · Hypotheses, Methodology & Paper Assembly"]
+        direction LR
+        HYP["<b>3 · Hypotheses</b><br/>theoretical & empirical"] --> CP3{"🧑 Checkpoint 3"}
+        CP3 -.->|"revise"| HYP
+        CP3 -->|"approved"| METH["<b>4 · Methodology</b><br/>design & analysis plan"]
+        METH --> CP4{"🧑 Checkpoint 4"}
+        CP4 -.->|"revise"| METH
+        CP4 -->|"approved"| WRITE["<b>5 · Paper Assembly</b><br/>sections, refs & figures"]
+        WRITE --> DONE(["📄 Complete Paper · PDF · DOCX"])
+    end
+
+    CP2 ==>|"approved"| HYP
 
     style START fill:#6366f1,stroke:#4338ca,color:#fff
     style CP1 fill:#f59e0b,stroke:#b45309,color:#fff
@@ -130,6 +138,8 @@ flowchart LR
     style CP3 fill:#f59e0b,stroke:#b45309,color:#fff
     style CP4 fill:#f59e0b,stroke:#b45309,color:#fff
     style DONE fill:#10b981,stroke:#047857,color:#fff
+    style L1 fill:none,stroke:#64748b,stroke-width:1px,stroke-dasharray: 4 4
+    style L2 fill:none,stroke:#64748b,stroke-width:1px,stroke-dasharray: 4 4
 ```
 
 **The four checkpoints** — each pauses the graph via LangGraph `interrupt()`, so nothing downstream runs until you say so. Reject one and the LLM revises from your feedback in natural language.
