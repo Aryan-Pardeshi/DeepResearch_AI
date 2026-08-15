@@ -303,6 +303,41 @@ const researchTimer = {
     }
 };
 
+// Cold-start auto-reload guard. If the user lands on a cold Render instance
+// where the backend takes 30-60s to wake up, the page can sit stuck with the
+// offline banner visible. A bounded one-shot reload gives the page a single
+// chance to cleanly recover once the backend spins up, without looping
+// indefinitely if the backend is genuinely down or interrupting an active run.
+const COLD_START_RELOAD_DELAY_MS = 50000;
+const COLD_START_SESSION_KEY = 'coldStartReloadDone';
+
+function initColdStartAutoReload() {
+    setTimeout(() => {
+        // 1. Guard against infinite reload loops: only attempt once per session.
+        if (sessionStorage.getItem(COLD_START_SESSION_KEY)) {
+            return;
+        }
+
+        // 2. Banner must be actively visible (not hidden or absent).
+        const banner = dom.backendOfflineBanner || document.getElementById('backend-offline-banner');
+        if (!banner || banner.style.display === 'none') {
+            return;
+        }
+
+        // 3. Must be completely idle in both modes — never interrupt active work.
+        // Re-checked at the 50s mark so runs started during the wait are safe.
+        const isDeepSearchBusy = Boolean(state.threadId);
+        const isResearchModeBusy = Boolean(state.rm && state.rm.threadId);
+        if (isDeepSearchBusy || isResearchModeBusy) {
+            return;
+        }
+
+        // Mark done in sessionStorage before reloading so subsequent loads won't repeat.
+        sessionStorage.setItem(COLD_START_SESSION_KEY, 'true');
+        location.reload();
+    }, COLD_START_RELOAD_DELAY_MS);
+}
+
 // DOM Cache
 let dom = {};
 
@@ -311,6 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initTheme();
     setupEventListeners();
     checkBackendHealth();
+    initColdStartAutoReload();
     checkConfigGate();
     renderRMPipelineTracker();
     restoreRMSessionOnLoad();
