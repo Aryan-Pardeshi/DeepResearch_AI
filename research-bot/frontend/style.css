@@ -2738,6 +2738,56 @@ main {
     border: 1px solid rgba(99, 102, 241, 0.25);
 }
 
+/* Super minimal Research Mode timer */
+.rm-mini-timer {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.15rem 0.55rem;
+    background: rgba(56, 189, 248, 0.08);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: 50px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
+    font-variant-numeric: tabular-nums;
+    color: var(--academic-blue, #38bdf8);
+    letter-spacing: 0.02em;
+    user-select: none;
+    line-height: 1.4;
+    transition: var(--transition-smooth);
+}
+
+.rm-mini-timer.running {
+    border-color: rgba(56, 189, 248, 0.45);
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.18);
+}
+
+.rm-mini-timer.completed {
+    background: rgba(52, 211, 153, 0.08);
+    border-color: rgba(52, 211, 153, 0.3);
+    color: var(--emerald-accent, #34d399);
+}
+
+.rm-mini-timer i {
+    width: 12px;
+    height: 12px;
+    stroke-width: 2.2;
+    flex-shrink: 0;
+}
+
+.light-theme .rm-mini-timer {
+    background: rgba(2, 132, 199, 0.08);
+    border-color: rgba(2, 132, 199, 0.25);
+    color: #0284c7;
+}
+
+.light-theme .rm-mini-timer.completed {
+    background: rgba(16, 185, 129, 0.08);
+    border-color: rgba(16, 185, 129, 0.3);
+    color: #059669;
+}
+
 .tracker-header-controls {
     display: flex;
     align-items: center;

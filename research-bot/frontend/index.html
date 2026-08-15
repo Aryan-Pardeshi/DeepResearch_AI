@@ -116,7 +116,7 @@
     }
     </script>
 
-    <link rel="stylesheet" href="style.css?v=2.5.2">
+    <link rel="stylesheet" href="style.css?v=2.5.3">
     <!-- Marked.js for markdown parsing -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- Lucide icons -->
@@ -455,6 +455,10 @@
                         <i data-lucide="git-merge" style="width: 18px; height: 18px; color: var(--academic-blue);"></i>
                         <h2 class="tracker-title">Autonomous Academic Pipeline</h2>
                         <span class="tracker-status-tag" id="rm-pipeline-status-tag">Active: HITL Checkpoint 1</span>
+                        <div class="rm-mini-timer" id="rm-timer-container" title="Elapsed Research Time">
+                            <i data-lucide="clock" style="width: 12px; height: 12px;"></i>
+                            <span id="rm-research-timer">00:00</span>
+                        </div>
                     </div>
                     <div class="tracker-header-controls">
                         <span class="tracker-toggle-lbl" id="tracker-toggle-lbl">Expand</span>
@@ -680,6 +684,6 @@
     <div class="toast-container" id="toast-container"></div>
 
     <!-- Application Script -->
-    <script src="app.js?v=2.5.6"></script>
+    <script src="app.js?v=2.5.7"></script>
 </body>
 </html>
