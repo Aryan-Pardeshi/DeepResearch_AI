@@ -3586,3 +3586,264 @@ select:focus-visible,
     margin: 1.75rem 0;
 }
 
+/* ==========================================================================
+   Research Mode Post-Checkpoint Transition Loading Placeholder
+   ========================================================================== */
+
+.rm-checkpoint-loader {
+    margin-bottom: 1.5rem;
+    padding: 1.5rem;
+    background: var(--glass-panel);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: var(--radius-md);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 0 20px rgba(56, 189, 248, 0.08);
+    position: relative;
+    overflow: hidden;
+    animation: fade-in 0.35s ease-out forwards;
+}
+
+.rm-checkpoint-loader::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 200%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--academic-blue), var(--accent-purple), transparent);
+    animation: loaderTopGlow 2.5s linear infinite;
+}
+
+@keyframes loaderTopGlow {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(50%); }
+}
+
+.rm-loader-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.rm-loader-badge-group {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.rm-loader-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 0.25rem 0.75rem;
+    border-radius: 50px;
+    background: rgba(56, 189, 248, 0.12);
+    color: var(--academic-blue);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.rm-loader-badge-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--academic-blue);
+    box-shadow: 0 0 8px var(--academic-blue);
+    animation: pulseDot 1.6s ease-in-out infinite;
+}
+
+@keyframes pulseDot {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.5; }
+}
+
+.rm-loader-live-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--violet-pulse);
+    padding: 0.2rem 0.6rem;
+    border-radius: 50px;
+    background: rgba(129, 140, 248, 0.1);
+    border: 1px solid rgba(129, 140, 248, 0.2);
+}
+
+.rm-loader-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.rm-loader-hero {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.25rem;
+}
+
+.rm-loader-spinner-wrapper {
+    position: relative;
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.rm-loader-spinner-wrapper .orbital-ring {
+    position: absolute;
+    inset: 0;
+    width: 52px;
+    height: 52px;
+}
+
+.rm-loader-core-icon {
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.rm-loader-hero-text {
+    flex: 1;
+}
+
+.rm-loader-title {
+    font-family: var(--font-outfit);
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 0.35rem 0;
+    line-height: 1.35;
+}
+
+.rm-loader-subtitle {
+    font-size: 0.88rem;
+    line-height: 1.55;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.rm-loader-subtasks-container {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-sm);
+    padding: 0.85rem 1rem;
+}
+
+.rm-loader-subtasks-heading {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.6rem;
+}
+
+.rm-loader-subtasks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.rm-loader-subtask-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.84rem;
+    color: var(--text-secondary);
+    transition: var(--transition-fast);
+}
+
+.rm-loader-subtask-item.in-progress {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.rm-loader-subtask-status {
+    width: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--academic-blue);
+    box-shadow: 0 0 8px var(--academic-blue);
+    animation: pulseDot 1.2s infinite ease-in-out;
+}
+
+.wait-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    opacity: 0.4;
+}
+
+.rm-loader-subtask-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--academic-blue);
+    opacity: 0.85;
+}
+
+.rm-loader-subtask-label {
+    line-height: 1.4;
+}
+
+.rm-loader-shimmer-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem 0.25rem 0;
+}
+
+.rm-loader-footer-bar {
+    margin-top: 0.5rem;
+    padding-top: 0.75rem;
+    border-bottom: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.rm-loader-footer-inner {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.rm-loader-footer-note {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* Light mode overrides for post-checkpoint loader */
+:root.light-mode .rm-checkpoint-loader {
+    background: #ffffff;
+    border-color: rgba(56, 189, 248, 0.35);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+:root.light-mode .rm-loader-subtasks-container {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+}
+:root.light-mode .rm-loader-header,
+:root.light-mode .rm-loader-footer-bar {
+    border-color: #e2e8f0;
+}
+
+

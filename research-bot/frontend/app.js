@@ -1105,6 +1105,7 @@ function resetResearchModeForm() {
     state.rm.hitlCheckpointPending = false;
     state.rm.corpus_stats = null;
 
+    hideRMCheckpointTransitionLoader();
     if (dom.rmCorpusStatsBar) dom.rmCorpusStatsBar.style.display = 'none';
     if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
     if (dom.rmCopyPaperBtn) dom.rmCopyPaperBtn.style.display = 'none';
@@ -1333,10 +1334,167 @@ async function handleRMStart() {
     }
 }
 
+const RM_CHECKPOINT_TRANSITIONS = {
+    checkpoint_1: {
+        phaseBadge: 'Phase 2 of 4: Evidence & Literature Synthesis',
+        title: 'Retrieving Academic Corpus & Synthesizing Literature…',
+        subtitle: 'Querying OpenAlex, Semantic Scholar & arXiv across extracted keywords, deduplicating, screening relevant papers, and formulating the conceptual framework.',
+        subtasks: [
+            { icon: 'globe', label: 'Querying OpenAlex, Semantic Scholar & arXiv indexes' },
+            { icon: 'filter', label: 'Relevance screening & deduplication of retrieved corpus' },
+            { icon: 'book-open', label: 'Synthesizing literature review, research gap & framework' }
+        ]
+    },
+    checkpoint_2: {
+        phaseBadge: 'Phase 3 of 4: Theoretical & Empirical Hypotheses',
+        title: 'Formulating Research Hypotheses…',
+        subtitle: 'Deriving testable, theoretically grounded hypotheses from the identified research gap and conceptual framework.',
+        subtasks: [
+            { icon: 'git-branch', label: 'Mapping core empirical constructs & relationships' },
+            { icon: 'sparkles', label: 'Formulating directional hypotheses (H1, H2, ...)' },
+            { icon: 'check-circle-2', label: 'Validating theoretical mechanism alignment' }
+        ]
+    },
+    checkpoint_3: {
+        phaseBadge: 'Phase 4 of 4: Empirical Methodology Design',
+        title: 'Designing Research Methodology & Analysis Protocols…',
+        subtitle: 'Constructing empirical research design, data collection protocols, and statistical analysis plans to evaluate the formulated hypotheses.',
+        subtasks: [
+            { icon: 'layout', label: 'Specifying research design & methodology framework' },
+            { icon: 'database', label: 'Formulating data collection protocols & sampling plan' },
+            { icon: 'bar-chart-2', label: 'Structuring qualitative & quantitative analysis plans' }
+        ]
+    },
+    checkpoint_4: {
+        phaseBadge: 'Final Phase: Full Academic Paper Synthesis',
+        title: 'Synthesizing Full Academic Paper & Report…',
+        subtitle: 'Generating empirical results, in-depth discussion, theoretical and practical implications, limitations, future scope, formatted references, and complete paper sections.',
+        subtasks: [
+            { icon: 'award', label: 'Synthesizing results, discussion & implications' },
+            { icon: 'alert-circle', label: 'Articulating study limitations & future research scope' },
+            { icon: 'book-open', label: 'Formatting verified academic references & appendices' },
+            { icon: 'file-check', label: 'Finalizing paper title, abstract & introduction' }
+        ]
+    }
+};
+
+function showRMCheckpointTransitionLoader(currentCp, isRevision = false) {
+    hideRMCheckpointTransitionLoader();
+
+    const transitionMeta = RM_CHECKPOINT_TRANSITIONS[currentCp] || {
+        phaseBadge: 'Pipeline Progressing',
+        title: 'Autonomous Academic Pipeline Resuming…',
+        subtitle: 'Executing next phase agents, processing data and synthesizing findings.',
+        subtasks: [
+            { icon: 'cpu', label: 'Autonomous agents actively processing workflow' },
+            { icon: 'sparkles', label: 'Synthesizing evidence and academic artifacts' }
+        ]
+    };
+
+    const loaderCard = document.createElement('div');
+    loaderCard.className = 'rm-checkpoint-loader card';
+    loaderCard.id = 'rm-checkpoint-loader';
+
+    const isRev = isRevision;
+    const badgeText = isRev ? `Revising: ${transitionMeta.phaseBadge}` : transitionMeta.phaseBadge;
+    const titleText = isRev ? `Applying Checkpoint Revisions…` : transitionMeta.title;
+    const subtitleText = isRev ? `Refining scope and updating parameters based on your feedback before resuming pipeline execution.` : transitionMeta.subtitle;
+
+    loaderCard.innerHTML = `
+        <div class="rm-loader-header">
+            <div class="rm-loader-badge-group">
+                <span class="rm-loader-badge">
+                    <span class="rm-loader-badge-dot"></span>
+                    ${escapeHtml(badgeText)}
+                </span>
+                <span class="rm-loader-live-tag">
+                    <i data-lucide="activity" style="width: 12px; height: 12px;"></i>
+                    Active Execution
+                </span>
+            </div>
+        </div>
+
+        <div class="rm-loader-body">
+            <div class="rm-loader-hero">
+                <div class="rm-loader-spinner-wrapper">
+                    <div class="orbital-ring"></div>
+                    <div class="rm-loader-core-icon">
+                        <i data-lucide="${isRev ? 'refresh-cw' : 'atom'}" style="width: 22px; height: 22px; color: var(--academic-blue);"></i>
+                    </div>
+                </div>
+                <div class="rm-loader-hero-text">
+                    <h3 class="rm-loader-title">${escapeHtml(titleText)}</h3>
+                    <p class="rm-loader-subtitle">${escapeHtml(subtitleText)}</p>
+                </div>
+            </div>
+
+            <div class="rm-loader-subtasks-container">
+                <span class="rm-loader-subtasks-heading">Phase Pipeline Tasks</span>
+                <div class="rm-loader-subtasks-list">
+                    ${transitionMeta.subtasks.map((task, idx) => `
+                        <div class="rm-loader-subtask-item ${idx === 0 ? 'in-progress' : 'pending'}">
+                            <span class="rm-loader-subtask-status">
+                                ${idx === 0 ? '<span class="pulse-dot"></span>' : '<span class="wait-dot"></span>'}
+                            </span>
+                            <span class="rm-loader-subtask-icon">
+                                <i data-lucide="${escapeHtml(task.icon)}" style="width: 14px; height: 14px;"></i>
+                            </span>
+                            <span class="rm-loader-subtask-label">${escapeHtml(task.label)}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+
+            <div class="rm-loader-shimmer-preview">
+                <div class="skeleton-line" style="width: 90%;"></div>
+                <div class="skeleton-line" style="width: 75%;"></div>
+                <div class="skeleton-line" style="width: 60%;"></div>
+            </div>
+        </div>
+
+        <div class="rm-loader-footer-bar">
+            <div class="rm-loader-footer-inner">
+                <span class="ai-wave-container">
+                    <span class="ai-wave-bar"></span>
+                    <span class="ai-wave-bar"></span>
+                    <span class="ai-wave-bar"></span>
+                    <span class="ai-wave-bar"></span>
+                </span>
+                <span class="rm-loader-footer-note">Streaming live agent deliberations &amp; synthesizing academic sections</span>
+            </div>
+        </div>
+    `;
+
+    const wsBody = dom.rmWorkspacePanel?.querySelector('.rm-workspace-body');
+    if (wsBody) {
+        if (dom.rmHitlPanel) {
+            wsBody.insertBefore(loaderCard, dom.rmHitlPanel);
+        } else {
+            wsBody.appendChild(loaderCard);
+        }
+        refreshIcons();
+    }
+}
+
+function hideRMCheckpointTransitionLoader() {
+    document.getElementById('rm-checkpoint-loader')?.remove();
+    document.getElementById('rm-scope-loader')?.remove();
+}
+
+function updateRMTransitionLoaderNode(nodeId) {
+    const loader = document.getElementById('rm-checkpoint-loader');
+    if (!loader) return;
+    const label = rmStageLabel(nodeId);
+    const noteEl = loader.querySelector('.rm-loader-footer-note');
+    if (noteEl) {
+        noteEl.textContent = `Active Stage: ${label} — synthesizing findings…`;
+    }
+}
+
 function renderRMHitlPanel(checkpoint) {
     // The transient scope-definition loader is only shown while the start
     // request is in flight; once a checkpoint panel renders it is obsolete.
-    document.getElementById('rm-scope-loader')?.remove();
+    hideRMCheckpointTransitionLoader();
     dom.rmHitlPanel.style.display = 'block';
     dom.rmHitlBody.innerHTML = '';
     dom.rmHitlFeedbackInput.value = '';
@@ -1487,6 +1645,7 @@ async function handleRMApprove(feedback) {
     const nextStage = cpIdx >= 0 && cpIdx + 1 < RM_STAGES.length ? RM_STAGES[cpIdx + 1].id : 'paper_fetcher';
 
     updateRMPipelineTracker(nextStage, completedStages);
+    showRMCheckpointTransitionLoader(currentCp, feedback !== 'approve');
     appendLogLine(`Checkpoint '${currentCp}' approved. Resuming pipeline...`, 'info');
     saveRMSession();
 
@@ -1695,6 +1854,7 @@ function processRMSEEvent(data) {
 
     if (data.event === 'node_start') {
         updateRMPipelineTracker(data.node);
+        updateRMTransitionLoaderNode(data.node);
         appendLogLine(`Node started: ${rmStageLabel(data.node)}`, 'info');
         if (trackerContainer) trackerContainer.classList.add('active-execution');
         if (paperCard) paperCard.classList.add('active-execution');
@@ -1742,6 +1902,7 @@ function processRMSEEvent(data) {
         renderRMPaperFinal();
         saveRMSession();
     } else if (data.event === 'error') {
+        hideRMCheckpointTransitionLoader();
         appendLogLine(`Pipeline Error: ${data.message}`, 'error');
         if (trackerContainer) trackerContainer.classList.remove('active-execution');
         if (paperCard) paperCard.classList.remove('active-execution');
@@ -1818,6 +1979,7 @@ function renderRMPaperLive(isStreaming = true) {
 }
 
 function renderRMPaperFinal() {
+    hideRMCheckpointTransitionLoader();
     renderRMPaperLive(false);
     if (dom.rmCopyPaperBtn) dom.rmCopyPaperBtn.style.display = 'inline-flex';
     if (dom.rmExportDropdown) dom.rmExportDropdown.style.display = 'inline-flex';
