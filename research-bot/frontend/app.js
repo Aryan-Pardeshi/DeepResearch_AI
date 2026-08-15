@@ -1032,6 +1032,19 @@ async function handleRMStart() {
     dom.rmStartBtn.disabled = true;
     dom.rmStartBtn.innerHTML = '<div class="spinner-ring sm"></div><span>Defining research scope...</span>';
 
+    // Show a small scope-definition loader in the workspace body so there is a
+    // visible animation while the start request runs (before Checkpoint 1).
+    const scopeLoader = document.createElement('div');
+    scopeLoader.className = 'rm-scope-loader';
+    scopeLoader.id = 'rm-scope-loader';
+    scopeLoader.innerHTML = `
+        <div class="scope-spinner"></div>
+        <div class="scope-text">
+            <span class="scope-title">Defining research scope…</span>
+            <span class="scope-sub">Generating problem statement, objectives, questions & extracting keywords</span>
+        </div>
+    `;
+
     try {
         const res = await fetch(`${API_BASE_URL}/research-mode/start`, {
             method: 'POST',
@@ -1047,6 +1060,7 @@ async function handleRMStart() {
         const data = await res.json();
         if (data.error || data.status === 'error') {
             showToast(data.error || 'Failed to start Research Mode.', 'error');
+            scopeLoader.remove();
             dom.rmStartBtn.disabled = false;
             dom.rmStartBtn.innerHTML = '<span>Launch Autonomous Academic Pipeline</span>';
             return;
@@ -1062,12 +1076,15 @@ async function handleRMStart() {
 
         state.rm.completedStages = [];
         switchPanel(dom.rmWorkspacePanel);
+        const wsBody = dom.rmWorkspacePanel?.querySelector('.rm-workspace-body');
+        wsBody?.insertBefore(scopeLoader, wsBody.firstChild);
         updateRMPipelineTracker('checkpoint_1', ['scope_definition', 'keyword_extractor']);
         renderRMHitlPanel('checkpoint_1');
         updateNewRunVisibility();
 
     } catch (e) {
         showToast('Error connecting to Research Mode service: ' + e.message, 'error');
+        scopeLoader.remove();
     } finally {
         dom.rmStartBtn.disabled = false;
         dom.rmStartBtn.innerHTML = '<span>Launch Autonomous Academic Pipeline</span>';
@@ -1075,6 +1092,9 @@ async function handleRMStart() {
 }
 
 function renderRMHitlPanel(checkpoint) {
+    // The transient scope-definition loader is only shown while the start
+    // request is in flight; once a checkpoint panel renders it is obsolete.
+    document.getElementById('rm-scope-loader')?.remove();
     dom.rmHitlPanel.style.display = 'block';
     dom.rmHitlBody.innerHTML = '';
     dom.rmHitlFeedbackInput.value = '';

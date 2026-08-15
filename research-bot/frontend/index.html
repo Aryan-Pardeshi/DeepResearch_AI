@@ -1,9 +1,121 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Deep Research Assistant & Academic Lab</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    
+    <!-- Primary SEO Meta Tags -->
+    <title>DeepResearch — AI Multi-Agent Research Assistant & Academic Lab</title>
+    <meta name="title" content="DeepResearch — AI Multi-Agent Research Assistant & Academic Lab">
+    <meta name="description" content="Autonomous multi-agent research workspace powered by LangGraph, DeepSeek, OpenAlex, Semantic Scholar, and arXiv. Synthesizes cited academic papers with Human-in-the-Loop review and real-time streaming.">
+    <meta name="keywords" content="AI research assistant, DeepResearch, multi-agent AI, academic paper synthesis, LangGraph research, literature review, PRISMA framework, OpenAlex, Semantic Scholar, arXiv, autonomous research agents, DeepSeek AI">
+    <meta name="author" content="Aryan Pardeshi">
+    <meta name="creator" content="Aryan Pardeshi">
+    <meta name="publisher" content="DeepResearch Academic Lab">
+    <meta name="application-name" content="DeepResearch">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+    <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+    <meta name="format-detection" content="telephone=no">
+    <link rel="canonical" href="https://deepresearch.dev/">
+
+    <!-- PWA, Theme & Mobile Optimization -->
+    <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+    <meta name="color-scheme" content="dark light">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="DeepResearch">
+    <link rel="manifest" href="site.webmanifest">
+
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="256x256" href="https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011">
+    <link rel="apple-touch-icon" href="https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011">
+
+    <!-- Resource Preconnects & Hints for Core Web Vitals -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <link rel="dns-prefetch" href="https://cdn-1.webcatalog.io">
+
+    <!-- Open Graph / Facebook / LinkedIn / Discord -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="DeepResearch">
+    <meta property="og:title" content="DeepResearch — AI Multi-Agent Research Assistant & Academic Lab">
+    <meta property="og:description" content="Autonomous multi-agent research workspace. Transforms research queries into cited academic papers and synthesized reports with Human-in-the-Loop review and real-time streaming.">
+    <meta property="og:url" content="https://deepresearch.dev/">
+    <meta property="og:image" content="https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011">
+    <meta property="og:image:alt" content="DeepResearch AI Multi-Agent Platform">
+    <meta property="og:image:width" content="256">
+    <meta property="og:image:height" content="256">
+    <meta property="og:locale" content="en_US">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@AryanPardeshi">
+    <meta name="twitter:creator" content="@AryanPardeshi">
+    <meta name="twitter:title" content="DeepResearch — AI Multi-Agent Research Assistant">
+    <meta name="twitter:description" content="Autonomous multi-agent research workspace powered by LangGraph, OpenAlex, Semantic Scholar, and arXiv with Human-in-the-Loop approval.">
+    <meta name="twitter:image" content="https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011">
+    <meta name="twitter:image:alt" content="DeepResearch AI Multi-Agent Platform">
+
+    <!-- Schema.org JSON-LD Structured Data for Google Knowledge Graph & Rich Results -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebApplication",
+          "@id": "https://deepresearch.dev/#webapp",
+          "name": "DeepResearch",
+          "alternateName": ["DeepResearch AI", "DeepResearch Academic Lab"],
+          "description": "An AI-powered multi-agent research assistant that turns research queries into structured, cited reports and academic papers with human-in-the-loop plan approval and real-time streaming.",
+          "applicationCategory": "EducationalApplication, BusinessApplication, ResearchApplication",
+          "operatingSystem": "All",
+          "browserRequirements": "Requires JavaScript. Requires HTML5.",
+          "url": "https://deepresearch.dev/",
+          "author": {
+            "@type": "Person",
+            "name": "Aryan Pardeshi",
+            "url": "https://github.com/Aryan-Pardeshi",
+            "sameAs": [
+              "https://linkedin.com/in/aryan-pardeshi-dev",
+              "https://github.com/Aryan-Pardeshi"
+            ]
+          },
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "featureList": [
+            "Autonomous Multi-Agent Graph with LangGraph",
+            "Human-in-the-Loop (HITL) Checkpoints & Review",
+            "Academic Literature Synthesis from OpenAlex, Semantic Scholar, and arXiv",
+            "Real-time Server-Sent Events (SSE) Progress Streaming",
+            "Automated PRISMA Flowchart & Evidence Matrix Generation",
+            "Export to Markdown (.md), PDF (.pdf), and Word (.docx)"
+          ],
+          "screenshot": "https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011"
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://deepresearch.dev/#website",
+          "url": "https://deepresearch.dev/",
+          "name": "DeepResearch",
+          "description": "Multi-agent autonomous research workspace powered by LangGraph, DeepSeek, and academic APIs.",
+          "publisher": {
+            "@type": "Person",
+            "name": "Aryan Pardeshi",
+            "url": "https://github.com/Aryan-Pardeshi"
+          }
+        }
+      ]
+    }
+    </script>
+
     <link rel="stylesheet" href="style.css?v=2.3.1">
     <!-- Marked.js for markdown parsing -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -11,6 +123,9 @@
     <script src="https://cdn.jsdelivr.net/npm/lucide/dist/umd/lucide.min.js"></script>
 </head>
 <body>
+    <!-- Skip Link for Accessibility & Keyboard Navigation -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
 
     <!-- Backend Offline Banner. The styles for this existed but the element did
          not, so a backend that was down or still cold-starting gave no signal. -->
@@ -20,9 +135,9 @@
     </div>
 
     <!-- Header -->
-    <header>
+    <header role="banner" class="app-header">
         <div class="logo-container">
-            <img class="logo-img" src="https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011" alt="Dolphin AI">
+            <img class="logo-img" src="https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011" alt="DeepResearch AI Assistant Logo" width="32" height="32">
             <div class="brand-text-group">
                 <span class="logo-text">DEEPRESEARCH</span>
                 <span class="logo-tag">ACADEMIC LAB</span>
@@ -30,22 +145,22 @@
         </div>
 
         <!-- Mode Switcher -->
-        <div class="mode-toggle-container" id="mode-toggle-container">
-            <button class="mode-tab active" id="tab-deepsearch" data-mode="deepsearch">
+        <nav class="mode-toggle-container" id="mode-toggle-container" aria-label="Research Workspace Modes">
+            <button class="mode-tab active" id="tab-deepsearch" data-mode="deepsearch" aria-label="Switch to DeepSearch Web Research mode">
                 <i data-lucide="globe" style="width: 15px; height: 15px;"></i>
                 <span>DeepSearch</span>
             </button>
-            <button class="mode-tab" id="tab-researchmode" data-mode="researchmode">
+            <button class="mode-tab" id="tab-researchmode" data-mode="researchmode" aria-label="Switch to Academic Research Paper mode">
                 <i data-lucide="book-open-check" style="width: 15px; height: 15px;"></i>
                 <span>Research Mode</span>
             </button>
-        </div>
+        </nav>
 
         <div class="header-actions">
-            <button class="btn-icon theme-toggle" id="theme-toggle-btn" title="Toggle theme">
+            <button class="btn-icon theme-toggle" id="theme-toggle-btn" title="Toggle theme" aria-label="Toggle dark and light color theme">
                 <i data-lucide="moon" style="width: 18px; height: 18px;"></i>
             </button>
-            <button class="btn-secondary btn-new-research" id="new-research-btn" style="display:none;">
+            <button class="btn-secondary btn-new-research" id="new-research-btn" style="display:none;" aria-label="Start new research run">
                 <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
                 <span>New Run</span>
             </button>
@@ -121,29 +236,29 @@
 
 
     <!-- Main Container -->
-    <main>
+    <main id="main-content" role="main">
         
         <!-- DEEPSEARCH MODE PANELS -->
         
         <!-- View 1: Landing Panel -->
-        <section id="landing-panel" class="panel active">
+        <section id="landing-panel" class="panel active" aria-label="DeepSearch Web Research">
             <h1 class="hero-title">Ask anything. We will <span class="hero-accent">plan, research, and synthesize.</span></h1>
             <p class="hero-subtitle">Multi-agent web research workspace driven by autonomous agent loops.</p>
 
             <div class="search-box-container">
-                <textarea class="search-input" id="query-input" placeholder="What would you like to research today?"></textarea>
+                <textarea class="search-input" id="query-input" placeholder="What would you like to research today?" aria-label="Research query input prompt"></textarea>
                 <div class="search-controls">
                     <div class="filter-group">
                         <span class="filter-label">Tavily Filters:</span>
-                        <div class="chips-container" id="filter-chips">
-                            <span class="chip active" data-topic="all">All</span>
-                            <span class="chip" data-topic="news">News</span>
-                            <span class="chip" data-topic="academic">Academic</span>
-                            <span class="chip" data-topic="finance">Finance</span>
-                            <span class="chip" data-topic="patent">Patent</span>
+                        <div class="chips-container" id="filter-chips" role="group" aria-label="Topic search filters">
+                            <button type="button" class="chip active" data-topic="all">All</button>
+                            <button type="button" class="chip" data-topic="news">News</button>
+                            <button type="button" class="chip" data-topic="academic">Academic</button>
+                            <button type="button" class="chip" data-topic="finance">Finance</button>
+                            <button type="button" class="chip" data-topic="patent">Patent</button>
                         </div>
                     </div>
-                    <button class="btn-primary" id="plan-research-btn">
+                    <button class="btn-primary" id="plan-research-btn" aria-label="Plan and execute multi-agent research">
                         <span>Plan Research</span>
                         <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
                     </button>
@@ -153,10 +268,10 @@
         </section>
 
         <!-- View 2: Approval Panel -->
-        <section id="approval-panel" class="panel">
+        <section id="approval-panel" class="panel" aria-label="Plan Approval and Review Console">
             <div class="approval-header">
-                <h1 class="section-title">Research Design Console</h1>
-                <button class="btn-secondary btn-new-research" id="approval-new-research-btn">
+                <h2 class="section-title">Research Design Console</h2>
+                <button class="btn-secondary btn-new-research" id="approval-new-research-btn" aria-label="Start new session">
                     <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
                     <span>New Session</span>
                 </button>
@@ -309,15 +424,15 @@
                     <span class="index-strip-label">Indexed sources</span>
                     <div class="index-list">
                         <a class="index-chip" href="https://openalex.org" target="_blank" rel="noopener noreferrer" title="OpenAlex — open catalogue of scholarly works">
-                            <img class="index-mark index-mark-openalex" src="assets/openalex.png" alt="" width="22" height="22" loading="lazy">
+                            <img class="index-mark index-mark-openalex" src="assets/openalex.png" alt="OpenAlex scholarly catalog logo" width="22" height="22" loading="lazy">
                             <span class="index-name">OpenAlex</span>
                         </a>
                         <a class="index-chip" href="https://www.semanticscholar.org" target="_blank" rel="noopener noreferrer" title="Semantic Scholar — AI-powered research corpus">
-                            <img class="index-mark" src="assets/semantic-scholar.png" alt="" width="22" height="22" loading="lazy">
+                            <img class="index-mark" src="assets/semantic-scholar.png" alt="Semantic Scholar research corpus logo" width="22" height="22" loading="lazy">
                             <span class="index-name">Semantic Scholar</span>
                         </a>
                         <a class="index-chip" href="https://arxiv.org" target="_blank" rel="noopener noreferrer" title="arXiv — open-access preprint archive">
-                            <img class="index-mark" src="assets/arxiv.png" alt="" width="22" height="22" loading="lazy">
+                            <img class="index-mark" src="assets/arxiv.png" alt="arXiv open preprint archive logo" width="22" height="22" loading="lazy">
                             <span class="index-name">arXiv</span>
                         </a>
                     </div>
@@ -468,6 +583,69 @@
         </section>
 
     </main>
+
+    <!-- Semantic & SEO Footer -->
+    <footer class="app-footer" role="contentinfo">
+        <div class="footer-container">
+            <div class="footer-col footer-brand-col">
+                <div class="footer-logo">
+                    <img src="https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011" alt="DeepResearch Logo" width="22" height="22" loading="lazy">
+                    <span class="footer-brand-title">DEEPRESEARCH</span>
+                    <span class="footer-brand-tag">ACADEMIC LAB</span>
+                </div>
+                <p class="footer-desc">
+                    An autonomous, multi-agent AI research workspace with Human-in-the-Loop plan approval, PRISMA study selection, and literature synthesis across global academic databases.
+                </p>
+                <div class="footer-tech-stack" aria-label="Built with technologies">
+                    <span class="tech-tag">LangGraph</span>
+                    <span class="tech-tag">DeepSeek</span>
+                    <span class="tech-tag">OpenAlex</span>
+                    <span class="tech-tag">Semantic Scholar</span>
+                    <span class="tech-tag">arXiv</span>
+                    <span class="tech-tag">Tavily</span>
+                </div>
+            </div>
+
+            <div class="footer-col">
+                <h3 class="footer-heading">Capabilities</h3>
+                <ul class="footer-links">
+                    <li><span>Autonomous Multi-Agent Web Research</span></li>
+                    <li><span>Academic Paper &amp; Literature Synthesis</span></li>
+                    <li><span>Human-in-the-Loop (HITL) Checkpoints</span></li>
+                    <li><span>PRISMA Selection &amp; Evidence Matrix</span></li>
+                    <li><span>PDF &amp; Word (.docx) Report Export</span></li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <h3 class="footer-heading">Academic Indexes</h3>
+                <ul class="footer-links">
+                    <li><a href="https://openalex.org" target="_blank" rel="noopener noreferrer">OpenAlex Scholarly Catalog</a></li>
+                    <li><a href="https://www.semanticscholar.org" target="_blank" rel="noopener noreferrer">Semantic Scholar Corpus</a></li>
+                    <li><a href="https://arxiv.org" target="_blank" rel="noopener noreferrer">arXiv Preprint Server</a></li>
+                    <li><a href="https://unpaywall.org" target="_blank" rel="noopener noreferrer">Unpaywall Open Access</a></li>
+                    <li><a href="https://europepmc.org" target="_blank" rel="noopener noreferrer">Europe PMC</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <h3 class="footer-heading">Author &amp; Project</h3>
+                <ul class="footer-links">
+                    <li><a href="https://github.com/Aryan-Pardeshi" target="_blank" rel="noopener noreferrer"><i data-lucide="github" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i> GitHub Profile</a></li>
+                    <li><a href="https://linkedin.com/in/aryan-pardeshi-dev" target="_blank" rel="noopener noreferrer"><i data-lucide="linkedin" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i> LinkedIn Connect</a></li>
+                    <li><span class="footer-author-note">Created by Aryan Pardeshi</span></li>
+                    <li><span class="footer-open-note">Open-source AI/ML Research Platform</span></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <div class="footer-bottom-inner">
+                <p>&copy; 2026 DeepResearch Academic Lab. Released under MIT License.</p>
+                <p class="footer-security-note">Zero data leakage guarantee: API keys stored locally in .env.</p>
+            </div>
+        </div>
+    </footer>
 
     <!-- Paper Deep-Dive Inspector Modal -->
     <div class="paper-modal-overlay" id="paper-detail-modal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; padding: 1.5rem;">

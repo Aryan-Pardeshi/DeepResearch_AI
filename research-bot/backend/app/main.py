@@ -3,6 +3,7 @@ import sys, os, re, secrets
 from pathlib import Path
 import uvicorn
 from fastapi import FastAPI, HTTPException, Header
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -180,6 +181,28 @@ def update_config(body: ConfigUpdate, x_config_token: str | None = Header(None, 
     _authorize_config_write(x_config_token)
     return _apply_config_update(body)
 
+
+# Dedicated SEO and Crawler File Handlers
+@app.get("/robots.txt", include_in_schema=False)
+def serve_robots():
+    robots_file = frontend_path / "robots.txt"
+    if robots_file.exists():
+        return FileResponse(robots_file, media_type="text/plain")
+    raise HTTPException(status_code=404, detail="robots.txt not found")
+
+@app.get("/sitemap.xml", include_in_schema=False)
+def serve_sitemap():
+    sitemap_file = frontend_path / "sitemap.xml"
+    if sitemap_file.exists():
+        return FileResponse(sitemap_file, media_type="application/xml")
+    raise HTTPException(status_code=404, detail="sitemap.xml not found")
+
+@app.get("/site.webmanifest", include_in_schema=False)
+def serve_manifest():
+    manifest_file = frontend_path / "site.webmanifest"
+    if manifest_file.exists():
+        return FileResponse(manifest_file, media_type="application/manifest+json")
+    raise HTTPException(status_code=404, detail="site.webmanifest not found")
 
 # Serve the UI from the application root. Registered last so every API route above
 # keeps precedence: a mount at "/" would otherwise swallow them.

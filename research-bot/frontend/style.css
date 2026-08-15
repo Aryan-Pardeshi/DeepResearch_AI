@@ -354,6 +354,7 @@ main {
     background-color: rgba(255, 255, 255, 0.03);
     border: 1px solid var(--card-border);
     color: var(--text-secondary);
+    font-family: inherit;
     font-size: 0.8rem;
     font-weight: 500;
     cursor: pointer;
@@ -1353,6 +1354,68 @@ main {
 
 .revising-spinner {
     animation: rotate 1s linear infinite;
+}
+
+/* Spinning ring used by the Research Mode "Defining research scope..." button
+   state (and any other in-app loader). Without these rules the .spinner-ring
+   div rendered as an invisible empty box, so the loading label had no icon. */
+.spinner-ring {
+    display: inline-block;
+    width: 1.1rem;
+    height: 1.1rem;
+    border: 2px solid rgba(120, 130, 200, 0.35);
+    border-top-color: var(--academic-blue, #6366f1);
+    border-radius: 50%;
+    animation: rotate 0.7s linear infinite;
+    flex-shrink: 0;
+}
+.spinner-ring.sm {
+    width: 0.95rem;
+    height: 0.95rem;
+    border-width: 2px;
+}
+.spinner-ring.lg {
+    width: 1.6rem;
+    height: 1.6rem;
+    border-width: 3px;
+}
+
+/* Small "Defining research scope" loader shown in the workspace body while the
+   start request is in flight, before Checkpoint 1 renders. Reuses the ai-wave
+   dots already used elsewhere so it matches the rest of the UI. */
+.rm-scope-loader {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 1.1rem 1.4rem;
+    margin-bottom: 1.5rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--card-border, rgba(255, 255, 255, 0.08));
+    border-radius: var(--radius-md, 12px);
+}
+.rm-scope-loader .scope-spinner {
+    width: 1.4rem;
+    height: 1.4rem;
+    border: 3px solid rgba(120, 130, 200, 0.3);
+    border-top-color: var(--academic-blue, #6366f1);
+    border-radius: 50%;
+    animation: rotate 0.7s linear infinite;
+    flex-shrink: 0;
+}
+.rm-scope-loader .scope-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+.rm-scope-loader .scope-title {
+    font-family: var(--font-outfit, inherit);
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: var(--text-primary, #f1f5f9);
+}
+.rm-scope-loader .scope-sub {
+    font-size: 0.8rem;
+    color: var(--text-muted, #94a3b8);
 }
 
 /* Animations */
@@ -3103,3 +3166,196 @@ select:focus-visible,
     color: var(--text-secondary);
     margin: 0;
 }
+
+/* Accessibility: Skip Link */
+.skip-link {
+    position: absolute;
+    top: -120px;
+    left: 1rem;
+    background: var(--accent-purple);
+    color: #ffffff;
+    padding: 0.6rem 1.2rem;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 0.88rem;
+    z-index: 10000;
+    text-decoration: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: top 0.2s ease;
+}
+
+.skip-link:focus {
+    top: 1rem;
+    outline: 2px solid var(--text-primary);
+    outline-offset: 2px;
+}
+
+/* Semantic & SEO App Footer */
+.app-footer {
+    width: 100%;
+    margin-top: 4rem;
+    border-top: 1px solid var(--card-border);
+    background: var(--bg-panel);
+    color: var(--text-secondary);
+    position: relative;
+    z-index: 10;
+}
+
+.footer-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 2rem;
+    display: grid;
+    grid-template-columns: 2fr 1.2fr 1.2fr 1.2fr;
+    gap: 2.5rem;
+}
+
+.footer-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.footer-brand-col .footer-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.footer-brand-title {
+    font-family: var(--font-outfit);
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: 0.05em;
+    color: var(--text-primary);
+}
+
+.footer-brand-tag {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(56, 189, 248, 0.12);
+    color: var(--academic-blue);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+.footer-desc {
+    font-size: 0.84rem;
+    line-height: 1.55;
+    color: var(--text-secondary);
+    margin: 0;
+    max-width: 340px;
+}
+
+.footer-tech-stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.25rem;
+}
+
+.tech-tag {
+    font-size: 0.7rem;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--card-border);
+    color: var(--text-muted);
+}
+
+.footer-heading {
+    font-family: var(--font-outfit);
+    font-size: 0.88rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.footer-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    font-size: 0.82rem;
+}
+
+.footer-links li a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: var(--transition-fast);
+    display: inline-flex;
+    align-items: center;
+}
+
+.footer-links li a:hover {
+    color: var(--accent-purple);
+    transform: translateX(2px);
+}
+
+.footer-links li span {
+    color: var(--text-muted);
+}
+
+.footer-author-note {
+    font-weight: 500;
+    color: var(--text-secondary) !important;
+}
+
+.footer-open-note {
+    font-size: 0.76rem;
+    color: var(--text-muted) !important;
+}
+
+.footer-bottom {
+    border-top: 1px solid var(--card-border);
+    padding: 1.25rem 1.5rem;
+    background: rgba(0, 0, 0, 0.15);
+}
+
+.footer-bottom-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+.footer-bottom p {
+    margin: 0;
+}
+
+.footer-security-note {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+@media (max-width: 900px) {
+    .footer-container {
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .footer-container {
+        grid-template-columns: 1fr;
+        gap: 1.75rem;
+        padding: 2rem 1rem 1.5rem;
+    }
+    .footer-bottom-inner {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+

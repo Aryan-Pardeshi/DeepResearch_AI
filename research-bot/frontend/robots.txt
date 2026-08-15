@@ -1,0 +1,12 @@
+# robots.txt for DeepResearch AI Research Assistant & Academic Lab
+User-agent: *
+Allow: /
+Allow: /assets/
+Allow: /static/
+Disallow: /config/
+Disallow: /healthz
+Disallow: /research/start
+Disallow: /research/approve
+
+# Sitemap location
+Sitemap: https://deepresearch.dev/sitemap.xml
