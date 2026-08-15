@@ -250,3 +250,6 @@ research-bot/backend/app/static/exports/
 
 # Machine-specific Claude Code dev tooling (absolute local paths, e.g. venv python)
 .claude/launch.json
+
+# Superpowers SDD scratch workspaces (plan artifacts; git history is the record)
+.superpowers/
