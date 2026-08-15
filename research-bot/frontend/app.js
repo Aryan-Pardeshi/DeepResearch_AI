@@ -339,6 +339,87 @@ const researchTimer = {
     }
 };
 
+// Research Mode Minimal Timer
+const rmTimer = {
+    startTime: null,
+    timerId: null,
+    elapsedSeconds: 0,
+    isPaused: false,
+    start(initialSeconds = null) {
+        this.stop();
+        if (typeof initialSeconds === 'number' && initialSeconds >= 0) {
+            this.elapsedSeconds = initialSeconds;
+        }
+        this.startTime = Date.now() - (this.elapsedSeconds * 1000);
+        this.isPaused = false;
+        this.timerId = setInterval(() => {
+            if (!this.isPaused) {
+                this.elapsedSeconds = Math.floor((Date.now() - this.startTime) / 1000);
+                this.updateDisplay();
+            }
+        }, 1000);
+        this.updateDisplay();
+    },
+    pause() {
+        this.isPaused = true;
+        if (this.timerId) {
+            clearInterval(this.timerId);
+            this.timerId = null;
+        }
+        this.updateDisplay();
+    },
+    resume() {
+        if (!this.startTime) {
+            this.start(this.elapsedSeconds);
+            return;
+        }
+        this.stop();
+        this.startTime = Date.now() - (this.elapsedSeconds * 1000);
+        this.isPaused = false;
+        this.timerId = setInterval(() => {
+            if (!this.isPaused) {
+                this.elapsedSeconds = Math.floor((Date.now() - this.startTime) / 1000);
+                this.updateDisplay();
+            }
+        }, 1000);
+        this.updateDisplay();
+    },
+    stop() {
+        if (this.timerId) {
+            clearInterval(this.timerId);
+            this.timerId = null;
+        }
+        this.updateDisplay();
+    },
+    reset() {
+        this.stop();
+        this.startTime = null;
+        this.elapsedSeconds = 0;
+        this.isPaused = false;
+        this.updateDisplay();
+    },
+    updateDisplay() {
+        const timerEl = document.getElementById('rm-research-timer');
+        const container = document.getElementById('rm-timer-container');
+        if (timerEl) {
+            const minutes = Math.floor(this.elapsedSeconds / 60);
+            const seconds = this.elapsedSeconds % 60;
+            timerEl.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+        if (container) {
+            if (state.rm && state.rm.status === 'completed') {
+                container.classList.remove('running');
+                container.classList.add('completed');
+            } else if (!this.isPaused && this.timerId) {
+                container.classList.remove('completed');
+                container.classList.add('running');
+            } else {
+                container.classList.remove('running', 'completed');
+            }
+        }
+    }
+};
+
 // Cold-start auto-reload guard. If the user lands on a cold Render instance
 // where the backend takes 30-60s to wake up, the page can sit stuck with the
 // offline banner visible. A bounded one-shot reload gives the page a single
@@ -949,6 +1030,8 @@ document.addEventListener('visibilitychange', () => {
 function saveRMSession() {
     if (!state.rm.threadId) return;
     try {
+        state.rm.elapsedSeconds = rmTimer.elapsedSeconds;
+        state.rm.timerPaused = rmTimer.isPaused;
         const { screenedPapers, ...persistableRmState } = state.rm;
         const sessionData = {
             threadId: state.rm.threadId,
@@ -998,6 +1081,17 @@ async function restoreRMSessionOnLoad() {
             renderRMHitlPanel(currentCp);
         } else {
             if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
+        }
+
+        // Rehydrate elapsed timer from local state
+        if (typeof state.rm.elapsedSeconds === 'number') {
+            rmTimer.elapsedSeconds = state.rm.elapsedSeconds;
+            if (state.rm.status === 'completed' || state.rm.hitlCheckpointPending || state.rm.timerPaused) {
+                rmTimer.isPaused = true;
+                rmTimer.updateDisplay();
+            } else {
+                rmTimer.start(state.rm.elapsedSeconds);
+            }
         }
 
         // Rehydrate corpus stats immediately from local cache on reload
@@ -1050,11 +1144,13 @@ async function restoreRMSessionOnLoad() {
                 }
 
                 if (data.is_completed) {
+                    rmTimer.stop();
                     state.rm.hitlCheckpoint = 'title';
                     updateRMPipelineTracker('title', RM_STAGES.map(s => s.id));
                     if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
                     renderRMPaperFinal();
                 } else if (data.is_checkpoint) {
+                    rmTimer.pause();
                     const resolvedCp = inferCurrentRMCheckpoint(data.hitl_checkpoint);
                     state.rm.hitlCheckpoint = resolvedCp;
                     state.rm.hitlCheckpointPending = true;
@@ -1070,6 +1166,7 @@ async function restoreRMSessionOnLoad() {
                     // Not finished, not paused: a node is actively running on the
                     // backend right now. Show live progress and reopen the event
                     // stream so it keeps updating instead of sitting frozen.
+                    rmTimer.resume();
                     if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
                     state.rm.hitlApproved = true;
                     state.rm.hitlCheckpointPending = false;
@@ -1166,6 +1263,7 @@ function resetResearchModeForm() {
     state.rm.hitlCheckpointPending = false;
     state.rm.corpus_stats = null;
 
+    rmTimer.reset();
     hideRMCheckpointTransitionLoader();
     if (dom.rmCorpusStatsBar) dom.rmCorpusStatsBar.style.display = 'none';
     if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
@@ -1376,6 +1474,8 @@ async function handleRMStart() {
         state.rm.researchQuestions = data.research_questions || [];
         state.rm.keywords = data.keywords || [];
         state.rm.hitlCheckpoint = data.hitl_checkpoint;
+        rmTimer.reset();
+        rmTimer.pause();
         saveRMSession();
 
         state.rm.completedStages = [];
@@ -1707,6 +1807,7 @@ async function handleRMApprove(feedback) {
     const nextStage = cpIdx >= 0 && cpIdx + 1 < RM_STAGES.length ? RM_STAGES[cpIdx + 1].id : 'paper_fetcher';
 
     updateRMPipelineTracker(nextStage, completedStages);
+    rmTimer.resume();
     showRMCheckpointTransitionLoader(currentCp, feedback !== 'approve');
     appendLogLine(`Checkpoint '${currentCp}' approved. Resuming pipeline...`, 'info');
     saveRMSession();
@@ -1912,8 +2013,6 @@ function openPaperInspector(paper) {
             </div>
             <div style="background: var(--bg-surface); padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 1rem;">
                 <p style="margin: 0 0 0.25rem 0; font-weight: 600;">Relevance Score: <span style="color: var(--academic-blue);">${paper.relevance_score || 'N/A'}/10</span></p>
-                <p style="margin: 0; color: var(--text-secondary);"><strong>Inclusion Rationale:</strong> ${paper.inclusion_reason || paper.rationale || 'Selected based on topic alignment.'}</p>
-            </div>
             <div style="margin-top: 1rem;">
                 <h5 style="margin: 0 0 0.5rem 0; font-size: 0.95rem; font-weight: 600;">Extracted Full-Text Excerpt</h5>
                 <pre style="white-space: pre-wrap; font-family: monospace; font-size: 0.82rem; background: #0f172a; color: #f8fafc; padding: 0.85rem; border-radius: 8px; max-height: 250px; overflow-y: auto;">${paper.fulltext_excerpt || paper.abstract || 'No full-text excerpt extracted for this paper.'}</pre>
@@ -1933,6 +2032,7 @@ function processRMSEEvent(data) {
     if (data.seq !== undefined && data.seq !== null) state.rm.lastSeq = data.seq;
 
     if (data.event === 'node_start') {
+        rmTimer.resume();
         updateRMPipelineTracker(data.node);
         updateRMTransitionLoaderNode(data.node);
         appendLogLine(`Node started: ${rmStageLabel(data.node)}`, 'info');
@@ -1944,6 +2044,7 @@ function processRMSEEvent(data) {
         // signal that a long node is still alive, so it drives the status tag.
         noteRMTokenActivity(data.node);
     } else if (data.event === 'resume') {
+        rmTimer.resume();
         appendLogLine('Pipeline resumed.', 'info');
     } else if (data.event === 'node_update') {
         applyRMStatePayload(data.data || {});
@@ -1953,6 +2054,7 @@ function processRMSEEvent(data) {
         renderRMPaperLive();
         saveRMSession();
     } else if (data.event === 'checkpoint') {
+        rmTimer.pause();
         applyRMStatePayload(data.state || {});
         const cp = inferCurrentRMCheckpoint(data.hitl_checkpoint);
         state.rm.hitlCheckpoint = cp;
@@ -1974,6 +2076,7 @@ function processRMSEEvent(data) {
         state.rm.hitlCheckpointPending = false;
         state.rm.hitlApproved = true;
         applyRMStatePayload(data.state || {});
+        rmTimer.stop();
         appendLogLine(`Pipeline execution completed!`, 'success');
         if (data.state && data.state.corpus_stats) updateCorpusStats(data.state.corpus_stats);
         updateRMPipelineTracker('title', RM_STAGES.map(s => s.id));
@@ -1982,6 +2085,7 @@ function processRMSEEvent(data) {
         renderRMPaperFinal();
         saveRMSession();
     } else if (data.event === 'error') {
+        rmTimer.stop();
         hideRMCheckpointTransitionLoader();
         appendLogLine(`Pipeline Error: ${data.message}`, 'error');
         if (trackerContainer) trackerContainer.classList.remove('active-execution');
