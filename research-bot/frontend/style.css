@@ -177,6 +177,14 @@ main {
     color: #fef2f2;
 }
 
+/* Why the check failed. Distinguishes a slow host from a request that never
+   left the browser, which is the difference between waiting and debugging. */
+.backend-offline-reason {
+    opacity: 0.75;
+    font-size: 0.82em;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
 /* Navigation Header */
 header {
     width: 100%;

@@ -116,7 +116,7 @@
     }
     </script>
 
-    <link rel="stylesheet" href="style.css?v=2.4.7">
+    <link rel="stylesheet" href="style.css?v=2.5.1">
     <!-- Marked.js for markdown parsing -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- Lucide icons -->
@@ -131,7 +131,7 @@
          not, so a backend that was down or still cold-starting gave no signal. -->
     <div class="backend-offline-banner" id="backend-offline-banner" style="display:none;">
         <i data-lucide="wifi-off" style="width: 18px; height: 18px; flex-shrink: 0;"></i>
-        <span><strong>Backend unreachable.</strong> Waiting for the research service to respond — a sleeping host can take up to a minute to wake.</span>
+        <span><strong>Backend unreachable.</strong> Waiting for the research service to respond — a sleeping host can take up to a minute to wake.<span id="backend-offline-reason" class="backend-offline-reason"></span></span>
     </div>
 
     <!-- Header -->
@@ -680,6 +680,6 @@
     <div class="toast-container" id="toast-container"></div>
 
     <!-- Application Script -->
-    <script src="app.js?v=2.5.0"></script>
+    <script src="app.js?v=2.5.1"></script>
 </body>
 </html>

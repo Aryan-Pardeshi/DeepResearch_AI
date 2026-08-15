@@ -780,6 +780,7 @@ const HEALTH_TIMEOUT_MS = 8000;
 let healthPollTimer = null;
 let healthFailureStreak = 0;
 let healthCheckInFlight = false;
+let lastHealthFailureReason = '';
 
 function markBackendOnline() {
     healthFailureStreak = 0;
@@ -804,9 +805,17 @@ async function checkBackendHealth() {
             signal: controller.signal
         });
         online = res.ok;
+        if (!online) lastHealthFailureReason = `HTTP ${res.status}`;
     } catch (e) {
         // Timeout, network error, or CORS — all mean "not reachable right now".
+        // Which one it was matters a great deal when diagnosing a report of this
+        // banner appearing on a backend that is demonstrably up: an aborted
+        // request means the host is slow, while "Failed to fetch" means the
+        // request never left the browser (blocked by an extension, DNS, or TLS).
         online = false;
+        lastHealthFailureReason = e.name === 'AbortError'
+            ? `no response in ${HEALTH_TIMEOUT_MS / 1000}s`
+            : `${e.name}: ${e.message}`;
     } finally {
         clearTimeout(timeoutId);
         healthCheckInFlight = false;
@@ -823,6 +832,10 @@ async function checkBackendHealth() {
             dom.backendOfflineBanner.style.display = 'none';
         } else if (healthFailureStreak >= 2) {
             dom.backendOfflineBanner.style.display = 'flex';
+            const reasonEl = document.getElementById('backend-offline-reason');
+            if (reasonEl && lastHealthFailureReason) {
+                reasonEl.textContent = ` (${lastHealthFailureReason})`;
+            }
         }
     }
 
