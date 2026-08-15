@@ -108,12 +108,12 @@ def _get_config_status():
         
     return {
         "ok": len(missing_required) == 0,
-        "llm_base_url": llm_url,
+        "llm_base_url": (llm_url or "") if _config_api_is_open() else "",
         "llm_api_key_configured": bool(llm_key) and llm_key.strip() not in placeholders,
         "tavily_configured": bool(tavily_key) and tavily_key.strip() not in placeholders,
-        "llm_model_planner": os.getenv("LLM_MODEL_PLANNER", "deepseek-chat"),
-        "llm_model_researcher": os.getenv("LLM_MODEL_RESEARCHER", "deepseek-chat"),
-        "llm_model_aggregator": os.getenv("LLM_MODEL_AGGREGATOR", "deepseek-chat"),
+        "llm_model_planner": os.getenv("LLM_MODEL_PLANNER", "deepseek-chat") if _config_api_is_open() else "",
+        "llm_model_researcher": os.getenv("LLM_MODEL_RESEARCHER", "deepseek-chat") if _config_api_is_open() else "",
+        "llm_model_aggregator": os.getenv("LLM_MODEL_AGGREGATOR", "deepseek-chat") if _config_api_is_open() else "",
         # Only echoed back when the config API is locally open; on a public
         # deployment this is somebody's personal address.
         "openalex_email": (openalex_email or "") if _config_api_is_open() else "",
