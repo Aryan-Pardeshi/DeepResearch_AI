@@ -178,6 +178,21 @@ function applyRMStatePayload(payload) {
     // SSE sends raw_papers_count, the rehydrate endpoint sends the arrays.
     if (Array.isArray(payload.raw_papers)) state.rm.rawPapersCount = payload.raw_papers.length;
     if (Array.isArray(payload.screened_papers)) state.rm.screenedPapersCount = payload.screened_papers.length;
+
+    // Corpus stats synchronization
+    if (payload.corpus_stats) {
+        updateCorpusStats(payload.corpus_stats);
+    } else if (state.rm.corpus_stats) {
+        updateCorpusStats(state.rm.corpus_stats);
+    } else if (state.rm.rawPapersCount || state.rm.screenedPapersCount) {
+        updateCorpusStats({
+            retrieved: state.rm.rawPapersCount || 0,
+            after_dedup: state.rm.rawPapersCount || 0,
+            screened: state.rm.screenedPapersCount || 0,
+            included: state.rm.screenedPapersCount || 0,
+            fulltext_fetched: state.rm.screenedPapersCount || 0
+        });
+    }
 }
 
 // Papers arrive from the backend already relevance-ranked in practice, but
@@ -964,6 +979,22 @@ async function restoreRMSessionOnLoad() {
         const completedStages = cpIdx > 0 ? RM_STAGES.slice(0, cpIdx).map(s => s.id) : [];
         updateRMPipelineTracker(currentCp, completedStages);
         if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
+
+        // Rehydrate corpus stats immediately from local cache on reload
+        if (state.rm.corpus_stats) {
+            updateCorpusStats(state.rm.corpus_stats);
+        } else if (state.rm.corpusStats) {
+            updateCorpusStats(state.rm.corpusStats);
+        } else if (state.rm.rawPapersCount || state.rm.screenedPapersCount) {
+            updateCorpusStats({
+                retrieved: state.rm.rawPapersCount || 0,
+                after_dedup: state.rm.rawPapersCount || 0,
+                screened: state.rm.screenedPapersCount || 0,
+                included: state.rm.screenedPapersCount || 0,
+                fulltext_fetched: state.rm.screenedPapersCount || 0
+            });
+        }
+
         if (state.rm.status === 'completed') {
             renderRMPaperFinal();
         } else if (typeof getPaperMarkdown === 'function' && getPaperMarkdown().trim().length > 50) {
@@ -990,6 +1021,13 @@ async function restoreRMSessionOnLoad() {
                 applyRMStatePayload(data.values || {});
                 renderRMSourcesPanel();
                 if (data.status) state.rm.status = data.status;
+
+                // Sync corpus stats from backend result
+                if (data.values && data.values.corpus_stats) {
+                    updateCorpusStats(data.values.corpus_stats);
+                } else if (state.rm.corpus_stats) {
+                    updateCorpusStats(state.rm.corpus_stats);
+                }
 
                 if (data.is_completed) {
                     state.rm.hitlCheckpoint = 'title';
@@ -1809,13 +1847,31 @@ function appendLogLine(msg, level = 'info') {
 }
 
 function updateCorpusStats(stats) {
-    if (!stats) return;
-    if (dom.statRetrieved) dom.statRetrieved.textContent = stats.retrieved || 0;
-    if (dom.statDedup) dom.statDedup.textContent = stats.after_dedup || 0;
-    if (dom.statScreened) dom.statScreened.textContent = stats.screened || 0;
-    if (dom.statIncluded) dom.statIncluded.textContent = stats.included || 0;
-    if (dom.statFulltext) dom.statFulltext.textContent = stats.fulltext_fetched || 0;
-    if (dom.rmCorpusStatsBar) dom.rmCorpusStatsBar.style.display = 'flex';
+    if (!stats || typeof stats !== 'object') return;
+    state.rm.corpus_stats = stats;
+
+    const retrieved = stats.retrieved != null ? stats.retrieved : (stats.raw_papers_count != null ? stats.raw_papers_count : 0);
+    const dedup = stats.after_dedup != null ? stats.after_dedup : (stats.dedup != null ? stats.dedup : retrieved);
+    const screened = stats.screened != null ? stats.screened : (stats.screened_papers_count != null ? stats.screened_papers_count : 0);
+    const included = stats.included != null ? stats.included : (stats.screened_papers_count != null ? stats.screened_papers_count : 0);
+    const fulltext = stats.fulltext_fetched != null ? stats.fulltext_fetched : (stats.fulltext != null ? stats.fulltext : 0);
+
+    const statRetrievedEl = dom.statRetrieved || document.getElementById('stat-retrieved');
+    const statDedupEl = dom.statDedup || document.getElementById('stat-dedup');
+    const statScreenedEl = dom.statScreened || document.getElementById('stat-screened');
+    const statIncludedEl = dom.statIncluded || document.getElementById('stat-included');
+    const statFulltextEl = dom.statFulltext || document.getElementById('stat-fulltext');
+    const corpusBarEl = dom.rmCorpusStatsBar || document.getElementById('rm-corpus-stats-bar');
+
+    if (statRetrievedEl) statRetrievedEl.textContent = retrieved;
+    if (statDedupEl) statDedupEl.textContent = dedup;
+    if (statScreenedEl) statScreenedEl.textContent = screened;
+    if (statIncludedEl) statIncludedEl.textContent = included;
+    if (statFulltextEl) statFulltextEl.textContent = fulltext;
+
+    if (corpusBarEl) {
+        corpusBarEl.style.display = 'flex';
+    }
 }
 
 function openPaperInspector(paper) {
