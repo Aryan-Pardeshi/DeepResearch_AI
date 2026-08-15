@@ -762,9 +762,18 @@ function switchPanel(targetPanel) {
 // visibilitychange listener re-checks the instant the tab regains focus, and
 // markBackendOnline() lets any real successful API response clear the banner
 // immediately instead of waiting on the timer at all.
+//
+// A single failed /healthz poll isn't treated as "down" either: Render's free
+// single worker occasionally queues or drops one request under load even while
+// the app is otherwise working (a real API call can succeed seconds later), and
+// that lone blip was enough to re-show the banner right after markBackendOnline()
+// had just cleared it. Two consecutive failures are required before showing it;
+// any success (poll or real traffic) clears the counter and hides it immediately.
 let healthPollTimer = null;
+let healthFailureStreak = 0;
 
 function markBackendOnline() {
+    healthFailureStreak = 0;
     if (dom.backendOfflineBanner) {
         dom.backendOfflineBanner.style.display = 'none';
     }
@@ -779,8 +788,14 @@ async function checkBackendHealth() {
         online = false;
     }
 
+    healthFailureStreak = online ? 0 : healthFailureStreak + 1;
+
     if (dom.backendOfflineBanner) {
-        dom.backendOfflineBanner.style.display = online ? 'none' : 'flex';
+        if (online) {
+            dom.backendOfflineBanner.style.display = 'none';
+        } else if (healthFailureStreak >= 2) {
+            dom.backendOfflineBanner.style.display = 'flex';
+        }
     }
 
     // Poll fast while it is down (cold start), slowly once it is up.
