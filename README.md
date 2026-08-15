@@ -130,8 +130,6 @@ flowchart TB
         WRITE --> DONE(["📄 Complete Paper · PDF · DOCX"])
     end
 
-    CP2 ==>|"approved"| HYP
-
     style START fill:#6366f1,stroke:#4338ca,color:#fff
     style CP1 fill:#f59e0b,stroke:#b45309,color:#fff
     style CP2 fill:#f59e0b,stroke:#b45309,color:#fff
