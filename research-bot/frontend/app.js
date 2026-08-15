@@ -498,6 +498,7 @@ async function checkConfigGate() {
     try {
         const res = await fetch(`${API_BASE_URL}/config/status`);
         if (!res.ok) return;
+        markBackendOnline();
         const data = await res.json();
         
         if (dom.rmModelPlanner && data.llm_model_planner) dom.rmModelPlanner.placeholder = data.llm_model_planner;
@@ -753,7 +754,21 @@ function switchPanel(targetPanel) {
 // Health Check. This ran exactly once at load, so a host that was still waking
 // up (Render free instances cold-start for ~30-60s) pinned the offline banner on
 // screen for the whole session even after the backend came up.
+//
+// The poll loop alone isn't enough: Chrome/Brave throttle setTimeout heavily in
+// backgrounded tabs (exactly what happens when someone tabs away during a ~50s
+// cold-start wait), so the next poll can be delayed minutes past when the
+// backend actually came up. Two additional recovery paths cover that: a
+// visibilitychange listener re-checks the instant the tab regains focus, and
+// markBackendOnline() lets any real successful API response clear the banner
+// immediately instead of waiting on the timer at all.
 let healthPollTimer = null;
+
+function markBackendOnline() {
+    if (dom.backendOfflineBanner) {
+        dom.backendOfflineBanner.style.display = 'none';
+    }
+}
 
 async function checkBackendHealth() {
     let online = false;
@@ -773,6 +788,12 @@ async function checkBackendHealth() {
     healthPollTimer = setTimeout(checkBackendHealth, online ? 60000 : 5000);
     return online;
 }
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        checkBackendHealth();
+    }
+});
 
 
 /* ==========================================================================
@@ -851,6 +872,7 @@ async function restoreRMSessionOnLoad() {
         try {
             const res = await fetch(`${API_BASE_URL}/research-mode/result/${session.threadId}`);
             if (res.ok) {
+                markBackendOnline();
                 const data = await res.json();
                 // This endpoint returns the raw graph state in snake_case. Copying it
                 // straight onto state.rm (which is camelCase) meant a rehydrated
@@ -1165,6 +1187,7 @@ async function handleRMStart() {
         if (!res.ok || !contentType.includes('application/json')) {
             throw new Error(`Server returned ${res.status} (${res.statusText || 'Non-JSON response'}). Make sure the backend server is running on ${API_BASE_URL}.`);
         }
+        markBackendOnline();
 
         const data = await res.json();
         if (data.error || data.status === 'error') {
@@ -1806,6 +1829,7 @@ async function handlePlanResearch() {
         if (!res.ok || !contentType.includes('application/json')) {
             throw new Error(`Server returned ${res.status} (${res.statusText || 'Non-JSON response'}). Make sure the backend server is running on ${API_BASE_URL}.`);
         }
+        markBackendOnline();
         const data = await res.json();
         if (data.status === 'error') {
             showToast(data.error || 'Failed to create plan.', 'error');
