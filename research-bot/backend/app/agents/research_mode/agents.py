@@ -105,12 +105,23 @@ async def scope_definition_agent(state: ResearchModeState) -> Dict[str, Any]:
     ps = state.get("problem_statement", "")
     objs = state.get("research_objectives", [])
     rqs = state.get("research_questions", [])
+    manual_scope = bool(objs and rqs)
+    enhanced_ps = ps
 
     if not objs or not rqs:
         llm = get_llm_for(state, role="planner")
-        prompt = f"""Problem Statement: {ps}
-Generate 2-4 concrete research objectives and 2-4 research questions suitable for academic paper synthesis.
-Return JSON with keys: "research_objectives" (list of strings), "research_questions" (list of strings)."""
+        prompt = f"""Core Problem Statement (as entered by the researcher, may be terse or underspecified): {ps}
+
+First, rewrite the problem statement into a clear, well-scoped 1-3 sentence
+academic problem statement: keep the user's actual topic and intent, but make
+it concrete enough to drive a literature search and a synthesis paper. Do not
+invent a different topic; expand and sharpen the one given.
+
+Then generate 2-4 concrete research objectives and 2-4 research questions that
+follow from that refined statement, suitable for academic paper synthesis.
+
+Return JSON with keys: "problem_statement" (string), "research_objectives"
+(list of strings), "research_questions" (list of strings)."""
         try:
             raw = await _safe_invoke_llm(llm, prompt, '{}')
             if "```" in raw:
@@ -118,6 +129,11 @@ Return JSON with keys: "research_objectives" (list of strings), "research_questi
                 if raw.startswith("json"):
                     raw = raw[4:]
             data = json.loads(raw)
+            # Manual scope (both objectives and questions already supplied by the
+            # user via the Advanced form) is left untouched - only a PS with
+            # nothing else defined for it gets rewritten.
+            if not manual_scope and data.get("problem_statement"):
+                enhanced_ps = data["problem_statement"].strip() or ps
             if not objs and data.get("research_objectives"):
                 objs = data["research_objectives"]
             if not rqs and data.get("research_questions"):
@@ -126,12 +142,12 @@ Return JSON with keys: "research_objectives" (list of strings), "research_questi
             logger.warning(f"Error in scope_definition_agent: {e}")
 
     if not objs:
-        objs = [f"Investigate core mechanisms of {ps[:80]}"]
+        objs = [f"Investigate core mechanisms of {enhanced_ps[:80]}"]
     if not rqs:
-        rqs = [f"What are the foundational principles governing {ps[:60]}?"]
+        rqs = [f"What are the foundational principles governing {enhanced_ps[:60]}?"]
 
     return {
-        "problem_statement": ps,
+        "problem_statement": enhanced_ps,
         "research_objectives": objs,
         "research_questions": rqs,
         "status": "defining_scope"
