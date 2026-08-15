@@ -235,7 +235,7 @@ cython_debug/
 # VS Code
 .vscode/
 api_tests.py
-r e s e a r c h - b o t / . e n v  
+research-bot/.env
 
 # Data directory and databases
 data/
@@ -247,3 +247,6 @@ research-bot/test_*.docx
 e2e_*.pdf
 e2e_*.docx
 research-bot/backend/app/static/exports/
+
+# Machine-specific Claude Code dev tooling (absolute local paths, e.g. venv python)
+.claude/launch.json

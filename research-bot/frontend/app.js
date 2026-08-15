@@ -71,7 +71,8 @@ const state = {
         abstract: '',
         title: '',
         activeStage: 'scope_definition',
-        completedStages: []
+        completedStages: [],
+        screenedPapers: []
     }
 };
 
@@ -164,10 +165,28 @@ function applyRMStatePayload(payload) {
             state.rm[key] = value;
         }
     });
+    // paper_fetcher sends raw_papers before screening; paper_screener and
+    // fulltext_fetcher both send screened_papers (the latter adds
+    // content_excerpt). Whichever arrives most recently wins — screened_papers
+    // is always the more complete list once it exists.
+    if (Array.isArray(payload.screened_papers)) {
+        state.rm.screenedPapers = payload.screened_papers;
+    } else if (Array.isArray(payload.raw_papers) && state.rm.screenedPapers.length === 0) {
+        state.rm.screenedPapers = payload.raw_papers;
+    }
     // The backend sends counts under different names depending on the endpoint:
     // SSE sends raw_papers_count, the rehydrate endpoint sends the arrays.
     if (Array.isArray(payload.raw_papers)) state.rm.rawPapersCount = payload.raw_papers.length;
     if (Array.isArray(payload.screened_papers)) state.rm.screenedPapersCount = payload.screened_papers.length;
+}
+
+// Papers arrive from the backend already relevance-ranked in practice, but
+// don't rely on that — sort explicitly so the checkpoint strip and library
+// panel always show the strongest matches first regardless of arrival order.
+function getScreenedPapers() {
+    return [...state.rm.screenedPapers].sort(
+        (a, b) => (b.relevance_score || 0) - (a.relevance_score || 0)
+    );
 }
 
 // Escapes model- and user-authored text before it goes into an innerHTML string.
@@ -205,6 +224,43 @@ function renderMarkdownSafe(md) {
         return single ? single[1] : html;
     }
     return `<pre class="markdown-fallback">${safe}</pre>`;
+}
+
+const SOURCE_BADGE_MAP = {
+    openalex: { src: 'assets/openalex.png', label: 'OpenAlex', cls: 'index-mark-openalex' },
+    semantic_scholar: { src: 'assets/semantic-scholar.png', label: 'Semantic Scholar', cls: '' },
+    arxiv: { src: 'assets/arxiv.png', label: 'arXiv', cls: '' }
+};
+
+// Reuses the same brand marks the landing page already downloaded (see
+// assets/*.png) so a paper's origin index is visually recognizable instead
+// of a plain text label like "openalex".
+function sourceBadgeHtml(source) {
+    const entry = SOURCE_BADGE_MAP[source];
+    if (!entry) return '';
+    return `<img class="source-badge ${entry.cls}" src="${entry.src}" alt="${entry.label}" title="${entry.label}" width="14" height="14" loading="lazy">`;
+}
+
+let truncatableIdCounter = 0;
+
+// Checkpoint 2 was showing researchGap/conceptualFramework in full — observed
+// at ~2500 words on screen in one live test run. literatureReview already had
+// a hard 400-char cut with no way to read past it. This gives every long
+// snippet the same collapsed-by-default treatment with an actual way out.
+function renderTruncatable(text, opts = {}) {
+    const charLimit = opts.charLimit || 400;
+    const safeText = text || '';
+    const id = `trunc-${++truncatableIdCounter}`;
+    const rendered = renderMarkdownSafe(safeText);
+
+    if (safeText.length <= charLimit) {
+        return `<div class="problem-statement-text">${rendered}</div>`;
+    }
+
+    return `
+        <div class="problem-statement-text truncatable" id="${id}">${rendered}</div>
+        <button type="button" class="truncate-toggle" data-truncate-target="${id}">Show full text</button>
+    `;
 }
 
 function refreshIcons() {
@@ -424,6 +480,9 @@ function cacheDomElements() {
         rmLogCount: document.getElementById('rm-log-count'),
         rmEvidenceCard: document.getElementById('rm-evidence-card'),
         rmEvidenceMatrixView: document.getElementById('rm-evidence-matrix-view'),
+        rmSourcesPanel: document.getElementById('rm-sources-panel'),
+        rmSourcesGrid: document.getElementById('rm-sources-grid'),
+        rmSourcesCountTag: document.getElementById('rm-sources-count-tag'),
         paperDetailModal: document.getElementById('paper-detail-modal'),
         modalPaperTitle: document.getElementById('modal-paper-title'),
         modalPaperBody: document.getElementById('modal-paper-body'),
@@ -526,6 +585,17 @@ function setupEventListeners() {
             e.target.classList.add('active');
             state.searchTopic = [e.target.dataset.topic];
         }
+    });
+
+    // Delegated so it works for truncatable blocks rendered at any point
+    // after this listener is attached (checkpoint panels, library panel).
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.truncate-toggle');
+        if (!btn) return;
+        const target = document.getElementById(btn.dataset.truncateTarget);
+        if (!target) return;
+        const expanded = target.classList.toggle('expanded');
+        btn.textContent = expanded ? 'Show less' : 'Show full text';
     });
 
     dom.planResearchBtn?.addEventListener('click', handlePlanResearch);
@@ -712,9 +782,10 @@ async function checkBackendHealth() {
 function saveRMSession() {
     if (!state.rm.threadId) return;
     try {
+        const { screenedPapers, ...persistableRmState } = state.rm;
         const sessionData = {
             threadId: state.rm.threadId,
-            rmState: state.rm,
+            rmState: persistableRmState,
             lastSeq: state.rm.lastSeq || 0,
             timestamp: Date.now()
         };
@@ -785,6 +856,7 @@ async function restoreRMSessionOnLoad() {
                 // straight onto state.rm (which is camelCase) meant a rehydrated
                 // session rendered an empty paper and empty checkpoint panels.
                 applyRMStatePayload(data.values || {});
+                renderRMSourcesPanel();
                 if (data.status) state.rm.status = data.status;
 
                 if (data.is_completed) {
@@ -896,6 +968,7 @@ function resetResearchModeForm() {
     state.rm.title = '';
     state.rm.lastSeq = 0;
     state.rm.completedStages = [];
+    state.rm.screenedPapers = [];
     state.rm.hitlApproved = false;
     state.rm.hitlCheckpointPending = false;
     state.rm.corpus_stats = null;
@@ -904,6 +977,7 @@ function resetResearchModeForm() {
     if (dom.rmHitlPanel) dom.rmHitlPanel.style.display = 'none';
     if (dom.rmCopyPaperBtn) dom.rmCopyPaperBtn.style.display = 'none';
     if (dom.rmExportDropdown) dom.rmExportDropdown.style.display = 'none';
+    renderRMSourcesPanel();
 
     if (dom.rmPsInput) { dom.rmPsInput.value = ''; rmPlaceholderCycle?.start(); }
     if (dom.rmObjsInput) dom.rmObjsInput.value = '';
@@ -952,6 +1026,41 @@ function renderRMPipelineTracker() {
         `;
         dom.rmPipelineStepsGrid.appendChild(stepEl);
     });
+}
+
+function renderRMSourcesPanel() {
+    if (!dom.rmSourcesPanel) return;
+    const papers = getScreenedPapers();
+
+    if (papers.length === 0) {
+        dom.rmSourcesPanel.style.display = 'none';
+        return;
+    }
+
+    dom.rmSourcesPanel.style.display = 'block';
+    if (dom.rmSourcesCountTag) {
+        dom.rmSourcesCountTag.textContent = `${papers.length} papers`;
+    }
+
+    dom.rmSourcesGrid.innerHTML = papers.map((p, i) => `
+        <div class="source-card-item" data-paper-index="${i}">
+            <div class="source-card-header">
+                ${sourceBadgeHtml(p.source)}
+                <span class="source-card-score">${p.relevance_score != null ? p.relevance_score + '/10' : ''}</span>
+            </div>
+            <div class="source-card-title">${escapeHtml(p.title || 'Untitled')}</div>
+            <div class="source-card-meta">${escapeHtml(String(p.year || ''))}${p.authors && p.authors.length ? ' · ' + escapeHtml(Array.isArray(p.authors) ? p.authors[0] : String(p.authors)) : ''}</div>
+        </div>
+    `).join('');
+
+    dom.rmSourcesGrid.querySelectorAll('.source-card-item').forEach((card) => {
+        card.addEventListener('click', () => {
+            const idx = parseInt(card.dataset.paperIndex, 10);
+            openPaperInspector(papers[idx]);
+        });
+    });
+
+    refreshIcons();
 }
 
 function updateRMPipelineTracker(activeStageId, completedStages) {
@@ -1146,20 +1255,43 @@ function renderRMHitlPanel(checkpoint) {
         dom.rmHitlTitle.textContent = 'Checkpoint 2: Literature Review & Framework Review';
         dom.rmHitlBadge.textContent = 'Checkpoint 2 of 4';
 
+        const topPapers = getScreenedPapers().slice(0, 10);
+        const evidenceRows = topPapers.map((p, i) => `
+            <div class="evidence-row" data-paper-index="${i}">
+                ${sourceBadgeHtml(p.source)}
+                <span class="evidence-title">${escapeHtml(p.title || 'Untitled')}</span>
+                <span class="evidence-year">${escapeHtml(String(p.year || ''))}</span>
+                <span class="evidence-score">${p.relevance_score != null ? p.relevance_score + '/10' : ''}</span>
+            </div>
+        `).join('');
+
         dom.rmHitlBody.innerHTML = `
+            ${topPapers.length ? `
+            <div class="form-group">
+                <label class="form-label">Evidence Used <span class="label-tag">${state.rm.screenedPapers.length} papers screened</span></label>
+                <div class="evidence-list">${evidenceRows}</div>
+            </div>
+            ` : ''}
             <div class="form-group">
                 <label class="form-label">Synthesized Literature Review Snippet</label>
-                <div class="problem-statement-text">${renderMarkdownSafe((state.rm.literatureReview || '').slice(0, 400))}...</div>
+                ${renderTruncatable(state.rm.literatureReview)}
             </div>
             <div class="form-group">
                 <label class="form-label">Identified Research Gap</label>
-                <div class="problem-statement-text">${renderMarkdownSafe(state.rm.researchGap)}</div>
+                ${renderTruncatable(state.rm.researchGap)}
             </div>
             <div class="form-group">
                 <label class="form-label">Proposed Conceptual Framework</label>
-                <div class="problem-statement-text">${renderMarkdownSafe(state.rm.conceptualFramework)}</div>
+                ${renderTruncatable(state.rm.conceptualFramework)}
             </div>
         `;
+
+        dom.rmHitlBody.querySelectorAll('.evidence-row').forEach((row) => {
+            row.addEventListener('click', () => {
+                const idx = parseInt(row.dataset.paperIndex, 10);
+                openPaperInspector(topPapers[idx]);
+            });
+        });
     } else if (checkpoint === 'checkpoint_3') {
         dom.rmHitlTitle.textContent = 'Checkpoint 3: Hypotheses Review';
         dom.rmHitlBadge.textContent = 'Checkpoint 3 of 4';
@@ -1442,6 +1574,7 @@ function processRMSEEvent(data) {
         appendLogLine('Pipeline resumed.', 'info');
     } else if (data.event === 'node_update') {
         applyRMStatePayload(data.data || {});
+        renderRMSourcesPanel();
         appendLogLine(`Node updated: ${rmStageLabel(data.node)}`, 'success');
         if (data.data && data.data.corpus_stats) updateCorpusStats(data.data.corpus_stats);
         renderRMPaperLive();
@@ -1490,6 +1623,39 @@ function processRMSEEvent(data) {
     return data.event;
 }
 
+// Best-effort only: matches "(Lastname, YYYY)" and "(Lastname et al., YYYY)"
+// against screened papers' first-author last name + year. Model-generated
+// citation text won't always map cleanly to a specific screened paper
+// (paraphrased names, multi-author collisions, references outside the
+// screened set) — unmatched citations are left as plain text, unchanged
+// from today's behavior.
+function linkCitations(html) {
+    const papers = getScreenedPapers();
+    if (papers.length === 0) return html;
+
+    const byLastNameYear = new Map();
+    papers.forEach((p, idx) => {
+        const firstAuthor = Array.isArray(p.authors) ? p.authors[0] : p.authors;
+        if (!firstAuthor || !p.year) return;
+        const lastName = String(firstAuthor).trim().split(/\s+/).pop();
+        if (!lastName) return;
+        const key = `${lastName.toLowerCase()}|${p.year}`;
+        if (!byLastNameYear.has(key)) byLastNameYear.set(key, idx);
+    });
+
+    if (byLastNameYear.size === 0) return html;
+
+    return html.replace(
+        /\(([A-Z][a-zA-Z'-]+)(?:\s+et al\.)?,\s*(\d{4})\)/g,
+        (match, lastName, year) => {
+            const key = `${lastName.toLowerCase()}|${year}`;
+            const paperIdx = byLastNameYear.get(key);
+            if (paperIdx === undefined) return match;
+            return `<a href="#" class="citation-link" data-paper-index="${paperIdx}">${match}</a>`;
+        }
+    );
+}
+
 function renderRMPaperLive(isStreaming = true) {
     if (dom.rmPaperTitle) dom.rmPaperTitle.textContent = state.rm.title || 'Synthesizing Academic Paper...';
     if (dom.rmPaperOutput) {
@@ -1499,11 +1665,21 @@ function renderRMPaperLive(isStreaming = true) {
         const prevScroll = scroller.scrollTop;
         const wasAtBottom = scroller.scrollHeight - scroller.clientHeight - prevScroll < 40;
 
-        let content = renderMarkdown(getPaperMarkdown());
+        let content = linkCitations(renderMarkdown(getPaperMarkdown()));
         if (isStreaming) {
             content += '<span class="typing-cursor"></span>';
         }
         scroller.innerHTML = content;
+
+        scroller.querySelectorAll('.citation-link').forEach((link) => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const idx = parseInt(link.dataset.paperIndex, 10);
+                const papers = getScreenedPapers();
+                if (papers[idx]) openPaperInspector(papers[idx]);
+            });
+        });
+
         scroller.scrollTop = wasAtBottom ? scroller.scrollHeight : prevScroll;
     }
 }
