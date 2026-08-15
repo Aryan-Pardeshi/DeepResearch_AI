@@ -789,35 +789,56 @@ function markBackendOnline() {
     }
 }
 
+// Probes one URL. Resolves {ok, reason} and never throws, so a caller can try a
+// second endpoint without unwinding.
+async function probeEndpoint(path) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS);
+    try {
+        const res = await fetch(`${API_BASE_URL}${path}`, {
+            cache: 'no-store',
+            signal: controller.signal
+        });
+        return { ok: res.ok, reason: res.ok ? '' : `HTTP ${res.status}` };
+    } catch (e) {
+        return {
+            ok: false,
+            reason: e.name === 'AbortError'
+                ? `no response in ${HEALTH_TIMEOUT_MS / 1000}s`
+                : `${e.name}: ${e.message}`
+        };
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
+
 async function checkBackendHealth() {
     // A focus-triggered check can land while the timer-driven poll is still
     // waiting; letting both run would double-count one outage toward the streak.
     if (healthCheckInFlight) return;
     healthCheckInFlight = true;
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS);
-
     let online = false;
     try {
-        const res = await fetch(`${API_BASE_URL}/healthz`, {
-            cache: 'no-store',
-            signal: controller.signal
-        });
-        online = res.ok;
-        if (!online) lastHealthFailureReason = `HTTP ${res.status}`;
-    } catch (e) {
-        // Timeout, network error, or CORS — all mean "not reachable right now".
-        // Which one it was matters a great deal when diagnosing a report of this
-        // banner appearing on a backend that is demonstrably up: an aborted
-        // request means the host is slow, while "Failed to fetch" means the
-        // request never left the browser (blocked by an extension, DNS, or TLS).
-        online = false;
-        lastHealthFailureReason = e.name === 'AbortError'
-            ? `no response in ${HEALTH_TIMEOUT_MS / 1000}s`
-            : `${e.name}: ${e.message}`;
+        const primary = await probeEndpoint('/healthz');
+        online = primary.ok;
+        lastHealthFailureReason = primary.reason;
+
+        // "Failed to fetch" means no HTTP response came back at all, which does
+        // NOT prove the server is down — a content blocker or privacy extension
+        // rejecting this one URL produces exactly the same error, and /healthz
+        // looks enough like a telemetry beacon to attract those lists. Declaring
+        // the backend unreachable on that alone pinned the banner permanently for
+        // users whose app was working fine. Confirm against a second, ordinary
+        // application endpoint before believing it; if that answers, we are online.
+        if (!online && !primary.reason.startsWith('HTTP')) {
+            const fallback = await probeEndpoint('/config/status');
+            if (fallback.ok) {
+                online = true;
+                lastHealthFailureReason = '';
+            }
+        }
     } finally {
-        clearTimeout(timeoutId);
         healthCheckInFlight = false;
         // Poll fast while it is down (cold start), slowly once it is up. This
         // lives in finally so no failure path can ever leave the loop unscheduled.
