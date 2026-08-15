@@ -769,8 +769,17 @@ function switchPanel(targetPanel) {
 // that lone blip was enough to re-show the banner right after markBackendOnline()
 // had just cleared it. Two consecutive failures are required before showing it;
 // any success (poll or real traffic) clears the counter and hides it immediately.
+// Finally, the fetch itself is bounded and the reschedule is unconditional.
+// Without a timeout a cold-starting host holds the connection open instead of
+// failing fast, so `await fetch(...)` never settles, the function never reaches
+// its own setTimeout, and the poll loop dies permanently — leaving the banner
+// stuck on screen with nothing left to ever clear it. That was the actual cause
+// of the "it never goes away" reports, and it struck exactly during the cold
+// start the banner exists to explain.
+const HEALTH_TIMEOUT_MS = 8000;
 let healthPollTimer = null;
 let healthFailureStreak = 0;
+let healthCheckInFlight = false;
 
 function markBackendOnline() {
     healthFailureStreak = 0;
@@ -780,12 +789,31 @@ function markBackendOnline() {
 }
 
 async function checkBackendHealth() {
+    // A focus-triggered check can land while the timer-driven poll is still
+    // waiting; letting both run would double-count one outage toward the streak.
+    if (healthCheckInFlight) return;
+    healthCheckInFlight = true;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS);
+
     let online = false;
     try {
-        const res = await fetch(`${API_BASE_URL}/healthz`, { cache: 'no-store' });
+        const res = await fetch(`${API_BASE_URL}/healthz`, {
+            cache: 'no-store',
+            signal: controller.signal
+        });
         online = res.ok;
     } catch (e) {
+        // Timeout, network error, or CORS — all mean "not reachable right now".
         online = false;
+    } finally {
+        clearTimeout(timeoutId);
+        healthCheckInFlight = false;
+        // Poll fast while it is down (cold start), slowly once it is up. This
+        // lives in finally so no failure path can ever leave the loop unscheduled.
+        clearTimeout(healthPollTimer);
+        healthPollTimer = setTimeout(checkBackendHealth, online ? 60000 : 5000);
     }
 
     healthFailureStreak = online ? 0 : healthFailureStreak + 1;
@@ -798,9 +826,6 @@ async function checkBackendHealth() {
         }
     }
 
-    // Poll fast while it is down (cold start), slowly once it is up.
-    clearTimeout(healthPollTimer);
-    healthPollTimer = setTimeout(checkBackendHealth, online ? 60000 : 5000);
     return online;
 }
 
