@@ -451,6 +451,7 @@ main {
 #approval-panel .problem-statement-text {
     font-size: 0.95rem;
     line-height: 1.5;
+    color: var(--text-secondary);
 }
 
 #approval-panel .subtasks-list {
@@ -1845,7 +1846,7 @@ main {
 }
 
 :root.light-mode .problem-statement-text {
-    color: #475569;
+    color: #0f172a;
 }
 
 :root.light-mode .source-url {
@@ -2625,7 +2626,8 @@ main {
     transition: var(--transition-smooth);
 }
 
-.pipeline-tracker-container summary.tracker-header {
+.pipeline-tracker-container summary.tracker-header,
+.rm-sources-panel summary.tracker-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -2636,7 +2638,8 @@ main {
     gap: 0.5rem;
 }
 
-.pipeline-tracker-container summary.tracker-header::-webkit-details-marker {
+.pipeline-tracker-container summary.tracker-header::-webkit-details-marker,
+.rm-sources-panel summary.tracker-header::-webkit-details-marker {
     display: none;
 }
 
@@ -2688,7 +2691,8 @@ main {
     transition: transform 0.25s ease;
 }
 
-.pipeline-tracker-container[open] .tracker-chevron-icon {
+.pipeline-tracker-container[open] .tracker-chevron-icon,
+.rm-sources-panel[open] .tracker-chevron-icon {
     transform: rotate(180deg);
 }
 
