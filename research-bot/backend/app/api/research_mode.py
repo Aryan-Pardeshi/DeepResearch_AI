@@ -81,6 +81,54 @@ async def _broadcast_event(thread_id: str, payload: Dict[str, Any], is_node_even
             pass
 
 
+def _resolve_checkpoint_state(state) -> tuple[bool, Optional[str]]:
+    """Accurately resolves whether the graph is at an HITL checkpoint, and which checkpoint."""
+    if not state:
+        return False, None
+    values = state.values or {}
+
+    # 1. Check tasks and interrupts
+    pending_interrupt = None
+    if getattr(state, "interrupts", None):
+        pending_interrupt = state.interrupts[0]
+    elif getattr(state, "tasks", None):
+        for t in state.tasks:
+            if getattr(t, "interrupts", None):
+                pending_interrupt = t.interrupts[0]
+                break
+
+    if pending_interrupt is not None:
+        val = getattr(pending_interrupt, "value", None)
+        if isinstance(val, dict) and val.get("checkpoint"):
+            return True, val.get("checkpoint")
+        elif isinstance(val, str) and val.startswith("checkpoint_"):
+            return True, val
+
+    # 2. Check state.next for checkpoint nodes
+    if getattr(state, "next", None):
+        for n in state.next:
+            if n in ("checkpoint_1", "checkpoint_2", "checkpoint_3", "checkpoint_4"):
+                return True, n
+
+    # 3. Check values["hitl_checkpoint"] or values["status"]
+    cp = values.get("hitl_checkpoint")
+    if cp and not cp.endswith("_approved") and cp in ("checkpoint_1", "checkpoint_2", "checkpoint_3", "checkpoint_4"):
+        return True, cp
+
+    # 4. Check data completeness to infer active checkpoint when paused
+    if getattr(state, "next", None) and values.get("status") != "completed":
+        if values.get("data_analysis_plan") or values.get("research_design"):
+            return True, "checkpoint_4"
+        elif values.get("hypotheses") and len(values.get("hypotheses", [])) > 0:
+            return True, "checkpoint_3"
+        elif values.get("conceptual_framework") or values.get("literature_review"):
+            return True, "checkpoint_2"
+        elif values.get("keywords") or values.get("problem_statement"):
+            return True, "checkpoint_1"
+
+    return False, None
+
+
 async def _execute_research_graph(thread_id: str, message: str):
     config = {"configurable": {"thread_id": thread_id}}
     graph = get_research_mode_graph()
@@ -143,13 +191,14 @@ async def _execute_research_graph(thread_id: str, message: str):
 
         # Check if paused at next interrupt or finished
         is_completed = values.get("status") == "completed" or not (state and state.next)
+        is_checkpoint, hitl_checkpoint = _resolve_checkpoint_state(state)
         event_name = "completed" if is_completed else "checkpoint"
 
         final_payload = {
             "event": event_name,
             "thread_id": thread_id,
             "status": values.get("status"),
-            "hitl_checkpoint": values.get("hitl_checkpoint"),
+            "hitl_checkpoint": hitl_checkpoint or values.get("hitl_checkpoint"),
             "state": {
                 "problem_statement": values.get("problem_statement"),
                 "research_objectives": values.get("research_objectives"),
@@ -333,25 +382,8 @@ async def get_research_mode_result(thread_id: str):
 
     values = state.values
 
-    # state.next is non-empty whenever there is a following node queued, which is
-    # true both while genuinely paused at an interrupt() AND while a node is still
-    # actively executing between checkpoints (the checkpointer persists after each
-    # completed superstep, so "next" just names what comes after the last one that
-    # finished). values["hitl_checkpoint"] has the same problem: checkpoint_N_node
-    # writes it once and nothing clears it, so it stays truthy long after that
-    # checkpoint was approved and the pipeline moved on. Together these made every
-    # page reload during an active run (or a browser missing the checkpoint SSE
-    # event, see the frontend id:-prefix bug) redisplay the stale HITL panel for a
-    # checkpoint that had already been passed. state.interrupts is the only field
-    # that reflects whether the graph is truly blocked inside interrupt() right now.
-    pending_interrupt = state.interrupts[0] if state.interrupts else None
-    is_checkpoint = pending_interrupt is not None
+    is_checkpoint, hitl_checkpoint = _resolve_checkpoint_state(state)
     is_completed = not bool(state.next) and values.get("status") == "completed"
-
-    hitl_checkpoint = None
-    if is_checkpoint:
-        interrupt_payload = pending_interrupt.value if isinstance(pending_interrupt.value, dict) else {}
-        hitl_checkpoint = interrupt_payload.get("checkpoint") or values.get("hitl_checkpoint")
 
     return {
         "values": values,
