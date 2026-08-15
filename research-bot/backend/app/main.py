@@ -204,10 +204,32 @@ def serve_manifest():
         return FileResponse(manifest_file, media_type="application/manifest+json")
     raise HTTPException(status_code=404, detail="site.webmanifest not found")
 
+class UIStaticFiles(StaticFiles):
+    """StaticFiles that forces revalidation of HTML.
+
+    StaticFiles sends only ETag/Last-Modified and no Cache-Control. With no
+    caching directive at all, browsers fall back to heuristic caching (RFC 9111
+    4.2.2) and may reuse index.html for a long time WITHOUT revalidating. Because
+    index.html is what names the ?v= query on app.js and style.css, a stale copy
+    pins the browser to an old script forever: shipping a fix changes nothing for
+    anyone already holding a cached page, and the only escape is a manual hard
+    refresh. Serving HTML as no-cache keeps the ETag revalidation (cheap 304s)
+    while guaranteeing a deploy is actually picked up. The versioned assets it
+    references stay cacheable, since their URL changes whenever they do.
+    """
+
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        content_type = response.headers.get("content-type", "")
+        if content_type.startswith("text/html"):
+            response.headers["Cache-Control"] = "no-cache, must-revalidate"
+        return response
+
+
 # Serve the UI from the application root. Registered last so every API route above
 # keeps precedence: a mount at "/" would otherwise swallow them.
 if frontend_path.exists():
-    app.mount("/", StaticFiles(directory=str(frontend_path), html=True), name="frontend_ui")
+    app.mount("/", UIStaticFiles(directory=str(frontend_path), html=True), name="frontend_ui")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=int(os.getenv("PORT", "8000")), reload=True)
