@@ -30,23 +30,33 @@ Both modes run as separate LangGraph state machines behind one FastAPI backend, 
 
 ```mermaid
 flowchart TB
-    UI["Frontend<br/><i>vanilla JS · no framework, no bundler</i>"]
-    API["FastAPI<br/><i>SSE streaming · session restore</i>"]
+    UI["🖥️ Frontend<br/>Vanilla JS · no build step"]
+    API["⚡ FastAPI<br/>SSE streaming"]
 
-    UI <-->|"Server-Sent Events"| API
+    UI <-->|"Server-Sent<br/>Events"| API
 
-    API --> DS["DeepSearch Graph"]
-    API --> RM["Research Mode Graph"]
+    API --> DS["🔎 DeepSearch<br/>Graph"]
+    API --> RM["📚 Research Mode<br/>Graph"]
 
-    DS --> TAV["Tavily<br/>Web Search"]
-    RM --> ACAD["OpenAlex · Semantic Scholar · arXiv<br/>Unpaywall · Europe PMC · CORE"]
+    DS --> TAV["🌐 Tavily<br/>Web Search"]
+    RM --> ACAD["🎓 Academic APIs<br/>OpenAlex · S2 · arXiv<br/>Unpaywall · PMC · CORE"]
 
-    DS --> LLM["LLM Layer<br/><i>any OpenAI-compatible endpoint</i>"]
+    DS --> LLM["🧠 LLM Layer<br/>any OpenAI-compatible<br/>endpoint"]
     RM --> LLM
-    LLM --> CACHE[("SQLite<br/>response cache")]
+    LLM --> CACHE[("💾 SQLite<br/>response cache")]
 
-    DS --> CP[("Checkpointer<br/><i>resumable graph state</i>")]
+    DS --> CP[("🔁 Checkpointer<br/>resumable state")]
     RM --> CP
+
+    style UI fill:#4f46e5,stroke:#3730a3,color:#fff
+    style API fill:#4f46e5,stroke:#3730a3,color:#fff
+    style DS fill:#0891b2,stroke:#0e7490,color:#fff
+    style RM fill:#0891b2,stroke:#0e7490,color:#fff
+    style TAV fill:#ea580c,stroke:#c2410c,color:#fff
+    style ACAD fill:#ea580c,stroke:#c2410c,color:#fff
+    style LLM fill:#db2777,stroke:#be185d,color:#fff
+    style CACHE fill:#475569,stroke:#334155,color:#fff
+    style CP fill:#475569,stroke:#334155,color:#fff
 ```
 
 ---
