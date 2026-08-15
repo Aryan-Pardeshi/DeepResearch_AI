@@ -108,27 +108,21 @@ flowchart TB
 A 25-agent academic pipeline. You steer it at four checkpoints; it does everything else.
 
 ```mermaid
-flowchart TB
-    START(["Core Problem Statement"]) --> SCOPE["<b>1 · Scope</b><br/>scope_definition → keyword_extractor"]
-    SCOPE --> CP1{"🧑 Checkpoint 1"}
-    CP1 -.->|"revise in plain English"| SCOPE
-    CP1 ---|"approved"| N1>"Problem statement, objectives,<br/>research questions, keywords"]
-
-    CP1 --> CORPUS["<b>2 · Corpus</b><br/>paper_fetcher → paper_screener → fulltext_fetcher"]
-    CORPUS --> SYNTH["<b>3 · Synthesis</b><br/>literature_review → citation_verifier<br/>→ gap_analysis → framework"]
-    SYNTH --> CP2{"🧑 Checkpoint 2"}
-    CP2 ---|"approved"| N2>"Literature review, research gap,<br/>conceptual framework"]
-
-    CP2 --> HYP["<b>4 · Hypotheses</b><br/>hypotheses"]
-    HYP --> CP3{"🧑 Checkpoint 3"}
-    CP3 ---|"approved"| N3>"Proposed hypotheses"]
-
-    CP3 --> METH["<b>5 · Methodology</b><br/>research_design → data_collection → data_analysis"]
-    METH --> CP4{"🧑 Checkpoint 4"}
-    CP4 ---|"approved"| N4>"Research design, data collection,<br/>analysis plan"]
-
-    CP4 --> WRITE["<b>6 · Paper Assembly</b><br/>results → discussion → limitations → conclusion<br/>→ future_scope → references → figures → appendices<br/>→ introduction → abstract → title"]
-    WRITE --> DONE(["📄 Complete Paper · PDF · DOCX"])
+flowchart LR
+    START(["Problem Statement"]) --> SCOPE["<b>1 · Scope</b><br/>definition & keywords"]
+    SCOPE --> CP1{"🧑 CP 1"}
+    CP1 -.->|"revise"| SCOPE
+    CP1 -->|"approved"| CORPUS["<b>2 · Literature</b><br/>corpus, review & framework"]
+    CORPUS --> CP2{"🧑 CP 2"}
+    CP2 -.->|"revise"| CORPUS
+    CP2 -->|"approved"| HYP["<b>3 · Hypotheses</b><br/>empirical hypotheses"]
+    HYP --> CP3{"🧑 CP 3"}
+    CP3 -.->|"revise"| HYP
+    CP3 -->|"approved"| METH["<b>4 · Methodology</b><br/>design & analysis plan"]
+    METH --> CP4{"🧑 CP 4"}
+    CP4 -.->|"revise"| METH
+    CP4 -->|"approved"| WRITE["<b>5 · Paper Assembly</b><br/>synthesis, refs & figures"]
+    WRITE --> DONE(["📄 Complete Paper"])
 
     style START fill:#6366f1,stroke:#4338ca,color:#fff
     style CP1 fill:#f59e0b,stroke:#b45309,color:#fff
