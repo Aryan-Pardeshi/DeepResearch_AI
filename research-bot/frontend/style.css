@@ -85,7 +85,10 @@ body {
     display: flex;
     flex-direction: column;
     overflow-x: hidden;
-    padding-top: 80px; /* Offset fixed header */
+    /* The header is fixed, so body has to reserve its height. --header-offset is
+       measured from the real header by syncHeaderOffset() in app.js; the 80px
+       fallback only applies before that first measurement, or without JS. */
+    padding-top: var(--header-offset, 80px);
 }
 
 /* Ambient backdrop: one fixed, blurred wash behind everything instead of the
@@ -3275,14 +3278,27 @@ select:focus-visible,
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
+    /* 44px is the smallest comfortably tappable target; below this width every
+       control is being hit with a thumb rather than a cursor. */
     .btn-icon, .btn-secondary, .btn-github {
-        min-height: 38px;
+        min-height: 44px;
+    }
+
+    .btn-icon {
+        min-width: 44px;
+    }
+
+    .mode-tab, .chip {
+        min-height: 44px;
     }
 }
 
 @media (max-width: 640px) {
+    /* Fallback only. The stacked header's real height depends on how its rows
+       wrap, so a fixed number here drifts; syncHeaderOffset() overrides this
+       with the measured value. */
     body {
-        padding-top: 115px; /* Offset stacked mobile header */
+        padding-top: var(--header-offset, 120px);
     }
 
     header {
@@ -3478,7 +3494,7 @@ select:focus-visible,
 
 @media (max-width: 375px) {
     body {
-        padding-top: 120px;
+        padding-top: var(--header-offset, 120px);
     }
 
     main {
