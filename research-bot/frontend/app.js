@@ -80,19 +80,19 @@ const state = {
 const RM_STAGES = [
     { id: 'scope_definition', name: '1-3. Scope Definition', role: 'scoper' },
     { id: 'keyword_extractor', name: 'Keyword Extraction', role: 'extractor' },
-    { id: 'checkpoint_1', name: 'HITL Checkpoint 1', hitl: true },
+    { id: 'checkpoint_1', name: 'Checkpoint 1', hitl: true },
     { id: 'paper_fetcher', name: 'Corpus Retrieval', role: 'fetcher' },
     { id: 'paper_screener', name: 'Corpus Screening', role: 'screener' },
     { id: 'literature_review', name: '4. Literature Review', role: 'synthesizer' },
     { id: 'gap_analysis', name: '5. Research Gap', role: 'analyst' },
     { id: 'framework', name: '6. Conceptual Framework', role: 'architect' },
-    { id: 'checkpoint_2', name: 'HITL Checkpoint 2', hitl: true },
+    { id: 'checkpoint_2', name: 'Checkpoint 2', hitl: true },
     { id: 'hypotheses', name: '7. Hypotheses', role: 'formulator' },
-    { id: 'checkpoint_3', name: 'HITL Checkpoint 3', hitl: true },
+    { id: 'checkpoint_3', name: 'Checkpoint 3', hitl: true },
     { id: 'research_design', name: '8. Research Design', role: 'methodologist' },
     { id: 'data_collection', name: '9. Data Collection', role: 'methodologist' },
     { id: 'data_analysis', name: '10. Data Analysis', role: 'methodologist' },
-    { id: 'checkpoint_4', name: 'HITL Checkpoint 4', hitl: true },
+    { id: 'checkpoint_4', name: 'Checkpoint 4', hitl: true },
     { id: 'results', name: '11. Results', role: 'synthesizer' },
     { id: 'discussion', name: '12. Discussion + Implications', role: 'interpreter' },
     { id: 'limitations', name: '13. Limitations', role: 'critic' },
@@ -842,6 +842,17 @@ function setupEventListeners() {
         }
     });
 
+    // Sources panel toggle label. Same pattern as the tracker above - without
+    // this listener the label was permanently stuck on "Expand" regardless of
+    // the panel's actual open/closed state.
+    const sourcesPanel = document.getElementById('rm-sources-panel');
+    const sourcesToggleLbl = document.getElementById('rm-sources-toggle-lbl');
+    sourcesPanel?.addEventListener('toggle', () => {
+        if (sourcesToggleLbl) {
+            sourcesToggleLbl.textContent = sourcesPanel.open ? 'Collapse' : 'Expand';
+        }
+    });
+
     // Settings Modal
 
     // Gate Modal Submit
@@ -1500,8 +1511,15 @@ function updateRMPipelineTracker(activeStageId, completedStages) {
 
     if (dom.rmPipelineStatusTag) {
         const current = RM_STAGES.find(s => s.id === anchoredStageId);
-        const label = hidden ? hidden.label : (current ? current.name : null);
-        dom.rmPipelineStatusTag.textContent = label ? `Active: ${label}` : 'Pipeline Running';
+        if (!hidden && current && current.hitl) {
+            // A checkpoint tile means the graph is genuinely paused waiting on the
+            // user, not "running" - the status tag should say so in plain terms
+            // rather than reusing the generic "Active: <stage>" running-state text.
+            dom.rmPipelineStatusTag.textContent = `Waiting for your review — ${current.name}`;
+        } else {
+            const label = hidden ? hidden.label : (current ? current.name : null);
+            dom.rmPipelineStatusTag.textContent = label ? `Active: ${label}` : 'Pipeline Running';
+        }
     }
 }
 
@@ -2198,7 +2216,7 @@ function processRMSEEvent(data) {
         state.rm.hitlCheckpoint = cp;
         state.rm.hitlCheckpointPending = true;
         state.rm.hitlApproved = false;
-        appendLogLine(`HITL Checkpoint reached: ${cp}`, 'warn');
+        appendLogLine(`Checkpoint reached — your review is needed (Step ${cp.replace('checkpoint_', '')} of 4)`, 'warn');
         if (data.state && data.state.corpus_stats) updateCorpusStats(data.state.corpus_stats);
         updateRMPipelineTracker(cp);
         if (trackerContainer) trackerContainer.classList.remove('active-execution');
