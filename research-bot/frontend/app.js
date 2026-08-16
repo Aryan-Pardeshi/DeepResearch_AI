@@ -29,7 +29,7 @@ let activeRMController = null;
 
 // Application State
 const state = {
-    mode: 'deepsearch', // 'deepsearch' | 'researchmode'
+    mode: 'researchmode', // 'deepsearch' | 'researchmode'
     threadId: null,
     status: 'idle', 
     query: '',
@@ -476,6 +476,8 @@ let dom = {};
 document.addEventListener('DOMContentLoaded', () => {
     cacheDomElements();
     initTheme();
+    updateModeTimeEstimate(state.mode);
+    initGitHubStarCount();
     setupEventListeners();
     checkBackendHealth();
     initColdStartAutoReload();
@@ -569,10 +571,14 @@ function cacheDomElements() {
         themeToggleBtn: document.getElementById('theme-toggle-btn'),
         newResearchBtn: document.getElementById('new-research-btn'),
         backendOfflineBanner: document.getElementById('backend-offline-banner'),
+        githubStarBtn: document.getElementById('github-star-btn'),
+        githubStarCount: document.getElementById('github-star-count'),
+        githubStarIcon: document.getElementById('github-star-icon'),
         
-        // Mode Tabs
+        // Mode Tabs & Time Estimate
         tabDeepSearch: document.getElementById('tab-deepsearch'),
         tabResearchMode: document.getElementById('tab-researchmode'),
+        modeTimeText: document.getElementById('mode-time-text'),
 
         // Setup Gate Modal
         setupGateModal: document.getElementById('setup-gate-modal'),
@@ -706,6 +712,65 @@ async function checkConfigGate() {
 // live run threw away the workspace view and looked like the run had vanished.
 const lastPanelByMode = { deepsearch: null, researchmode: null };
 
+function updateModeTimeEstimate(mode) {
+    const textEl = dom.modeTimeText || document.getElementById('mode-time-text');
+    if (textEl) {
+        textEl.textContent = mode === 'deepsearch' ? '~1–2 min' : '~10–25 min';
+    }
+}
+
+// GitHub repository live star count fetcher with 1-hour cache and safe fallback
+const GITHUB_REPO_API = 'https://api.github.com/repos/Aryan-Pardeshi/DeepResearch_AI';
+const GITHUB_STARS_CACHE_KEY = 'deepresearch_github_stars';
+const GITHUB_STARS_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+async function initGitHubStarCount() {
+    const countEl = dom.githubStarCount || document.getElementById('github-star-count');
+    const iconEl = dom.githubStarIcon || document.getElementById('github-star-icon');
+    if (!countEl) return;
+
+    function renderCount(num) {
+        if (typeof num === 'number' && num > 0) {
+            countEl.textContent = num >= 1000 ? `${(num / 1000).toFixed(1)}k` : String(num);
+            countEl.style.display = 'inline';
+            if (iconEl) iconEl.style.display = 'inline-block';
+        }
+    }
+
+    try {
+        const cached = localStorage.getItem(GITHUB_STARS_CACHE_KEY);
+        if (cached) {
+            const parsed = JSON.parse(cached);
+            if (parsed && typeof parsed.count === 'number' && (Date.now() - (parsed.timestamp || 0)) < GITHUB_STARS_CACHE_TTL_MS) {
+                renderCount(parsed.count);
+                return;
+            }
+        }
+    } catch (e) {
+        // Safe fallback on localStorage errors
+    }
+
+    try {
+        const res = await fetch(GITHUB_REPO_API);
+        if (res.ok) {
+            const data = await res.json();
+            if (data && typeof data.stargazers_count === 'number' && data.stargazers_count > 0) {
+                renderCount(data.stargazers_count);
+                try {
+                    localStorage.setItem(GITHUB_STARS_CACHE_KEY, JSON.stringify({
+                        count: data.stargazers_count,
+                        timestamp: Date.now()
+                    }));
+                } catch (e) {
+                    // Safe fallback
+                }
+            }
+        }
+    } catch (e) {
+        // Silently fail safely
+    }
+}
+
 function switchMode(newMode) {
     const previous = state.mode;
     const currentPanel = document.querySelector('.panel.active');
@@ -721,6 +786,7 @@ function switchMode(newMode) {
         dom.tabDeepSearch.classList.remove('active');
         switchPanel(lastPanelByMode.researchmode || dom.rmInputPanel);
     }
+    updateModeTimeEstimate(newMode);
     updateNewRunVisibility();
 }
 
