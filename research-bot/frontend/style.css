@@ -3304,6 +3304,22 @@ select:focus-visible,
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
+    /* Number-beside-label with a forced-nowrap label only works when the card
+       is wide enough for both. Below 768px it isn't - the label text was
+       overflowing its own card and visually bleeding into the neighboring
+       one. Stack instead and let the label wrap if it genuinely needs to. */
+    .stat-card {
+        flex-direction: column;
+        gap: 0.1rem;
+        padding: 0.4rem 0.3rem;
+    }
+
+    .stat-lbl {
+        white-space: normal;
+        overflow-wrap: break-word;
+        line-height: 1.15;
+    }
+
     /* 44px is the smallest comfortably tappable target; below this width every
        control is being hit with a thumb rather than a cursor. */
     .btn-icon, .btn-secondary, .btn-github {
