@@ -477,6 +477,7 @@ document.addEventListener('DOMContentLoaded', () => {
     cacheDomElements();
     initTheme();
     updateModeTimeEstimate(state.mode);
+    initHeaderOffset();
     initGitHubStarCount();
     setupEventListeners();
     checkBackendHealth();
@@ -711,6 +712,36 @@ async function checkConfigGate() {
 // to the landing/input panel, so flipping to the other mode and back during a
 // live run threw away the workspace view and looked like the run had vanished.
 const lastPanelByMode = { deepsearch: null, researchmode: null };
+
+// The header is fixed, so body reserves its height as padding. That height is
+// not a constant: below 640px the header stacks into two rows, and its content
+// changes at runtime (the "New Run" button appears mid-session). Any hardcoded
+// offset drifts out of sync and either hides content behind the header or
+// leaves a gap under it, so measure the real element instead.
+function syncHeaderOffset() {
+    const header = document.querySelector('header');
+    if (!header) return;
+    const height = Math.ceil(header.getBoundingClientRect().height);
+    if (height > 0) {
+        document.documentElement.style.setProperty('--header-offset', `${height}px`);
+    }
+}
+
+function initHeaderOffset() {
+    syncHeaderOffset();
+    // ResizeObserver catches content-driven height changes too, not just viewport
+    // resizes, which a window resize listener alone would miss.
+    if (typeof ResizeObserver !== 'undefined') {
+        const header = document.querySelector('header');
+        if (header) new ResizeObserver(syncHeaderOffset).observe(header);
+    } else {
+        window.addEventListener('resize', syncHeaderOffset);
+    }
+    // Web fonts land after first paint and can change the header's height.
+    if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(syncHeaderOffset).catch(() => {});
+    }
+}
 
 function updateModeTimeEstimate(mode) {
     const textEl = dom.modeTimeText || document.getElementById('mode-time-text');
