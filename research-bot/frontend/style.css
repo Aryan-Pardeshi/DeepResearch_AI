@@ -1526,6 +1526,18 @@ main {
     display: block;
 }
 
+/* The white shimmer above is invisible on light mode's white cards - same bars,
+   dark-tinted instead. */
+:root.light-mode .skeleton {
+    background: linear-gradient(
+        90deg,
+        rgba(15,23,42,0.06) 25%,
+        rgba(15,23,42,0.14) 50%,
+        rgba(15,23,42,0.06) 75%
+    );
+    background-size: 600px 100%;
+}
+
 .skeleton-ps {
     width: 100%;
     height: 14px;
@@ -2928,24 +2940,28 @@ main {
     color: #059669;
 }
 
+/* Was --text-muted on a near-transparent background - readable only on hover,
+   invisible at rest. This is the toggle for the pipeline tracker and the
+   Sources panel, so it needs to read as a button by default, not just on
+   hover. */
 .tracker-header-controls {
     display: flex;
     align-items: center;
     gap: 0.35rem;
-    color: var(--text-muted);
+    color: var(--text-secondary);
     font-size: 0.75rem;
-    font-weight: 500;
-    background: rgba(255, 255, 255, 0.04);
-    padding: 0.2rem 0.55rem;
+    font-weight: 600;
+    background: rgba(56, 189, 248, 0.08);
+    padding: 0.25rem 0.65rem;
     border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(56, 189, 248, 0.25);
     transition: var(--transition-smooth);
 }
 
 .tracker-header-controls:hover {
-    background: rgba(56, 189, 248, 0.1);
+    background: rgba(56, 189, 248, 0.16);
     color: var(--text-primary);
-    border-color: rgba(56, 189, 248, 0.3);
+    border-color: rgba(56, 189, 248, 0.45);
 }
 
 .tracker-chevron-icon {
@@ -3600,6 +3616,11 @@ select:focus-visible,
     background-size: 200% 100%;
     animation: skeletonShimmer 1.5s infinite;
     margin-bottom: 0.75rem;
+}
+
+:root.light-mode .skeleton-line {
+    background: linear-gradient(90deg, rgba(15,23,42,0.05) 25%, rgba(99,102,241,0.25) 50%, rgba(15,23,42,0.05) 75%);
+    background-size: 200% 100%;
 }
 .typing-cursor {
     display: inline-block;

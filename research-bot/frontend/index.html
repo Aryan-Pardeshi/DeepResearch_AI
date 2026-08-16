@@ -116,7 +116,7 @@
     }
     </script>
 
-    <link rel="stylesheet" href="style.css?v=2.6.4">
+    <link rel="stylesheet" href="style.css?v=2.6.7">
     <!-- Marked.js for markdown parsing -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- DOMPurify for XSS sanitization -->
@@ -468,19 +468,19 @@
             <div class="rm-ambient-aura"></div>
             
             <!-- Signature Element: Pipeline Progress Tracker (Collapsible) -->
-            <details class="pipeline-tracker-container card rm-glow-card" id="rm-tracker-details">
+            <details class="pipeline-tracker-container card rm-glow-card" id="rm-tracker-details" open>
                 <summary class="tracker-header">
                     <div class="tracker-title-group">
                         <i data-lucide="git-merge" style="width: 18px; height: 18px; color: var(--academic-blue);"></i>
                         <h2 class="tracker-title">Autonomous Academic Pipeline</h2>
-                        <span class="tracker-status-tag" id="rm-pipeline-status-tag">Active: HITL Checkpoint 1</span>
+                        <span class="tracker-status-tag" id="rm-pipeline-status-tag">Waiting for your review — Checkpoint 1</span>
                         <div class="rm-mini-timer" id="rm-timer-container" title="Elapsed Research Time">
                             <i data-lucide="clock" style="width: 12px; height: 12px;"></i>
                             <span id="rm-research-timer">00:00</span>
                         </div>
                     </div>
                     <div class="tracker-header-controls">
-                        <span class="tracker-toggle-lbl" id="tracker-toggle-lbl">Expand</span>
+                        <span class="tracker-toggle-lbl" id="tracker-toggle-lbl">Collapse</span>
                         <i data-lucide="chevron-down" class="tracker-chevron-icon" style="width: 15px; height: 15px;"></i>
                     </div>
                 </summary>
@@ -650,7 +650,7 @@
                 <ul class="footer-links">
                     <li><span>Autonomous Multi-Agent Web Research</span></li>
                     <li><span>Academic Paper &amp; Literature Synthesis</span></li>
-                    <li><span>Human-in-the-Loop (HITL) Checkpoints</span></li>
+                    <li><span>Checkpoints You Review &amp; Approve</span></li>
                     <li><span>PRISMA Selection &amp; Evidence Matrix</span></li>
                     <li><span>PDF &amp; Word (.docx) Report Export</span></li>
                 </ul>
@@ -703,6 +703,6 @@
     <div class="toast-container" id="toast-container"></div>
 
     <!-- Application Script -->
-    <script src="app.js?v=2.6.4"></script>
+    <script src="app.js?v=2.6.7"></script>
 </body>
 </html>
