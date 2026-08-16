@@ -2117,7 +2117,13 @@ function updateCorpusStats(stats) {
     if (statFulltextEl) statFulltextEl.textContent = fulltext;
 
     if (corpusBarEl) {
-        corpusBarEl.style.display = 'flex';
+        // Clear the inline display:none from resetRMWorkspace() rather than
+        // hardcoding a value - the element's real layout (display: grid, with
+        // responsive column counts per breakpoint) lives in the .rm-corpus-stats
+        // CSS class. Hardcoding 'flex' here was silently overriding that class
+        // on every stats update, which is why the grid's mobile column rules
+        // never actually applied and the cards overflowed into each other.
+        corpusBarEl.style.display = '';
     }
 }
 
