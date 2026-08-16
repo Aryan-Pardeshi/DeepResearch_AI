@@ -842,17 +842,6 @@ function setupEventListeners() {
         }
     });
 
-    // Sources panel toggle label. Same pattern as the tracker above - without
-    // this listener the label was permanently stuck on "Expand" regardless of
-    // the panel's actual open/closed state.
-    const sourcesPanel = document.getElementById('rm-sources-panel');
-    const sourcesToggleLbl = document.getElementById('rm-sources-toggle-lbl');
-    sourcesPanel?.addEventListener('toggle', () => {
-        if (sourcesToggleLbl) {
-            sourcesToggleLbl.textContent = sourcesPanel.open ? 'Collapse' : 'Expand';
-        }
-    });
-
     // Settings Modal
 
     // Gate Modal Submit
