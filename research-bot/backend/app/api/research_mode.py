@@ -124,17 +124,22 @@ def _resolve_checkpoint_state(state) -> tuple[bool, Optional[str]]:
     if cp and not cp.endswith("_approved") and cp in ("checkpoint_1", "checkpoint_2", "checkpoint_3", "checkpoint_4"):
         return True, cp
 
-    # 4. Check data completeness to infer active checkpoint when paused
-    if getattr(state, "next", None) and values.get("status") != "completed":
-        if values.get("data_analysis_plan") or values.get("research_design"):
-            return True, "checkpoint_4"
-        elif values.get("hypotheses") and len(values.get("hypotheses", [])) > 0:
-            return True, "checkpoint_3"
-        elif values.get("conceptual_framework") or values.get("literature_review"):
-            return True, "checkpoint_2"
-        elif values.get("keywords") or values.get("problem_statement"):
-            return True, "checkpoint_1"
-
+    # No genuine interrupt found by any of the checks above: the graph is either
+    # actively executing a non-checkpoint node right now, or it's finished. Either
+    # way, it is NOT paused, and must not be reported as one.
+    #
+    # A fourth branch used to infer "paused at checkpoint N" from which result
+    # fields happened to be non-empty (e.g. hypotheses present -> "must be at
+    # checkpoint_3"). That heuristic is unsound: fields accumulate monotonically
+    # and are never cleared, so it fired identically whether the graph was
+    # genuinely paused OR actively mid-run between checkpoints - e.g. while
+    # paper_screener or the hypotheses agent was still running, with no interrupt
+    # pending at all. Reload during that window and every checkpoint_1_node's
+    # actual interrupt() call (see research_mode_builder.py) already reports the
+    # correct checkpoint via branch 1 above; there's no real case this branch
+    # covers that branch 1 doesn't. Removing it fixes reload showing a stale,
+    # seemingly-random checkpoint number with no live progress: the frontend was
+    # trusting this false "paused" signal to skip reconnecting to the SSE stream.
     return False, None
 
 
