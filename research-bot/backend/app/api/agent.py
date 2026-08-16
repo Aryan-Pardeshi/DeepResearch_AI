@@ -9,6 +9,8 @@ import json
 import asyncio
 import re
 
+from pydantic import BaseModel
+
 from langgraph.types import Command
 
 THREAD_ID_PATTERN = re.compile(r"[a-zA-Z0-9\-_]{1,64}")
