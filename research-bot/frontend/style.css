@@ -1713,7 +1713,11 @@ main {
 }
 
 :root.light-mode .mode-time-estimate {
-    color: #64748b;
+    color: #475569;
+}
+
+:root.light-mode .mode-time-estimate.is-active {
+    color: #4338ca;
 }
 
 :root.light-mode .btn-github {
@@ -2444,24 +2448,33 @@ main {
     isolation: isolate;
 }
 
-.mode-time-estimate {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    font-size: 0.68rem;
-    font-weight: 500;
-    color: var(--text-muted);
-    line-height: 1;
+/* One cell per tab, each the same width as the tab above it, so the two
+   runtimes line up under the labels they belong to. */
+.mode-time-row {
+    display: flex;
+    width: 100%;
+    /* Matches .mode-toggle-container's padding so each half lines up with the
+       tab above it rather than with the pill's outer edge. */
+    padding: 0 4px;
     user-select: none;
-    letter-spacing: 0.02em;
-    transition: color var(--transition-fast);
 }
 
-.mode-time-estimate i {
-    width: 11px;
-    height: 11px;
-    opacity: 0.75;
+.mode-time-estimate {
+    flex: 1 1 0;
+    text-align: center;
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    line-height: 1;
+    letter-spacing: 0.02em;
+    transition: color var(--transition-fast), font-weight var(--transition-fast);
+}
+
+/* The selected mode's runtime is the one that applies right now, so it is the
+   one that reads as foreground. */
+.mode-time-estimate.is-active {
+    color: var(--accent-purple);
+    font-weight: 700;
 }
 
 /* The travelling pill. Both tabs are forced to equal width so a flat 100%

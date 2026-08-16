@@ -579,7 +579,8 @@ function cacheDomElements() {
         // Mode Tabs & Time Estimate
         tabDeepSearch: document.getElementById('tab-deepsearch'),
         tabResearchMode: document.getElementById('tab-researchmode'),
-        modeTimeText: document.getElementById('mode-time-text'),
+        modeTimeDeepSearch: document.getElementById('mode-time-deepsearch'),
+        modeTimeResearchMode: document.getElementById('mode-time-researchmode'),
 
         // Setup Gate Modal
         setupGateModal: document.getElementById('setup-gate-modal'),
@@ -743,11 +744,13 @@ function initHeaderOffset() {
     }
 }
 
+// Both runtimes stay on screen; switching modes only moves the emphasis, so the
+// figures are always comparable rather than one replacing the other.
 function updateModeTimeEstimate(mode) {
-    const textEl = dom.modeTimeText || document.getElementById('mode-time-text');
-    if (textEl) {
-        textEl.textContent = mode === 'deepsearch' ? '~1–2 min' : '~10–25 min';
-    }
+    const ds = dom.modeTimeDeepSearch || document.getElementById('mode-time-deepsearch');
+    const rm = dom.modeTimeResearchMode || document.getElementById('mode-time-researchmode');
+    if (ds) ds.classList.toggle('is-active', mode === 'deepsearch');
+    if (rm) rm.classList.toggle('is-active', mode !== 'deepsearch');
 }
 
 // GitHub repository live star count fetcher with 1-hour cache and safe fallback
