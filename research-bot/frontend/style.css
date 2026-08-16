@@ -235,7 +235,10 @@ main {
     width: 100%;
     max-width: 1400px;
     margin: 0 auto;
-    padding: 2rem;
+    /* Top padding is lighter than the sides: the fixed header already provides
+       80px of clearance above this, so a full 2rem on top read as dead space
+       between the header rule and the hero headline. */
+    padding: 0.75rem 2rem 2rem;
 }
 
 .panel {
@@ -746,6 +749,74 @@ main {
     color: var(--text-primary);
     border-color: var(--text-secondary);
     background: rgba(255,255,255,0.03);
+}
+
+/* GitHub Star Button in Header */
+.btn-github {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    height: 36px;
+    padding: 0 0.75rem;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid var(--card-border);
+    color: var(--text-secondary);
+    font-family: var(--font-inter);
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    white-space: nowrap;
+    user-select: none;
+}
+
+.btn-github:hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateY(-1px);
+}
+
+.btn-github:active {
+    transform: translateY(0);
+}
+
+/* Inline brand marks (GitHub, LinkedIn). They inherit colour from the link or
+   button they sit in, so they follow both themes with no separate rules. */
+.brand-mark {
+    flex-shrink: 0;
+    color: inherit;
+    fill: currentColor;
+}
+
+.footer-brand-mark {
+    vertical-align: middle;
+    margin-right: 4px;
+}
+
+.github-star-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.github-star-icon {
+    color: #eab308;
+    fill: #eab308;
+}
+
+.github-star-count {
+    color: var(--text-secondary);
+    font-family: var(--font-mono, monospace);
+    letter-spacing: -0.02em;
+}
+
+.btn-github:hover .github-star-count {
+    color: var(--text-primary);
 }
 
 /* Settings Modal */
@@ -1638,6 +1709,30 @@ main {
     color: #ffffff;
 }
 
+:root.light-mode .mode-time-estimate {
+    color: #64748b;
+}
+
+:root.light-mode .btn-github {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    color: #475569;
+}
+
+:root.light-mode .btn-github:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #94a3b8;
+}
+
+:root.light-mode .github-star-count {
+    color: #475569;
+}
+
+:root.light-mode .btn-github:hover .github-star-count {
+    color: #0f172a;
+}
+
 :root.light-mode .btn-icon {
     background: #ffffff;
     border-color: #cbd5e1;
@@ -2314,13 +2409,22 @@ main {
     margin-top: -3px;
 }
 
-/* Mode Switcher Tabs */
-/* Centred on the header itself rather than by flex order, so the logo and the
-   action buttons can change width without dragging the switch off-centre. */
-.mode-toggle-container {
+/* Mode Switcher Wrapper & Tabs */
+.mode-switcher-wrapper {
     position: absolute;
     left: 50%;
-    transform: translateX(-50%);
+    top: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    pointer-events: auto;
+    z-index: 10;
+}
+
+.mode-toggle-container {
+    position: relative;
     display: flex;
     padding: 4px;
     gap: 0;
@@ -2335,6 +2439,26 @@ main {
         0 6px 20px rgba(0, 0, 0, 0.35);
     overflow: hidden;
     isolation: isolate;
+}
+
+.mode-time-estimate {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-size: 0.68rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    line-height: 1;
+    user-select: none;
+    letter-spacing: 0.02em;
+    transition: color var(--transition-fast);
+}
+
+.mode-time-estimate i {
+    width: 11px;
+    height: 11px;
+    opacity: 0.75;
 }
 
 /* The travelling pill. Both tabs are forced to equal width so a flat 100%
@@ -2823,6 +2947,63 @@ main {
     border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+/* Research Mode Corpus Stats Bar */
+.rm-corpus-stats {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.35rem;
+    margin-bottom: 0.5rem;
+    width: 100%;
+}
+
+.stat-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--card-border);
+    border-radius: 6px;
+    padding: 0.35rem 0.5rem;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-width: 0;
+    transition: var(--transition-fast);
+}
+
+.stat-card:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(56, 189, 248, 0.3);
+}
+
+.stat-num {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--academic-blue);
+    font-variant-numeric: tabular-nums;
+}
+
+.stat-lbl {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    display: inline;
+    white-space: nowrap;
+}
+
+:root.light-mode .stat-card {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+}
+
+:root.light-mode .stat-card:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+:root.light-mode .stat-lbl {
+    color: #64748b;
+}
+
 /* Multi-line flex wrapped step chips layout (no side scrolling) */
 .pipeline-steps-grid {
     display: flex;
@@ -3043,15 +3224,298 @@ select:focus-visible,
     }
 }
 
+/* ==========================================================================
+   Responsive Mobile & Tablet Layout (1024px, 768px, 640px, 480px, 375px)
+   ========================================================================== */
+
+@media (max-width: 1024px) {
+    main {
+        padding: 1.5rem 1.25rem;
+    }
+}
+
 @media (max-width: 768px) {
     header {
-        padding: 0 1rem;
+        padding: 0 1.25rem;
     }
+
+    .mode-tab {
+        min-width: 120px;
+        font-size: 0.8rem;
+        padding: 0.4rem 0.8rem;
+    }
+
     .form-grid {
         grid-template-columns: 1fr;
     }
+
     .form-grid .full-width {
         grid-column: span 1;
+    }
+
+    .approval-header {
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .paper-header {
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .paper-actions {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        justify-content: flex-start;
+    }
+
+    .rm-corpus-stats {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .btn-icon, .btn-secondary, .btn-github {
+        min-height: 38px;
+    }
+}
+
+@media (max-width: 640px) {
+    body {
+        padding-top: 115px; /* Offset stacked mobile header */
+    }
+
+    header {
+        height: auto;
+        min-height: 105px;
+        padding: 0.65rem 1rem 0.55rem;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.35rem;
+        background: var(--bg-dark);
+        border-bottom: 1px solid var(--card-border);
+    }
+
+    :root.light-mode header {
+        background: rgba(255, 255, 255, 0.96);
+    }
+
+    .logo-container {
+        order: 1;
+    }
+
+    .header-actions {
+        order: 2;
+    }
+
+    .mode-switcher-wrapper {
+        order: 3;
+        position: static;
+        transform: none;
+        width: 100%;
+        margin-top: 0.25rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .mode-toggle-container {
+        width: 100%;
+        max-width: 320px;
+    }
+
+    .mode-tab {
+        min-width: 0;
+        flex: 1 1 50%;
+        padding: 0.4rem 0.5rem;
+        font-size: 0.78rem;
+        gap: 0.3rem;
+    }
+
+    .hero-title {
+        font-size: 1.85rem;
+        line-height: 1.2;
+    }
+
+    .hero-subtitle {
+        font-size: 0.9rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .search-box-container {
+        padding: 1rem;
+    }
+
+    .search-controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+
+    .filter-group {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.4rem;
+        width: 100%;
+    }
+
+    .chips-container {
+        width: 100%;
+        gap: 0.35rem;
+    }
+
+    #plan-research-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .hitl-btn-row {
+        flex-direction: column;
+        gap: 0.6rem;
+        width: 100%;
+    }
+
+    .hitl-btn-row .btn-primary,
+    .hitl-btn-row .btn-secondary {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .feedback-controls {
+        flex-direction: column;
+        gap: 0.6rem;
+        width: 100%;
+    }
+
+    .feedback-controls button {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .rm-input-card {
+        padding: 1.25rem 1rem;
+    }
+
+    #rm-start-btn {
+        width: 100%;
+        white-space: normal;
+        text-align: center;
+        line-height: 1.35;
+        padding: 0.85rem 1rem;
+    }
+
+    #rm-prisma-view img {
+        max-width: 100%;
+        height: auto;
+        border-radius: var(--radius-sm);
+    }
+
+    #rm-evidence-matrix-view {
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .modal {
+        max-width: 95vw;
+        max-height: 90vh;
+        padding: 1.25rem 1rem;
+    }
+
+    .paper-modal-card {
+        max-width: 96vw;
+        max-height: 90vh;
+    }
+
+    .toast-container {
+        left: 1rem;
+        right: 1rem;
+        bottom: 1rem;
+    }
+
+    .toast {
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .logo-tag {
+        display: none;
+    }
+
+    .logo-text {
+        font-size: 1.05rem;
+    }
+
+    .btn-github {
+        padding: 0 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    .rm-corpus-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .index-list {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .index-chip {
+        justify-content: center;
+    }
+
+    .tracker-title-group {
+        gap: 0.4rem;
+    }
+
+    .tracker-title {
+        font-size: 0.85rem;
+    }
+}
+
+@media (max-width: 375px) {
+    body {
+        padding-top: 120px;
+    }
+
+    main {
+        padding: 1rem 0.5rem;
+    }
+
+    .hero-title {
+        font-size: 1.6rem;
+    }
+
+    .hero-subtitle {
+        font-size: 0.85rem;
+    }
+
+    .mode-toggle-container {
+        max-width: 100%;
+    }
+
+    .mode-tab {
+        font-size: 0.72rem;
+        padding: 0.35rem 0.35rem;
+    }
+
+    .mode-tab i {
+        display: none; /* Keep text clean & unclipped on 375px */
+    }
+
+    .rm-input-card {
+        padding: 1rem 0.75rem;
+    }
+
+    .card {
+        padding: 1rem 0.75rem;
+    }
+
+    header {
+        padding: 0.5rem 0.75rem;
     }
 }
 
@@ -3266,19 +3730,21 @@ select:focus-visible,
 .footer-container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 3rem 1.5rem 2rem;
+    padding: 3rem 1.5rem 2.25rem;
     display: grid;
-    grid-template-columns: 2fr 1.2fr 1.2fr 1.2fr;
+    grid-template-columns: 1.5fr 1fr 1fr 1fr;
     gap: 2.5rem;
+    align-items: start;
 }
 
 .footer-col {
     display: flex;
     flex-direction: column;
-    gap: 0.85rem;
+    gap: 1rem;
 }
 
 .footer-brand-col .footer-logo {
+    height: 24px;
     display: flex;
     align-items: center;
     gap: 0.6rem;
@@ -3290,10 +3756,11 @@ select:focus-visible,
     font-size: 1.05rem;
     letter-spacing: 0.05em;
     color: var(--text-primary);
+    line-height: 1;
 }
 
 .footer-brand-tag {
-    font-size: 0.65rem;
+    font-size: 0.62rem;
     font-weight: 700;
     letter-spacing: 0.08em;
     padding: 2px 6px;
@@ -3301,21 +3768,22 @@ select:focus-visible,
     background: rgba(56, 189, 248, 0.12);
     color: var(--academic-blue);
     border: 1px solid rgba(56, 189, 248, 0.25);
+    line-height: 1.2;
 }
 
 .footer-desc {
     font-size: 0.84rem;
-    line-height: 1.55;
+    line-height: 1.6;
     color: var(--text-secondary);
     margin: 0;
-    max-width: 340px;
+    max-width: 320px;
 }
 
 .footer-tech-stack {
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
-    margin-top: 0.25rem;
+    margin-top: 0.15rem;
 }
 
 .tech-tag {
@@ -3330,12 +3798,15 @@ select:focus-visible,
 
 .footer-heading {
     font-family: var(--font-outfit);
-    font-size: 0.88rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--text-primary);
     margin: 0;
+    height: 24px;
+    display: flex;
+    align-items: center;
 }
 
 .footer-links {
@@ -3344,8 +3815,9 @@ select:focus-visible,
     margin: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
+    gap: 0.65rem;
     font-size: 0.82rem;
+    line-height: 1.4;
 }
 
 .footer-links li a {
@@ -3402,23 +3874,44 @@ select:focus-visible,
     font-style: italic;
 }
 
+@media (max-width: 1024px) {
+    .footer-container {
+        grid-template-columns: 1.3fr 1fr 1fr 1fr;
+        gap: 2rem 1.5rem;
+    }
+}
+
 @media (max-width: 900px) {
     .footer-container {
         grid-template-columns: 1fr 1fr;
-        gap: 2rem;
+        gap: 2.5rem 2rem;
+    }
+    .footer-desc {
+        max-width: 100%;
     }
 }
 
 @media (max-width: 600px) {
     .footer-container {
         grid-template-columns: 1fr;
-        gap: 1.75rem;
-        padding: 2rem 1rem 1.5rem;
+        gap: 2rem;
+        padding: 2.25rem 1.25rem 1.75rem;
     }
     .footer-bottom-inner {
         flex-direction: column;
         align-items: flex-start;
+        gap: 0.5rem;
     }
+}
+
+:root.light-mode .footer-bottom {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+:root.light-mode .tech-tag {
+    background: #f1f5f9;
+    border-color: #e2e8f0;
+    color: #475569;
 }
 
 /* Source badges — reused brand marks for individual paper rows (checkpoint

@@ -116,7 +116,7 @@
     }
     </script>
 
-    <link rel="stylesheet" href="style.css?v=2.5.3">
+    <link rel="stylesheet" href="style.css?v=2.6.1">
     <!-- Marked.js for markdown parsing -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- DOMPurify for XSS sanitization -->
@@ -146,19 +146,34 @@
             </div>
         </div>
 
-        <!-- Mode Switcher -->
-        <nav class="mode-toggle-container" id="mode-toggle-container" aria-label="Research Workspace Modes">
-            <button class="mode-tab active" id="tab-deepsearch" data-mode="deepsearch" aria-label="Switch to DeepSearch Web Research mode">
-                <i data-lucide="globe" style="width: 15px; height: 15px;"></i>
-                <span>DeepSearch</span>
-            </button>
-            <button class="mode-tab" id="tab-researchmode" data-mode="researchmode" aria-label="Switch to Academic Research Paper mode">
-                <i data-lucide="book-open-check" style="width: 15px; height: 15px;"></i>
-                <span>Research Mode</span>
-            </button>
-        </nav>
+        <!-- Mode Switcher + Estimated Time Hint -->
+        <div class="mode-switcher-wrapper">
+            <nav class="mode-toggle-container" id="mode-toggle-container" aria-label="Research Workspace Modes">
+                <button class="mode-tab" id="tab-deepsearch" data-mode="deepsearch" aria-label="Switch to DeepSearch Web Research mode">
+                    <i data-lucide="globe" style="width: 15px; height: 15px;"></i>
+                    <span>DeepSearch</span>
+                </button>
+                <button class="mode-tab active" id="tab-researchmode" data-mode="researchmode" aria-label="Switch to Academic Research Paper mode">
+                    <i data-lucide="book-open-check" style="width: 15px; height: 15px;"></i>
+                    <span>Research Mode</span>
+                </button>
+            </nav>
+            <div class="mode-time-estimate" id="mode-time-estimate" aria-live="polite">
+                <i data-lucide="clock" style="width: 11px; height: 11px;"></i>
+                <span id="mode-time-text">~10–25 min</span>
+            </div>
+        </div>
 
         <div class="header-actions">
+            <a href="https://github.com/Aryan-Pardeshi/DeepResearch_AI" target="_blank" rel="noopener noreferrer" class="btn-secondary btn-github" id="github-star-btn" title="View DeepResearch on GitHub" aria-label="View DeepResearch on GitHub repository">
+                <!-- Drawn inline rather than via data-lucide: lucide carries no brand
+                     marks, so a "github" icon name silently renders nothing. -->
+                <svg class="brand-mark" viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+                <span class="github-star-wrapper" id="github-star-wrapper">
+                    <i data-lucide="star" class="github-star-icon" id="github-star-icon" style="width: 12px; height: 12px; display: none;"></i>
+                    <span class="github-star-count" id="github-star-count" style="display: none;"></span>
+                </span>
+            </a>
             <button class="btn-icon theme-toggle" id="theme-toggle-btn" title="Toggle theme" aria-label="Toggle dark and light color theme">
                 <i data-lucide="moon" style="width: 18px; height: 18px;"></i>
             </button>
@@ -243,7 +258,7 @@
         <!-- DEEPSEARCH MODE PANELS -->
         
         <!-- View 1: Landing Panel -->
-        <section id="landing-panel" class="panel active" aria-label="DeepSearch Web Research">
+        <section id="landing-panel" class="panel" aria-label="DeepSearch Web Research">
             <h1 class="hero-title">Ask anything. We will <span class="hero-accent">plan, research, and synthesize.</span></h1>
             <p class="hero-subtitle">Multi-agent web research workspace driven by autonomous agent loops.</p>
 
@@ -385,7 +400,7 @@
         <!-- RESEARCH MODE PANELS -->
 
         <!-- Research Mode View 1: Input Panel -->
-        <section id="rm-input-panel" class="panel">
+        <section id="rm-input-panel" class="panel active">
             <div class="rm-hero-header">
                 <h1 class="hero-title">Academic <span class="hero-accent">Research Paper Synthesis</span></h1>
                 <p class="hero-subtitle">20 autonomous agents, 3 academic API indexes, and 4 Human-in-the-Loop approval checkpoints.</p>
@@ -469,12 +484,12 @@
                 </summary>
 
                 <div class="tracker-collapsible-content">
-                    <div class="rm-corpus-stats" id="rm-corpus-stats-bar" style="display: flex; gap: 0.5rem; margin-top: 0.35rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
-                        <div class="stat-card" style="flex: 1; min-width: 80px; background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 6px; padding: 0.3rem 0.5rem; text-align: center;"><span class="stat-num" id="stat-retrieved" style="font-size: 0.95rem; font-weight: 700; color: var(--academic-blue);">0</span> <span class="stat-lbl" style="font-size: 0.68rem; color: var(--text-muted); display: inline;">Retrieved</span></div>
-                        <div class="stat-card" style="flex: 1; min-width: 80px; background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 6px; padding: 0.3rem 0.5rem; text-align: center;"><span class="stat-num" id="stat-dedup" style="font-size: 0.95rem; font-weight: 700; color: var(--academic-blue);">0</span> <span class="stat-lbl" style="font-size: 0.68rem; color: var(--text-muted); display: inline;">Deduplicated</span></div>
-                        <div class="stat-card" style="flex: 1; min-width: 80px; background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 6px; padding: 0.3rem 0.5rem; text-align: center;"><span class="stat-num" id="stat-screened" style="font-size: 0.95rem; font-weight: 700; color: var(--academic-blue);">0</span> <span class="stat-lbl" style="font-size: 0.68rem; color: var(--text-muted); display: inline;">Screened</span></div>
-                        <div class="stat-card" style="flex: 1; min-width: 80px; background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 6px; padding: 0.3rem 0.5rem; text-align: center;"><span class="stat-num" id="stat-included" style="font-size: 0.95rem; font-weight: 700; color: var(--academic-blue);">0</span> <span class="stat-lbl" style="font-size: 0.68rem; color: var(--text-muted); display: inline;">Included</span></div>
-                        <div class="stat-card" style="flex: 1; min-width: 80px; background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 6px; padding: 0.3rem 0.5rem; text-align: center;"><span class="stat-num" id="stat-fulltext" style="font-size: 0.95rem; font-weight: 700; color: var(--academic-blue);">0</span> <span class="stat-lbl" style="font-size: 0.68rem; color: var(--text-muted); display: inline;">Full-Text</span></div>
+                    <div class="rm-corpus-stats" id="rm-corpus-stats-bar">
+                        <div class="stat-card"><span class="stat-num" id="stat-retrieved">0</span> <span class="stat-lbl">Retrieved</span></div>
+                        <div class="stat-card"><span class="stat-num" id="stat-dedup">0</span> <span class="stat-lbl">Deduplicated</span></div>
+                        <div class="stat-card"><span class="stat-num" id="stat-screened">0</span> <span class="stat-lbl">Screened</span></div>
+                        <div class="stat-card"><span class="stat-num" id="stat-included">0</span> <span class="stat-lbl">Included</span></div>
+                        <div class="stat-card"><span class="stat-num" id="stat-fulltext">0</span> <span class="stat-lbl">Full-Text</span></div>
                     </div>
 
                     <div class="pipeline-steps-grid" id="rm-pipeline-steps-grid">
@@ -653,8 +668,8 @@
             <div class="footer-col">
                 <h3 class="footer-heading">Author &amp; Project</h3>
                 <ul class="footer-links">
-                    <li><a href="https://github.com/Aryan-Pardeshi" target="_blank" rel="noopener noreferrer"><i data-lucide="github" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i> GitHub Profile</a></li>
-                    <li><a href="https://linkedin.com/in/aryan-pardeshi-dev" target="_blank" rel="noopener noreferrer"><i data-lucide="linkedin" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i> LinkedIn Connect</a></li>
+                    <li><a href="https://github.com/Aryan-Pardeshi" target="_blank" rel="noopener noreferrer"><svg class="brand-mark footer-brand-mark" viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg> GitHub Profile</a></li>
+                    <li><a href="https://linkedin.com/in/aryan-pardeshi-dev" target="_blank" rel="noopener noreferrer"><svg class="brand-mark footer-brand-mark" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true" focusable="false"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.225 0z"/></svg> LinkedIn Connect</a></li>
                     <li><span class="footer-author-note">Created by Aryan Pardeshi</span></li>
                     <li><span class="footer-open-note">Open-source AI/ML Research Platform</span></li>
                 </ul>
@@ -686,6 +701,6 @@
     <div class="toast-container" id="toast-container"></div>
 
     <!-- Application Script -->
-    <script src="app.js?v=2.5.7"></script>
+    <script src="app.js?v=2.6.1"></script>
 </body>
 </html>
