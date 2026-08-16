@@ -2849,8 +2849,7 @@ main {
     transition: var(--transition-smooth);
 }
 
-.pipeline-tracker-container summary.tracker-header,
-.rm-sources-panel summary.tracker-header {
+.pipeline-tracker-container summary.tracker-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -2861,8 +2860,7 @@ main {
     gap: 0.5rem;
 }
 
-.pipeline-tracker-container summary.tracker-header::-webkit-details-marker,
-.rm-sources-panel summary.tracker-header::-webkit-details-marker {
+.pipeline-tracker-container summary.tracker-header::-webkit-details-marker {
     display: none;
 }
 
@@ -2968,8 +2966,7 @@ main {
     transition: transform 0.25s ease;
 }
 
-.pipeline-tracker-container[open] .tracker-chevron-icon,
-.rm-sources-panel[open] .tracker-chevron-icon {
+.pipeline-tracker-container[open] .tracker-chevron-icon {
     transform: rotate(180deg);
 }
 
@@ -4050,6 +4047,61 @@ select:focus-visible,
 }
 
 /* Sources library panel */
+/* Persistent side panel next to the paper, not a click-to-expand accordion -
+   same pattern as DeepSearch's .workers-sidebar. min-width: 0 on the main
+   column stops long unbreakable content (DOIs, URLs) from forcing the grid
+   wider than the viewport. */
+.rm-workspace-grid {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 1.5rem;
+    align-items: start;
+    width: 100%;
+}
+
+.rm-main-column {
+    min-width: 0;
+}
+
+.rm-sources-sidebar {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    position: sticky;
+    top: 100px;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+}
+
+.rm-sources-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--card-border);
+    position: sticky;
+    top: 0;
+    background: var(--card-bg);
+    z-index: 1;
+}
+
+.rm-sources-sidebar .rm-sources-grid {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+    padding: 0.75rem;
+}
+
+@media (max-width: 1024px) {
+    .rm-workspace-grid {
+        grid-template-columns: 1fr;
+    }
+    .rm-sources-sidebar {
+        position: static;
+        max-height: none;
+    }
+}
+
 .rm-sources-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
