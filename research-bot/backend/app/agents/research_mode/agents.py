@@ -83,9 +83,14 @@ def _strip_preamble(text: str) -> str:
     return cleaned.strip()
 
 
-async def _safe_invoke_llm(llm, prompt: str, default_fallback: str = "", max_retries: int = 2) -> str:
-    """Helper to safely invoke LLM with retry logic and fallback on API/JSON decode errors."""
-    invoke_timeout = float(os.getenv("LLM_INVOKE_TIMEOUT", "60.0"))
+async def _safe_invoke_llm(llm, prompt: str, default_fallback: str = "", max_retries: int = 3, invoke_timeout: float | None = None) -> str:
+    """Helper to safely invoke LLM with retry logic and fallback on API/JSON decode errors.
+
+    Uses exponential backoff: 2s, 4s, 8s between retries. Logs the exception
+    class name alongside the message so silent connection drops are diagnosable.
+    """
+    if invoke_timeout is None:
+        invoke_timeout = float(os.getenv("LLM_INVOKE_TIMEOUT", "90.0"))
     for attempt in range(max_retries + 1):
         try:
             res = await asyncio.wait_for(llm.ainvoke(prompt), timeout=invoke_timeout)
@@ -94,9 +99,13 @@ async def _safe_invoke_llm(llm, prompt: str, default_fallback: str = "", max_ret
                 if text:
                     return text
         except Exception as e:
-            logger.warning(f"LLM invoke attempt {attempt+1} failed: {e}")
+            logger.warning(
+                f"LLM invoke attempt {attempt+1}/{max_retries+1} failed "
+                f"[{type(e).__name__}]: {e!r}"
+            )
             if attempt < max_retries:
-                await asyncio.sleep(1.0)
+                backoff = 2.0 ** attempt  # 1s, 2s, 4s
+                await asyncio.sleep(backoff)
     return default_fallback
 
 
