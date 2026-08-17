@@ -18,6 +18,7 @@ from backend.app.api.research_mode import router as research_mode_router
 from backend.app.llm import lazy_llm, llm_fast, llm_pro
 from backend.app.graph.research_mode_builder import set_checkpointer as set_rm_checkpointer
 from backend.app.graph.builder import set_checkpointer as set_ds_checkpointer
+from backend.app.stats import init_stats_db
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -64,6 +65,9 @@ async def lifespan(app: FastAPI):
         await checkpointer.setup()
         set_rm_checkpointer(checkpointer)
         set_ds_checkpointer(checkpointer)
+        # Warm the cumulative paper-counter DB so /research-mode/total-papers is
+        # ready before the first request (and survives restarts on a mounted disk).
+        await init_stats_db()
         yield
 
 

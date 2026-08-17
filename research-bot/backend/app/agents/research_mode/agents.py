@@ -85,9 +85,10 @@ def _strip_preamble(text: str) -> str:
 
 async def _safe_invoke_llm(llm, prompt: str, default_fallback: str = "", max_retries: int = 2) -> str:
     """Helper to safely invoke LLM with retry logic and fallback on API/JSON decode errors."""
+    invoke_timeout = float(os.getenv("LLM_INVOKE_TIMEOUT", "60.0"))
     for attempt in range(max_retries + 1):
         try:
-            res = await llm.ainvoke(prompt)
+            res = await asyncio.wait_for(llm.ainvoke(prompt), timeout=invoke_timeout)
             if hasattr(res, "content") and res.content:
                 text = _strip_preamble(str(res.content).strip())
                 if text:
@@ -313,7 +314,7 @@ async def literature_review_agent(state: ResearchModeState) -> Dict[str, Any]:
     
     papers_summary = "\n".join(
         f"- [{idx+1}] {p.get('authors', ['Anon'])[0] if p.get('authors') else 'Anon'} et al. ({p.get('year', 'n.d.')}). {p.get('title')}: {p.get('content_excerpt') if p.get('content_excerpt') else (p.get('abstract') or '')[:250]}"
-        for idx, p in enumerate(papers[:30])
+        for idx, p in enumerate(papers[:15])
     )
 
     prompt = f"""Problem Statement:
@@ -325,11 +326,11 @@ Research Objectives:
 Screened Papers Corpus:
 {papers_summary}
 
-Write a rigorous, themed Literature Review section (800 - 1500 words).
+Write a rigorous, themed Literature Review section (400 - 800 words).
 Group findings into logical sub-themes. Use formal academic prose with parenthetical inline citations matching the papers (e.g. (Author et al., 2024)).
 Do NOT include markdown title headers (# Literature Review); output only section content formatted in Markdown."""
 
-    text = await _safe_invoke_llm(llm, prompt, f"Literature review examining {ps}.")
+    text = await _safe_invoke_llm(llm, prompt, f"Literature review examining {ps}.", max_retries=2, invoke_timeout=60.0)
     return {"literature_review": text}
 
 

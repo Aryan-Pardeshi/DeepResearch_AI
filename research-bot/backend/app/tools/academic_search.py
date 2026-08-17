@@ -15,11 +15,11 @@ HTTP_TIMEOUT = 5.0
 
 # Corpus limits for the screening stage
 MAX_SEARCH_KEYWORDS = 8      # keywords queried against every index
-SCREEN_THRESHOLD = 40        # corpus sizes at or below this skip screening entirely
-SCREEN_CANDIDATES = 120      # papers sent to the LLM relevance scorer
-SCREEN_KEEP = 40             # papers retained for synthesis
-SCREEN_BATCH_SIZE = 20       # papers per LLM scoring call
-SCREEN_CONCURRENCY = 6       # scoring calls in flight at once
+SCREEN_THRESHOLD = 30        # corpus sizes at or below this skip screening entirely
+SCREEN_CANDIDATES = 60       # papers sent to the LLM relevance scorer
+SCREEN_KEEP = 30             # papers retained for synthesis
+SCREEN_BATCH_SIZE = 15       # papers per LLM scoring call
+SCREEN_CONCURRENCY = 2       # scoring calls in flight at once
 
 def _reconstruct_openalex_abstract(inverted_index: Optional[Dict[str, List[int]]]) -> str:
     if not inverted_index or not isinstance(inverted_index, dict):
@@ -186,9 +186,13 @@ async def fetch_tavily_web_papers(keyword: str, max_results: int = 5) -> List[Di
     """LAST RESORT FALLBACK: Fetches web articles via Tavily when academic database indexes return insufficient literature."""
     papers = []
     try:
-        from backend.app.tools.tavily_search import search_web
+        api_key = os.getenv("TAVILY_API_KEY")
+        if not api_key:
+            return papers
+        from tavily import TavilyClient
         logger.info(f"Triggering LAST RESORT Tavily web search fallback for keyword: '{keyword}'")
-        res = search_web(query=f"academic research paper {keyword}", max_results=max_results)
+        tavily = TavilyClient(api_key=api_key)
+        res = tavily.search(query=f"academic research paper {keyword}", max_results=max_results, search_depth="basic")
         results = res.get("results", []) if isinstance(res, dict) else []
         for r in results:
             title = r.get("title", "").strip()
@@ -326,7 +330,7 @@ Papers:
     score_map: Dict[int, int] = {}
     async with semaphore:
         try:
-            res = await llm.ainvoke(prompt)
+            res = await asyncio.wait_for(llm.ainvoke(prompt), timeout=20.0)
             raw = str(res.content).strip()
             if "```" in raw:
                 raw = raw.split("```")[1]
@@ -339,7 +343,7 @@ Papers:
                 if isinstance(item, dict) and "id" in item
             }
         except Exception as e:
-            logger.warning(f"Screening batch failed, defaulting to neutral scores: {e}")
+            logger.warning(f"Screening batch failed or timed out, defaulting to neutral scores: {e}")
 
     scored = []
     for idx, p in enumerate(batch):

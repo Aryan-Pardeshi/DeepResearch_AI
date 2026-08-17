@@ -116,7 +116,7 @@
     }
     </script>
 
-    <link rel="stylesheet" href="style.css?v=2.6.9">
+    <link rel="stylesheet" href="style.css?v=2.8.9">
     <!-- Marked.js for markdown parsing -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- DOMPurify for XSS sanitization -->
@@ -261,7 +261,7 @@
         
         <!-- View 1: Landing Panel -->
         <section id="landing-panel" class="panel" aria-label="DeepSearch Web Research">
-            <h1 class="hero-title">Ask anything. We will <span class="hero-accent">plan, research, and synthesize.</span></h1>
+            <h1 class="hero-title">Ask anything. We will <span class="canvas-text-target hero-accent" data-text="plan, research, and synthesize.">plan, research, and synthesize.</span></h1>
             <p class="hero-subtitle">Multi-agent web research workspace driven by autonomous agent loops.</p>
 
             <div class="search-box-container">
@@ -412,8 +412,26 @@
         <!-- Research Mode View 1: Input Panel -->
         <section id="rm-input-panel" class="panel active">
             <div class="rm-hero-header">
-                <h1 class="hero-title">Academic <span class="hero-accent">Research Paper Synthesis</span></h1>
-                <p class="hero-subtitle">20 autonomous agents, 3 academic API indexes, and 4 Human-in-the-Loop approval checkpoints.</p>
+                <h1 class="hero-title">Academic Research <span class="canvas-text-target hero-accent" data-text="Paper Synthesis">Paper Synthesis</span></h1>
+            </div>
+
+            <!-- Social Proof & Scale Metric Bento Showcase -->
+            <div class="rm-metrics-showcase">
+                <div class="rm-metric-card">
+                    <div class="metric-giant-val" id="rm-total-papers">0</div>
+                    <div class="metric-label">Papers Synthesized</div>
+                    <div class="metric-subtext">Peer-structured with methodology &amp; references</div>
+                </div>
+                <div class="rm-metric-card">
+                    <div class="metric-giant-val">250M+</div>
+                    <div class="metric-label">Indexed Sources</div>
+                    <div class="metric-subtext">OpenAlex, Semantic Scholar &amp; arXiv</div>
+                </div>
+                <div class="rm-metric-card">
+                    <div class="metric-giant-val">20</div>
+                    <div class="metric-label">Specialist Agents</div>
+                    <div class="metric-subtext">Autonomous multi-agent academic pipeline</div>
+                </div>
             </div>
 
             <div class="rm-input-card card">
@@ -479,25 +497,37 @@
         <section id="rm-workspace-panel" class="panel" style="position: relative;">
             <div class="rm-ambient-aura"></div>
             
-            <!-- Signature Element: Pipeline Progress Tracker (Collapsible) -->
-            <details class="pipeline-tracker-container card rm-glow-card" id="rm-tracker-details" open>
-                <summary class="tracker-header">
-                    <div class="tracker-title-group">
-                        <i data-lucide="git-merge" style="width: 18px; height: 18px; color: var(--academic-blue);"></i>
-                        <h2 class="tracker-title">Autonomous Academic Pipeline</h2>
-                        <span class="tracker-status-tag" id="rm-pipeline-status-tag" aria-live="polite">Waiting for your review — Checkpoint 1</span>
+            <!-- Autonomous Academic Pipeline Tracker -->
+            <div class="pipeline-tracker-card card" id="rm-tracker-card">
+                <div class="tracker-top-bar">
+                    <div class="tracker-title-wrap">
+                        <div class="stepper-icon-ring">
+                            <i data-lucide="git-merge" style="width: 16px; height: 16px; color: var(--academic-blue);"></i>
+                        </div>
+                        <div>
+                            <h3 class="stepper-headline">Autonomous Academic Pipeline</h3>
+                            <div class="stepper-live-sub">
+                                <span class="stepper-pulse-dot"></span>
+                                <span id="rm-active-task-label">Phase 1: Inception &amp; Scoping</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tracker-meta-group">
+                        <span class="stepper-status-pill" id="rm-pipeline-status-tag" aria-live="polite">Waiting for your review — Checkpoint 1</span>
                         <div class="rm-mini-timer" id="rm-timer-container" title="Elapsed Research Time">
                             <i data-lucide="clock" style="width: 12px; height: 12px;"></i>
                             <span id="rm-research-timer">00:00</span>
                         </div>
+                        <button class="tracker-collapse-btn" id="rm-tracker-collapse-toggle" type="button">
+                            <span id="tracker-toggle-lbl">Collapse</span>
+                            <i data-lucide="chevron-up" id="tracker-toggle-icon" style="width: 13px; height: 13px;"></i>
+                        </button>
                     </div>
-                    <div class="tracker-header-controls">
-                        <span class="tracker-toggle-lbl" id="tracker-toggle-lbl">Collapse</span>
-                        <i data-lucide="chevron-down" class="tracker-chevron-icon" style="width: 15px; height: 15px;"></i>
-                    </div>
-                </summary>
+                </div>
 
-                <div class="tracker-collapsible-content">
+                <div class="tracker-expandable-content" id="rm-tracker-expandable-content">
+                    <!-- 5 Corpus Stats Cards (Prominently visible during run) -->
                     <div class="rm-corpus-stats" id="rm-corpus-stats-bar">
                         <div class="stat-card"><span class="stat-num" id="stat-retrieved">0</span> <span class="stat-lbl">Retrieved</span></div>
                         <div class="stat-card"><span class="stat-num" id="stat-dedup">0</span> <span class="stat-lbl">Deduplicated</span></div>
@@ -506,22 +536,14 @@
                         <div class="stat-card"><span class="stat-num" id="stat-fulltext">0</span> <span class="stat-lbl">Full-Text</span></div>
                     </div>
 
-                    <div class="pipeline-steps-grid" id="rm-pipeline-steps-grid">
-                        <!-- 18 stages + 4 checkpoints rendered dynamically by phase -->
-                    </div>
-
-                    <!-- Live Execution Console Drawer -->
-                    <details class="rm-log-console" id="rm-log-drawer" style="margin-top: 0.5rem; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #f8fafc; font-family: monospace; font-size: 0.8rem;">
-                        <summary class="rm-log-summary" style="padding: 0.4rem 0.8rem; cursor: pointer; user-select: none; font-weight: 600; display: flex; align-items: center; justify-content: space-between;">
-                            <span><i data-lucide="terminal" style="width: 13px; height: 13px; vertical-align: middle; margin-right: 6px;"></i> Live Pipeline Event Stream Log</span>
-                            <span class="badge" id="rm-log-count" style="background: #334155; padding: 2px 8px; border-radius: 12px; font-size: 0.72rem;">0 events</span>
-                        </summary>
-                        <div class="rm-log-body" id="rm-log-body" aria-live="polite" aria-atomic="false" style="max-height: 180px; overflow-y: auto; padding: 0.75rem 1rem; border-top: 1px solid #334155; line-height: 1.4;">
-                            <div class="rm-log-line info" style="color: #38bdf8;">[System] Pipeline console ready. Logs will stream dynamically.</div>
+                    <!-- Complete 20-Stage Real-Time Pipeline Matrix -->
+                    <div class="pipeline-stages-container" id="rm-stages-container">
+                        <div class="pipeline-stages-matrix" id="rm-stages-matrix">
+                            <!-- Populated dynamically: 4 phases, 20 stage pills with real-time state badges -->
                         </div>
-                    </details>
+                    </div>
                 </div>
-            </details>
+            </div>
 
             <!-- Main Content Area: HITL Review vs Live Paper Stream -->
             <div class="rm-workspace-body">
@@ -753,6 +775,6 @@
     <div class="toast-container" id="toast-container"></div>
 
     <!-- Application Script -->
-    <script src="app.js?v=2.6.9"></script>
+    <script src="app.js?v=2.8.9"></script>
 </body>
 </html>

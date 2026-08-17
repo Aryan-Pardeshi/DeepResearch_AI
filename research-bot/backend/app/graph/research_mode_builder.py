@@ -118,7 +118,7 @@ User Revision Request: {message}
 Revise the Conceptual Framework based on user feedback.
 Return JSON with keys: "conceptual_framework" (string), "research_gap" (string)."""
         try:
-            res = await llm.ainvoke(prompt)
+            res = await asyncio.wait_for(llm.ainvoke(prompt), timeout=45.0)
             import json
             raw = res.content.strip()
             if "```" in raw:
@@ -159,7 +159,7 @@ User Revision Request: {message}
 Revise or refine the hypotheses list.
 Return ONLY a JSON array of hypothesis strings."""
         try:
-            res = await llm.ainvoke(prompt)
+            res = await asyncio.wait_for(llm.ainvoke(prompt), timeout=45.0)
             import json
             raw = res.content.strip()
             if "```" in raw:
@@ -205,7 +205,7 @@ User Revision Request: {message}
 Revise the methodology components based on user feedback.
 Return JSON with keys: "research_design", "data_collection_plan", "data_analysis_plan"."""
         try:
-            res = await llm.ainvoke(prompt)
+            res = await asyncio.wait_for(llm.ainvoke(prompt), timeout=45.0)
             import json
             raw = res.content.strip()
             if "```" in raw:
