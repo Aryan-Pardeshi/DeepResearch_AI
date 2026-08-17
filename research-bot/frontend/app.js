@@ -1615,10 +1615,10 @@ function resetResearchModeForm() {
                 <i data-lucide="file-clock" style="width: 36px; height: 36px; color: var(--academic-blue); opacity: 0.7;"></i>
             </div>
             <p style="color: var(--text-secondary); font-weight: 600; font-size: 0.95rem;">
-                Awaiting Checkpoint Approval
+                Ready to Launch
             </p>
             <p style="margin-top: 0.35rem; color: var(--text-muted); font-size: 0.82rem; max-width: 440px; line-height: 1.5; text-align: center;">
-                Review the problem statement and objectives above, then click <strong style="color: var(--text-secondary);">Approve &amp; Continue Pipeline</strong> to start paper synthesis.
+                Fill in your research topic and click <strong style="color: var(--text-secondary);">Launch Autonomous Academic Pipeline</strong> to begin.
             </p>
         </div>
     `;

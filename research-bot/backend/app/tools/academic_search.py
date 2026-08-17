@@ -343,7 +343,10 @@ Papers:
                 if isinstance(item, dict) and "id" in item
             }
         except Exception as e:
-            logger.warning(f"Screening batch failed or timed out, defaulting to neutral scores: {e}")
+            logger.warning(
+                f"Screening batch failed or timed out, defaulting to neutral scores "
+                f"[{type(e).__name__}]: {e!r}"
+            )
 
     scored = []
     for idx, p in enumerate(batch):
