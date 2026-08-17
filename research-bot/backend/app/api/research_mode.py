@@ -18,6 +18,7 @@ from langgraph.types import Command
 from backend.app.graph.research_mode_builder import get_research_mode_graph
 from backend.app.tools.pdf_generator import generate_paper_pdf
 from backend.app.tools.docx_generator import generate_paper_docx
+from backend.app.stats import increment_paper_count, get_paper_count
 
 
 logger = logging.getLogger(__name__)
@@ -294,6 +295,14 @@ async def start_research_mode(request: ResearchModeStartRequest):
         state = await graph.aget_state(config)
         values = state.values or {}
 
+        # Count this as one "paper" launched. Best-effort: a stats-DB failure must
+        # never block or fail the research run itself.
+        papers_total = 0
+        try:
+            papers_total = await increment_paper_count()
+        except Exception:
+            logger.warning("Failed to increment paper counter", exc_info=True)
+
         return {
             "thread_id": thread_id,
             "problem_statement": values.get("problem_statement"),
@@ -302,6 +311,7 @@ async def start_research_mode(request: ResearchModeStartRequest):
             "keywords": values.get("keywords"),
             "hitl_checkpoint": values.get("hitl_checkpoint", "checkpoint_1"),
             "status": values.get("status", "awaiting_approval"),
+            "papers_total": papers_total,
             "error": values.get("error")
         }
     except Exception as e:
@@ -311,6 +321,16 @@ async def start_research_mode(request: ResearchModeStartRequest):
             "status": "error",
             "error": f"Failed to start Research Mode: {str(e)}"
         }
+
+
+@router.get("/research-mode/total-papers")
+@router.get("/research/mode/total-papers")
+async def total_papers():
+    """Cumulative count of research-mode papers launched (live display)."""
+    try:
+        return {"total_papers": await get_paper_count()}
+    except Exception:
+        return {"total_papers": 0}
 
 
 @router.post("/research-mode/approve")

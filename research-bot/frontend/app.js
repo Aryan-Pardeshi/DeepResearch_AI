@@ -520,6 +520,10 @@ document.addEventListener('DOMContentLoaded', () => {
     rmPlaceholderCycle = initCyclingPlaceholder(dom.rmPsInput, RM_PLACEHOLDER_EXAMPLES);
     dsPlaceholderCycle = initCyclingPlaceholder(dom.queryInput, DS_PLACEHOLDER_EXAMPLES);
     updateNewRunVisibility();
+    initCanvasText();
+    if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(initCanvasText);
+    }
     refreshIcons();
 });
 
@@ -865,6 +869,7 @@ function switchMode(newMode) {
     }
     updateModeTimeEstimate(newMode);
     updateNewRunVisibility();
+    setTimeout(initCanvasText, 60);
 }
 
 // Setup Event Listeners
@@ -876,13 +881,19 @@ function setupEventListeners() {
     // Theme toggle
     dom.themeToggleBtn?.addEventListener('click', toggleTheme);
 
-    // Collapsible tracker toggle label update
-    const trackerDetails = document.getElementById('rm-tracker-details');
-    const trackerToggleLbl = document.getElementById('tracker-toggle-lbl');
-    trackerDetails?.addEventListener('toggle', () => {
-        if (trackerToggleLbl) {
-            trackerToggleLbl.textContent = trackerDetails.open ? 'Collapse' : 'Expand';
+    // 20-Stage Pipeline DAG Matrix Toggle
+    const toggleGraphBtn = document.getElementById('rm-toggle-all-stages-btn');
+    const allStagesCollapse = document.getElementById('rm-all-stages-collapse');
+    const graphBtnLabel = document.getElementById('rm-graph-btn-label');
+    toggleGraphBtn?.addEventListener('click', () => {
+        if (!allStagesCollapse) return;
+        const isHidden = allStagesCollapse.style.display === 'none';
+        allStagesCollapse.style.display = isHidden ? 'block' : 'none';
+        toggleGraphBtn.classList.toggle('active', isHidden);
+        if (graphBtnLabel) {
+            graphBtnLabel.textContent = isHidden ? 'Hide Full Matrix' : 'All 20 Stages';
         }
+        refreshIcons();
     });
 
     // Settings Modal
@@ -970,6 +981,23 @@ function setupEventListeners() {
     dom.modalCloseBtn?.addEventListener('click', closePaperInspector);
     dom.paperDetailModal?.addEventListener('click', (e) => {
         if (e.target === dom.paperDetailModal) closePaperInspector();
+    });
+
+    // Pipeline tracker collapse toggle
+    const collapseToggleBtn = document.getElementById('rm-tracker-collapse-toggle');
+    const expandableContent = document.getElementById('rm-tracker-expandable-content');
+    const toggleLbl = document.getElementById('tracker-toggle-lbl');
+    const toggleIcon = document.getElementById('tracker-toggle-icon');
+
+    collapseToggleBtn?.addEventListener('click', () => {
+        if (!expandableContent) return;
+        const isHidden = expandableContent.style.display === 'none';
+        expandableContent.style.display = isHidden ? 'flex' : 'none';
+        if (toggleLbl) toggleLbl.textContent = isHidden ? 'Collapse' : 'Expand';
+        if (toggleIcon) {
+            toggleIcon.setAttribute('data-lucide', isHidden ? 'chevron-up' : 'chevron-down');
+            refreshIcons();
+        }
     });
 
     // Global Keyboard Shortcuts (⌘/Ctrl + Enter to approve/run, Esc to close modals)
@@ -1552,64 +1580,41 @@ function resetResearchModeForm() {
 }
 
 function renderRMPipelineTracker() {
-    if (!dom.rmPipelineStepsGrid) return;
-    dom.rmPipelineStepsGrid.innerHTML = '';
+    updateRMPipelineTracker(state.rm.activeStage || 'scope_definition');
+}
 
-    RM_PHASES.forEach(phase => {
-        const phaseGroupEl = document.createElement('div');
-        phaseGroupEl.className = 'pipeline-phase-group';
-        phaseGroupEl.id = `rm-phase-group-${phase.id}`;
+function updateCorpusStats(stats) {
+    if (!stats) return;
+    state.rm.corpus_stats = stats;
 
-        const headerEl = document.createElement('div');
-        headerEl.className = 'phase-group-header';
-        headerEl.innerHTML = `
-            <div class="phase-title-wrap">
-                <span class="phase-badge">${phase.badge}</span>
-                <span class="phase-title">${phase.name}</span>
-            </div>
-        `;
-        phaseGroupEl.appendChild(headerEl);
+    const retrievedEl = document.getElementById('stat-retrieved');
+    const dedupEl = document.getElementById('stat-dedup');
+    const screenedEl = document.getElementById('stat-screened');
+    const includedEl = document.getElementById('stat-included');
+    const fulltextEl = document.getElementById('stat-fulltext');
 
-        const stepsRowEl = document.createElement('div');
-        stepsRowEl.className = 'phase-steps-row';
+    if (retrievedEl) retrievedEl.textContent = stats.retrieved != null ? stats.retrieved : 0;
+    if (dedupEl) dedupEl.textContent = stats.after_dedup != null ? stats.after_dedup : (stats.deduplicated != null ? stats.deduplicated : 0);
+    if (screenedEl) screenedEl.textContent = stats.screened != null ? stats.screened : 0;
+    if (includedEl) includedEl.textContent = stats.included != null ? stats.included : 0;
+    if (fulltextEl) fulltextEl.textContent = stats.fulltext_fetched != null ? stats.fulltext_fetched : (stats.fulltext != null ? stats.fulltext : 0);
 
-        phase.stages.forEach(stageId => {
-            const stage = RM_STAGES.find(s => s.id === stageId);
-            if (!stage) return;
-
-            const stepEl = document.createElement('div');
-            stepEl.className = 'pipeline-step';
-            stepEl.id = `rm-step-${stage.id}`;
-
-            if (stage.hitl) {
-                stepEl.classList.add('hitl');
-            }
-
-            const idx = RM_STAGES.findIndex(s => s.id === stageId);
-            stepEl.innerHTML = `
-                <span class="step-number">${stage.hitl ? 'REVIEW' : `STEP ${idx + 1}`}</span>
-                <span class="step-label">${stage.name}</span>
-            `;
-            stepsRowEl.appendChild(stepEl);
-        });
-
-        phaseGroupEl.appendChild(stepsRowEl);
-        dom.rmPipelineStepsGrid.appendChild(phaseGroupEl);
-    });
+    const statsBar = document.getElementById('rm-corpus-stats-bar');
+    if (statsBar) statsBar.style.display = 'grid';
 }
 
 function renderRMSourcesPanel() {
     if (!dom.rmSourcesPanel) return;
     const allPapers = getScreenedPapers();
 
-    if (allPapers.length === 0) {
+    if (!state.rm || !state.rm.threadId) {
         dom.rmSourcesPanel.style.display = 'none';
         return;
     }
 
-    dom.rmSourcesPanel.style.display = 'block';
+    dom.rmSourcesPanel.style.display = 'flex';
     if (dom.rmSourcesCountTag) {
-        dom.rmSourcesCountTag.textContent = `${allPapers.length} papers`;
+        dom.rmSourcesCountTag.textContent = allPapers.length > 0 ? `${allPapers.length} papers` : 'Awaiting retrieval...';
     }
 
     const currentFilter = state.rm.activeSourceFilter || 'all';
@@ -1619,10 +1624,17 @@ function renderRMSourcesPanel() {
 
     if (papers.length === 0) {
         dom.rmSourcesGrid.innerHTML = `
-            <div style="padding: 1.25rem 0.5rem; text-align: center; color: var(--text-muted); font-size: 0.82rem;">
-                No sources matching filter "<strong>${escapeHtml(currentFilter)}</strong>".
+            <div class="sources-empty-state">
+                <i data-lucide="compass" style="width: 24px; height: 24px; color: var(--academic-blue); opacity: 0.6; margin-bottom: 0.5rem;"></i>
+                <p style="color: var(--text-secondary); font-weight: 500; font-size: 0.85rem;">
+                    ${allPapers.length === 0 ? 'Corpus retrieval in progress…' : `No sources in "${escapeHtml(currentFilter)}"`}
+                </p>
+                <p style="color: var(--text-muted); font-size: 0.74rem; margin-top: 0.25rem;">
+                    ${allPapers.length === 0 ? 'Screened papers from OpenAlex, Semantic Scholar & arXiv will appear here.' : 'Try selecting "All" to view all indexed papers.'}
+                </p>
             </div>
         `;
+        refreshIcons();
         return;
     }
 
@@ -1653,56 +1665,110 @@ function renderRMSourcesPanel() {
 function updateRMPipelineTracker(activeStageId, completedStages) {
     const hidden = RM_HIDDEN_STAGES[activeStageId];
     const anchoredStageId = hidden ? hidden.anchor : activeStageId;
-    const activeIdx = RM_STAGES.findIndex(s => s.id === anchoredStageId);
 
-    // Completion is cumulative.
+    // Track completed stages
     const done = new Set(state.rm.completedStages || []);
     if (Array.isArray(completedStages)) {
         completedStages.forEach(id => done.add(id));
-    } else if (activeIdx > 0) {
-        RM_STAGES.slice(0, activeIdx).forEach(s => done.add(s.id));
     }
     state.rm.completedStages = Array.from(done);
 
-    RM_STAGES.forEach(stage => {
-        const el = document.getElementById(`rm-step-${stage.id}`);
-        if (!el) return;
-
-        el.classList.remove('active', 'completed');
-        if (done.has(stage.id)) {
-            el.classList.add('completed');
-        } else if (stage.id === anchoredStageId) {
-            el.classList.add('active');
+    // Determine active phase index (0 to 3)
+    let activePhaseIdx = 0;
+    RM_PHASES.forEach((phase, idx) => {
+        if (phase.stages.includes(anchoredStageId)) {
+            activePhaseIdx = idx;
         }
     });
 
-    // Update phase group states
-    RM_PHASES.forEach(phase => {
-        const groupEl = document.getElementById(`rm-phase-group-${phase.id}`);
-        if (!groupEl) return;
-        const allDone = phase.stages.every(st => done.has(st));
-        const hasActive = phase.stages.includes(anchoredStageId);
+    const isFinished = activeStageId === 'title' || state.rm.status === 'completed';
 
-        groupEl.classList.remove('phase-active', 'phase-completed');
-        if (allDone) {
-            groupEl.classList.add('phase-completed');
-        } else if (hasActive) {
-            groupEl.classList.add('phase-active');
+    // Update active task label
+    const current = RM_STAGES.find(s => s.id === anchoredStageId);
+    const activeLabelEl = document.getElementById('rm-active-task-label');
+    if (activeLabelEl) {
+        if (isFinished) {
+            activeLabelEl.textContent = 'Academic Paper Synthesis Complete';
+        } else if (!hidden && current && current.hitl) {
+            activeLabelEl.textContent = `Review Checkpoint: ${current.name} (Waiting for your review)`;
+        } else {
+            const label = hidden ? hidden.label : (current ? current.name : 'Running');
+            activeLabelEl.textContent = `Active Task: ${label}`;
         }
-    });
+    }
 
     if (dom.rmPipelineStatusTag) {
-        const current = RM_STAGES.find(s => s.id === anchoredStageId);
-        if (!hidden && current && current.hitl) {
-            // A checkpoint tile means the graph is genuinely paused waiting on the
-            // user, not "running" - the status tag should say so in plain terms
-            // rather than reusing the generic "Active: <stage>" running-state text.
+        if (isFinished) {
+            dom.rmPipelineStatusTag.textContent = 'Synthesis Complete';
+            dom.rmPipelineStatusTag.className = 'stepper-status-pill completed';
+        } else if (!hidden && current && current.hitl) {
             dom.rmPipelineStatusTag.textContent = `Waiting for your review — ${current.name}`;
+            dom.rmPipelineStatusTag.className = 'stepper-status-pill review';
         } else {
             const label = hidden ? hidden.label : (current ? current.name : null);
             dom.rmPipelineStatusTag.textContent = label ? `Active: ${label}` : 'Pipeline Running';
+            dom.rmPipelineStatusTag.className = 'stepper-status-pill';
         }
     }
+
+    // Render the 4-Phase Connected Real-Time Pipeline Matrix
+    const matrixContainer = document.getElementById('rm-stages-matrix');
+    if (matrixContainer) {
+        let matrixHtml = '';
+        RM_PHASES.forEach((phase, pIdx) => {
+            const isPhaseActive = pIdx === activePhaseIdx;
+            const isPhaseDone = pIdx < activePhaseIdx || isFinished;
+            matrixHtml += `
+                <div class="pipeline-phase-group ${isPhaseActive ? 'phase-active' : ''} ${isPhaseDone ? 'phase-done' : ''}">
+                    <div class="phase-group-header">
+                        <span class="phase-num-pill">${phase.badge || `Phase ${pIdx + 1}`}</span>
+                        <span class="phase-group-title">${escapeHtml(phase.name)}</span>
+                    </div>
+                    <div class="phase-stages-chips">
+            `;
+
+            phase.stages.forEach(stageId => {
+                const stageObj = RM_STAGES.find(s => s.id === stageId);
+                if (!stageObj) return;
+
+                const isDone = isFinished || done.has(stageId);
+                const isActive = !isFinished && (stageId === anchoredStageId);
+                const isHitl = !!stageObj.hitl;
+
+                let chipClass = 'pending';
+                let iconHtml = '<i data-lucide="circle" style="width: 10px; height: 10px;"></i>';
+
+                if (isDone) {
+                    chipClass = 'completed';
+                    iconHtml = '<i data-lucide="check" style="width: 11px; height: 11px; color: var(--emerald-verified);"></i>';
+                } else if (isActive) {
+                    chipClass = isHitl ? 'review active' : 'active';
+                    iconHtml = isHitl 
+                        ? '<i data-lucide="shield-alert" style="width: 12px; height: 12px; color: #f59e0b;"></i>' 
+                        : '<span class="micro-spin-dot"></span>';
+                } else if (isHitl) {
+                    chipClass = 'hitl-pending';
+                    iconHtml = '<i data-lucide="shield" style="width: 10px; height: 10px;"></i>';
+                }
+
+                matrixHtml += `
+                    <div class="stage-flow-chip ${chipClass} ${isHitl ? 'is-hitl-stage' : ''}" title="${escapeHtml(stageObj.name)}">
+                        <span class="stage-chip-icon">${iconHtml}</span>
+                        <span class="stage-chip-name">${escapeHtml(stageObj.name)}</span>
+                        ${isActive ? '<span class="stage-chip-live-dot"></span>' : ''}
+                    </div>
+                `;
+            });
+
+            matrixHtml += `
+                    </div>
+                </div>
+            `;
+        });
+        matrixContainer.innerHTML = matrixHtml;
+    }
+
+    refreshIcons();
 }
 
 // Human-readable name for a raw graph node id, for the event log.
@@ -1746,18 +1812,35 @@ async function handleRMStart() {
     if (aggregatorModel) models.aggregator = aggregatorModel;
 
     dom.rmStartBtn.disabled = true;
-    dom.rmStartBtn.innerHTML = '<div class="spinner-ring sm"></div><span>Defining research scope...</span>';
+    dom.rmStartBtn.innerHTML = `
+        <div class="btn-loader-wrap">
+            <span class="apple-spin-ring"></span>
+            <span class="btn-loader-text">Defining Research Scope<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span></span>
+        </div>
+    `;
 
-    // Show a small scope-definition loader in the workspace body so there is a
-    // visible animation while the start request runs (before Checkpoint 1).
+    // Show an Apple radar-style scope loader in the workspace body
     const scopeLoader = document.createElement('div');
-    scopeLoader.className = 'rm-scope-loader';
+    scopeLoader.className = 'rm-scope-loader card';
     scopeLoader.id = 'rm-scope-loader';
     scopeLoader.innerHTML = `
-        <div class="scope-spinner"></div>
-        <div class="scope-text">
-            <span class="scope-title">Defining research scope…</span>
-            <span class="scope-sub">Generating problem statement, objectives, questions & extracting keywords</span>
+        <div class="rm-scope-loader-inner">
+            <div class="apple-radar-spinner">
+                <div class="radar-core"></div>
+                <div class="radar-wave radar-wave-1"></div>
+                <div class="radar-wave radar-wave-2"></div>
+                <div class="radar-wave radar-wave-3"></div>
+            </div>
+            <div class="scope-text-wrap">
+                <div class="scope-title-row">
+                    <h4 class="scope-title">Initializing Research Scope…</h4>
+                    <span class="scope-live-badge"><span class="badge-live-dot"></span> Active</span>
+                </div>
+                <p class="scope-sub">Drafting problem statement, formulating objectives &amp; questions, extracting academic keywords</p>
+                <div class="scope-progress-bar-track">
+                    <div class="scope-progress-bar-fill"></div>
+                </div>
+            </div>
         </div>
     `;
 
@@ -1779,7 +1862,8 @@ async function handleRMStart() {
             showToast(data.error || 'Failed to start Research Mode.', 'error');
             scopeLoader.remove();
             dom.rmStartBtn.disabled = false;
-            dom.rmStartBtn.innerHTML = '<span>Launch Autonomous Academic Pipeline</span>';
+            dom.rmStartBtn.innerHTML = '<i data-lucide="atom" style="width: 18px; height: 18px;"></i><span>Launch Autonomous Academic Pipeline</span>';
+            if (window.lucide) lucide.createIcons();
             return;
         }
 
@@ -1806,7 +1890,8 @@ async function handleRMStart() {
         scopeLoader.remove();
     } finally {
         dom.rmStartBtn.disabled = false;
-        dom.rmStartBtn.innerHTML = '<span>Launch Autonomous Academic Pipeline</span>';
+        dom.rmStartBtn.innerHTML = '<i data-lucide="atom" style="width: 18px; height: 18px;"></i><span>Launch Autonomous Academic Pipeline</span>';
+        if (window.lucide) lucide.createIcons();
     }
 }
 
@@ -2128,24 +2213,8 @@ async function handleRMApprove(feedback) {
     saveRMSession();
 
     if (dom.rmPaperTitle) dom.rmPaperTitle.textContent = state.rm.title || 'Synthesizing Paper...';
-    if (dom.rmPaperOutput && !getPaperMarkdown().trim()) {
-        dom.rmPaperOutput.innerHTML = `
-            <div class="paper-placeholder-state" id="rm-paper-placeholder">
-                <div class="orbital-loader-container">
-                    <div class="orbital-ring"></div>
-                    <p style="margin-top: 1rem; color: var(--text-secondary); font-weight: 500; display: flex; align-items: center;">
-                        <span>Academic pipeline active &amp; synthesizing</span>
-                        <span class="ai-wave-container">
-                            <span class="ai-wave-bar"></span>
-                            <span class="ai-wave-bar"></span>
-                            <span class="ai-wave-bar"></span>
-                            <span class="ai-wave-bar"></span>
-                        </span>
-                    </p>
-                </div>
-            </div>
-        `;
-    }
+    renderRMPaperLive(true);
+    renderRMSourcesPanel();
 
     await openRMEventStream(feedback);
 }
@@ -3017,4 +3086,142 @@ function showToast(msg, type = 'info') {
     toast.textContent = msg;
     container.appendChild(toast);
     setTimeout(() => toast.remove(), 4000);
+}
+
+/* ==========================================================================
+   CANVAS TEXT ANIMATED WAVY GRADIENT ENGINE (Research & Search Modes)
+   ========================================================================== */
+
+function initCanvasText() {
+    const targets = document.querySelectorAll('.canvas-text-target');
+    targets.forEach(el => {
+        const text = el.getAttribute('data-text') || el.textContent.trim();
+        if (!text) return;
+
+        // Clean any existing canvas if reinitializing
+        el.innerHTML = '';
+        el.style.position = 'relative';
+        el.style.display = 'inline-block';
+        el.style.verticalAlign = 'top';
+        el.style.background = 'none';
+        el.style.webkitTextFillColor = 'initial';
+
+        // Sizing span to maintain exact geometric dimensions and screen-reader accessibility
+        const sizer = document.createElement('span');
+        sizer.className = 'canvas-text-sizer';
+        sizer.textContent = text;
+        sizer.style.visibility = 'hidden';
+        sizer.style.display = 'inline-block';
+        sizer.style.whiteSpace = 'pre-wrap';
+        sizer.style.userSelect = 'none';
+        sizer.setAttribute('aria-hidden', 'true');
+        el.appendChild(sizer);
+
+        // Render Canvas
+        const canvas = document.createElement('canvas');
+        canvas.className = 'canvas-text-canvas';
+        canvas.style.position = 'absolute';
+        canvas.style.top = '0';
+        canvas.style.left = '0';
+        canvas.style.pointerEvents = 'none';
+        canvas.setAttribute('role', 'img');
+        canvas.setAttribute('aria-label', text);
+        el.appendChild(canvas);
+
+        const colors = [
+            'rgba(255, 255, 255, 0.75)',  // luminous shimmer
+            'rgba(192, 132, 252, 0.9)',   // bright lavender purple
+            'rgba(96, 165, 250, 0.9)',    // bright electric blue
+            'rgba(216, 180, 254, 0.85)',  // soft violet
+            'rgba(129, 140, 248, 0.9)',   // indigo
+            'rgba(56, 189, 248, 0.85)',   // sky blue shimmer
+            'rgba(168, 85, 247, 0.9)',    // deep vibrant purple
+            'rgba(37, 99, 235, 0.9)'      // sapphire blue
+        ];
+
+        const animationDuration = 6; // seconds
+        const lineWidth = 2.2;
+        const lineGap = 4;
+        const curveIntensity = 30;
+
+        let startTime = performance.now();
+
+        function renderFrame(currentTime) {
+            // Check if element is still connected
+            if (!el.isConnected) return;
+
+            const rect = sizer.getBoundingClientRect();
+            const width = Math.ceil(rect.width);
+            const height = Math.ceil(rect.height);
+
+            if (width === 0 || height === 0) {
+                requestAnimationFrame(renderFrame);
+                return;
+            }
+
+            const dpr = window.devicePixelRatio || 1;
+            if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+                canvas.width = width * dpr;
+                canvas.height = height * dpr;
+                canvas.style.width = width + 'px';
+                canvas.style.height = height + 'px';
+            }
+
+            const ctx = canvas.getContext('2d', { alpha: true });
+            if (!ctx) return;
+
+            const computed = window.getComputedStyle(el);
+            const font = `${computed.fontWeight} ${computed.fontSize} ${computed.fontFamily}`;
+
+            const elapsed = (currentTime - startTime) / 1000;
+            const phase = (elapsed / animationDuration) * Math.PI * 2;
+
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.clearRect(0, 0, width, height);
+
+            // 1. Draw text mask
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.font = font;
+            ctx.textBaseline = 'middle';
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#000';
+            ctx.fillText(text, 0, height / 2);
+
+            // 2. Fill background with luminous electric blue & purple gradient base
+            ctx.globalCompositeOperation = 'source-in';
+            const baseGrad = ctx.createLinearGradient(0, 0, width, height);
+            baseGrad.addColorStop(0, '#a855f7');   // vibrant purple
+            baseGrad.addColorStop(0.5, '#6366f1'); // indigo
+            baseGrad.addColorStop(1, '#3b82f6');   // electric blue
+            ctx.fillStyle = baseGrad;
+            ctx.fillRect(0, 0, width, height);
+
+            // 3. Draw moving wavy curves clipped inside text
+            ctx.globalCompositeOperation = 'source-atop';
+            const numLines = Math.floor(height / lineGap) + 12;
+
+            for (let i = 0; i < numLines; i++) {
+                const y = i * lineGap;
+                const curve1 = Math.sin(phase + (i * 0.1)) * curveIntensity;
+                const curve2 = Math.sin(phase + 0.6 + (i * 0.1)) * curveIntensity * 0.7;
+
+                const colorIndex = i % colors.length;
+                ctx.strokeStyle = colors[colorIndex];
+                ctx.lineWidth = lineWidth;
+
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.bezierCurveTo(
+                    width * 0.33, y + curve1,
+                    width * 0.66, y + curve2,
+                    width, y
+                );
+                ctx.stroke();
+            }
+
+            requestAnimationFrame(renderFrame);
+        }
+
+        requestAnimationFrame(renderFrame);
+    });
 }

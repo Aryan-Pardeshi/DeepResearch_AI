@@ -57,11 +57,14 @@ def get_llm(model: str | None = None, role: str | None = None, temperature: floa
         else:
             model = os.getenv("LLM_MODEL_PLANNER", "deepseek-chat")
 
+    timeout_val = float(os.getenv("LLM_REQUEST_TIMEOUT", "45.0"))
     return ChatOpenAI(
         model=model,
         openai_api_key=api_key,
         openai_api_base=base_url,
-        temperature=temperature
+        temperature=temperature,
+        request_timeout=timeout_val,
+        max_retries=1
     )
 
 
