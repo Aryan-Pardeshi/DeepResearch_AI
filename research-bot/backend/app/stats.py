@@ -6,10 +6,10 @@ import aiosqlite
 
 logger = logging.getLogger(__name__)
 
-# Cumulative count of research-mode "papers" launched by users. Stored in its own
-# file (separate from the LangGraph checkpointer) inside the same /app/data volume
-# so a mounted Render Disk (or docker-compose volume) keeps the count alive across
-# restarts and deploys.
+# Base cumulative count of research-mode "papers" launched by users.
+BASE_PAPER_COUNT = int(os.getenv("INITIAL_PAPER_COUNT", "33"))
+
+
 def _stats_db_path() -> Path:
     base = os.getenv("RESEARCH_DB_PATH", "./data/research_state.db")
     return Path(base).resolve().parent / "site_stats.db"
@@ -26,9 +26,17 @@ async def _connect() -> aiosqlite.Connection:
     await db.execute(
         "CREATE TABLE IF NOT EXISTS paper_stats("
         "id INTEGER PRIMARY KEY CHECK (id=1), "
-        "total INTEGER NOT NULL DEFAULT 0)"
+        f"total INTEGER NOT NULL DEFAULT {BASE_PAPER_COUNT})"
     )
-    await db.execute("INSERT OR IGNORE INTO paper_stats(id, total) VALUES(1, 0)")
+    await db.execute(
+        "INSERT OR IGNORE INTO paper_stats(id, total) VALUES(1, ?)",
+        (BASE_PAPER_COUNT,)
+    )
+    # Ensure any database with total < BASE_PAPER_COUNT is upgraded to BASE_PAPER_COUNT
+    await db.execute(
+        "UPDATE paper_stats SET total = ? WHERE id = 1 AND total < ?",
+        (BASE_PAPER_COUNT, BASE_PAPER_COUNT)
+    )
     await db.commit()
     return db
 
@@ -44,21 +52,23 @@ async def increment_paper_count() -> int:
     db = await _connect()
     try:
         cursor = await db.execute(
-            "UPDATE paper_stats SET total = total + 1 WHERE id = 1 RETURNING total"
+            "UPDATE paper_stats SET total = CASE WHEN total < ? THEN ? + 1 ELSE total + 1 END WHERE id = 1 RETURNING total",
+            (BASE_PAPER_COUNT, BASE_PAPER_COUNT)
         )
         row = await cursor.fetchone()
         await db.commit()
-        return row[0] if row else 0
+        return row[0] if row else BASE_PAPER_COUNT + 1
     finally:
         await db.close()
 
 
 async def get_paper_count() -> int:
-    """Return the current cumulative paper count (0 if unavailable)."""
+    """Return the current cumulative paper count (BASE_PAPER_COUNT minimum)."""
     db = await _connect()
     try:
         cursor = await db.execute("SELECT total FROM paper_stats WHERE id = 1")
         row = await cursor.fetchone()
-        return row[0] if row else 0
+        val = row[0] if row else BASE_PAPER_COUNT
+        return max(val, BASE_PAPER_COUNT)
     finally:
         await db.close()
