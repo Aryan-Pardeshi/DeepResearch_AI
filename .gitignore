@@ -240,7 +240,8 @@ research-bot/.env
 # Data directory and databases
 data/
 data/*.db
-# Stray PDFs from local test runs
+
+# Stray PDFs / test artifacts from local test runs
 research-bot/test_*.pdf
 research-bot/scratch/
 research-bot/test_*.docx
@@ -248,8 +249,9 @@ e2e_*.pdf
 e2e_*.docx
 research-bot/backend/app/static/exports/
 
-# Machine-specific Claude Code dev tooling (absolute local paths, e.g. venv python)
-.claude/launch.json
+# Machine-specific dev tooling and agents
+.claude/
+.agents/
 
 # Superpowers SDD scratch workspaces (plan artifacts; git history is the record)
 .superpowers/

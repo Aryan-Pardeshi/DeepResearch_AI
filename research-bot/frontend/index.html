@@ -266,6 +266,10 @@
 
             <div class="search-box-container">
                 <textarea class="search-input" id="query-input" placeholder="What would you like to research today?" aria-label="Research query input prompt"></textarea>
+                <div class="search-box-meta">
+                    <span class="input-char-counter" id="query-char-counter">0 words</span>
+                    <span class="input-shortcut-hint"><kbd class="kbd-hint">Ctrl</kbd> + <kbd class="kbd-hint">Enter</kbd> to plan</span>
+                </div>
                 <div class="search-controls">
                     <div class="filter-group">
                         <span class="filter-label">Tavily Filters:</span>
@@ -326,6 +330,10 @@
                         Need changes? Type instructions below or click Approve to execute.
                     </p>
                     <textarea class="feedback-textarea" id="feedback-input" placeholder="Type instructions to modify the plan..."></textarea>
+                    <div class="input-meta-bar">
+                        <span class="input-char-counter" id="feedback-char-counter">0 words</span>
+                        <span class="input-shortcut-hint"><kbd class="kbd-hint">Ctrl</kbd> + <kbd class="kbd-hint">Enter</kbd> to submit</span>
+                    </div>
                     
                     <div class="feedback-controls">
                         <button class="btn-secondary" id="submit-feedback-btn" style="display: none;">
@@ -412,6 +420,10 @@
                 <div class="form-group">
                     <label class="form-label" for="rm-ps-input">Core Problem Statement *</label>
                     <textarea class="form-input rm-textarea" id="rm-ps-input" placeholder="State the core research gap, problem, or empirical challenge to investigate..."></textarea>
+                    <div class="input-meta-bar">
+                        <span class="input-char-counter" id="rm-ps-char-counter">0 words</span>
+                        <span class="input-shortcut-hint"><kbd class="kbd-hint">Ctrl</kbd> + <kbd class="kbd-hint">Enter</kbd> to launch</span>
+                    </div>
                     <p class="rm-hint">Research Objectives and Research Questions are drafted automatically from this statement. You review and re-prompt them at Checkpoint 1.</p>
                 </div>
 
@@ -473,7 +485,7 @@
                     <div class="tracker-title-group">
                         <i data-lucide="git-merge" style="width: 18px; height: 18px; color: var(--academic-blue);"></i>
                         <h2 class="tracker-title">Autonomous Academic Pipeline</h2>
-                        <span class="tracker-status-tag" id="rm-pipeline-status-tag">Waiting for your review — Checkpoint 1</span>
+                        <span class="tracker-status-tag" id="rm-pipeline-status-tag" aria-live="polite">Waiting for your review — Checkpoint 1</span>
                         <div class="rm-mini-timer" id="rm-timer-container" title="Elapsed Research Time">
                             <i data-lucide="clock" style="width: 12px; height: 12px;"></i>
                             <span id="rm-research-timer">00:00</span>
@@ -495,7 +507,7 @@
                     </div>
 
                     <div class="pipeline-steps-grid" id="rm-pipeline-steps-grid">
-                        <!-- 18 stages + 4 checkpoints rendered dynamically -->
+                        <!-- 18 stages + 4 checkpoints rendered dynamically by phase -->
                     </div>
 
                     <!-- Live Execution Console Drawer -->
@@ -504,7 +516,7 @@
                             <span><i data-lucide="terminal" style="width: 13px; height: 13px; vertical-align: middle; margin-right: 6px;"></i> Live Pipeline Event Stream Log</span>
                             <span class="badge" id="rm-log-count" style="background: #334155; padding: 2px 8px; border-radius: 12px; font-size: 0.72rem;">0 events</span>
                         </summary>
-                        <div class="rm-log-body" id="rm-log-body" style="max-height: 180px; overflow-y: auto; padding: 0.75rem 1rem; border-top: 1px solid #334155; line-height: 1.4;">
+                        <div class="rm-log-body" id="rm-log-body" aria-live="polite" aria-atomic="false" style="max-height: 180px; overflow-y: auto; padding: 0.75rem 1rem; border-top: 1px solid #334155; line-height: 1.4;">
                             <div class="rm-log-line info" style="color: #38bdf8;">[System] Pipeline console ready. Logs will stream dynamically.</div>
                         </div>
                     </details>
@@ -549,6 +561,10 @@
                         <div class="form-group" style="width: 100%;">
                             <label class="form-label" for="rm-hitl-feedback-input">Revision Request (Optional)</label>
                             <textarea class="form-input rm-textarea-sm" id="rm-hitl-feedback-input" placeholder="Specify any edits or revisions for this phase..."></textarea>
+                            <div class="input-meta-bar" style="margin-top: 0.35rem;">
+                                <span class="input-char-counter" id="rm-hitl-char-counter">0 words</span>
+                                <span class="input-shortcut-hint"><kbd class="kbd-hint">Ctrl</kbd> + <kbd class="kbd-hint">Enter</kbd> to approve</span>
+                            </div>
                         </div>
                         <div class="hitl-btn-row">
                             <button class="btn-secondary" id="rm-hitl-revise-btn">
@@ -569,8 +585,16 @@
                         <div class="paper-title-group">
                             <i data-lucide="file-text" style="width: 22px; height: 22px; color: var(--academic-blue);"></i>
                             <h2 class="paper-heading" id="rm-paper-title">Academic Paper Workspace</h2>
+                            <div class="paper-stats-badges" id="paper-stats-badges" style="display: none;">
+                                <span class="paper-meta-chip" id="paper-read-time" title="Estimated Reading Time"><i data-lucide="clock" style="width: 12px; height: 12px;"></i> <span id="paper-read-time-val">0 min read</span></span>
+                                <span class="paper-meta-chip" id="paper-word-count" title="Total Word Count"><i data-lucide="file-type-2" style="width: 12px; height: 12px;"></i> <span id="paper-word-count-val">0 words</span></span>
+                            </div>
                         </div>
                         <div class="paper-actions">
+                            <button class="btn-secondary" id="toggle-paper-outline-btn" style="display: none;" title="Toggle Document Table of Contents Outline" aria-label="Toggle Document Outline Navigation">
+                                <i data-lucide="list-tree" style="width: 15px; height: 15px;"></i>
+                                <span>Outline</span>
+                            </button>
                             <button class="btn-secondary" id="rm-copy-paper-btn" style="display: none;">
                                 <i data-lucide="copy" style="width: 16px; height: 16px;"></i>
                                 <span>Copy Text</span>
@@ -590,17 +614,35 @@
                         </div>
                     </div>
 
-                    <div class="paper-render-container" id="rm-paper-output">
-                        <div class="paper-placeholder-state" id="rm-paper-placeholder">
-                            <div class="paper-idle-icon" style="margin-bottom: 0.5rem;">
-                                <i data-lucide="file-clock" style="width: 36px; height: 36px; color: var(--academic-blue); opacity: 0.7;"></i>
+                    <div class="paper-layout-wrapper">
+                        <nav class="paper-outline-rail" id="paper-outline-rail" style="display: none;" aria-label="Document Table of Contents">
+                            <div class="outline-header">
+                                <i data-lucide="compass" style="width: 14px; height: 14px; color: var(--academic-blue);"></i>
+                                <span>Contents</span>
                             </div>
-                            <p style="color: var(--text-secondary); font-weight: 600; font-size: 0.95rem;">
-                                Awaiting Checkpoint Approval
-                            </p>
-                            <p style="margin-top: 0.35rem; color: var(--text-muted); font-size: 0.82rem; max-width: 440px; line-height: 1.5; text-align: center;">
-                                Review the problem statement and objectives above, then click <strong style="color: var(--text-secondary);">Approve &amp; Continue Pipeline</strong> to start paper synthesis.
-                            </p>
+                            <ul class="outline-list" id="paper-outline-list">
+                                <!-- Dynamically populated -->
+                            </ul>
+                        </nav>
+
+                        <div class="paper-render-container" id="rm-paper-output">
+                            <div class="paper-placeholder-state" id="rm-paper-placeholder">
+                                <div class="paper-idle-icon" style="margin-bottom: 0.5rem;">
+                                    <i data-lucide="file-clock" style="width: 36px; height: 36px; color: var(--academic-blue); opacity: 0.7;"></i>
+                                </div>
+                                <p style="color: var(--text-secondary); font-weight: 600; font-size: 0.95rem;">
+                                    Awaiting Checkpoint Approval
+                                </p>
+                                <p style="margin-top: 0.35rem; color: var(--text-muted); font-size: 0.82rem; max-width: 440px; line-height: 1.5; text-align: center;">
+                                    Review the problem statement and objectives above, then click <strong style="color: var(--text-secondary);">Approve &amp; Continue Pipeline</strong> to start paper synthesis.
+                                </p>
+                                <div class="paper-skeleton-outline">
+                                    <div class="skeleton-pill" style="width: 140px;"></div>
+                                    <div class="skeleton-bar" style="width: 88%;"></div>
+                                    <div class="skeleton-bar" style="width: 76%;"></div>
+                                    <div class="skeleton-bar" style="width: 65%;"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -615,6 +657,12 @@
                             <h2 class="tracker-title">Sources</h2>
                         </div>
                         <span class="tracker-status-tag" id="rm-sources-count-tag">0 papers</span>
+                    </div>
+                    <div class="sources-filter-bar" id="sources-filter-bar" role="group" aria-label="Filter sources by database">
+                        <button type="button" class="source-filter-chip active" data-source-filter="all">All</button>
+                        <button type="button" class="source-filter-chip" data-source-filter="openalex">OpenAlex</button>
+                        <button type="button" class="source-filter-chip" data-source-filter="semantic_scholar">Semantic</button>
+                        <button type="button" class="source-filter-chip" data-source-filter="arxiv">arXiv</button>
                     </div>
                     <div class="rm-sources-grid" id="rm-sources-grid"></div>
                 </aside>
