@@ -105,6 +105,38 @@ const RM_STAGES = [
     { id: 'title', name: '20. Title', role: 'finalizer' }
 ];
 
+// Phased grouping for the 20 stages + 4 checkpoints
+const RM_PHASES = [
+    {
+        id: 'phase_1',
+        name: 'Inception & Scoping',
+        badge: 'Phase 1 of 4',
+        stages: ['scope_definition', 'keyword_extractor', 'checkpoint_1']
+    },
+    {
+        id: 'phase_2',
+        name: 'Corpus Retrieval & Screening',
+        badge: 'Phase 2 of 4',
+        stages: ['paper_fetcher', 'paper_screener', 'literature_review', 'gap_analysis', 'framework', 'checkpoint_2']
+    },
+    {
+        id: 'phase_3',
+        name: 'Theoretical & Empirical Hypotheses',
+        badge: 'Phase 3 of 4',
+        stages: ['hypotheses', 'checkpoint_3']
+    },
+    {
+        id: 'phase_4',
+        name: 'Methodology & Full Paper Synthesis',
+        badge: 'Phase 4 of 4',
+        stages: [
+            'research_design', 'data_collection', 'data_analysis', 'checkpoint_4',
+            'results', 'discussion', 'limitations', 'conclusion', 'future_scope',
+            'references', 'appendices', 'introduction', 'abstract', 'title'
+        ]
+    }
+];
+
 // Graph nodes that run without their own tile in the tracker grid. Every node in
 // research_mode_builder.py must appear either in RM_STAGES or here, otherwise the
 // tracker cannot resolve the node and falls back to a bare "Pipeline Running".
@@ -603,12 +635,14 @@ function cacheDomElements() {
 
         // DeepSearch Inputs & Elements
         queryInput: document.getElementById('query-input'),
+        queryCharCounter: document.getElementById('query-char-counter'),
         planResearchBtn: document.getElementById('plan-research-btn'),
         filterChips: document.getElementById('filter-chips'),
         approvalQueryDisplay: document.getElementById('approval-query-display'),
         approvalPsText: document.getElementById('approval-ps-text'),
         approvalSubtasksContainer: document.getElementById('approval-subtasks-container'),
         feedbackInput: document.getElementById('feedback-input'),
+        feedbackCharCounter: document.getElementById('feedback-char-counter'),
         submitFeedbackBtn: document.getElementById('submit-feedback-btn'),
         approvePlanBtn: document.getElementById('approve-plan-btn'),
         approvalNewResearchBtn: document.getElementById('approval-new-research-btn'),
@@ -624,6 +658,7 @@ function cacheDomElements() {
 
         // Research Mode Elements
         rmPsInput: document.getElementById('rm-ps-input'),
+        rmPsCharCounter: document.getElementById('rm-ps-char-counter'),
         rmObjsInput: document.getElementById('rm-objs-input'),
         rmRqsInput: document.getElementById('rm-rqs-input'),
         rmModelPlanner: document.getElementById('rm-model-planner'),
@@ -637,10 +672,17 @@ function cacheDomElements() {
         rmHitlBadge: document.getElementById('rm-hitl-checkpoint-badge'),
         rmHitlBody: document.getElementById('rm-hitl-body'),
         rmHitlFeedbackInput: document.getElementById('rm-hitl-feedback-input'),
+        rmHitlCharCounter: document.getElementById('rm-hitl-char-counter'),
         rmHitlReviseBtn: document.getElementById('rm-hitl-revise-btn'),
         rmHitlApproveBtn: document.getElementById('rm-hitl-approve-btn'),
         rmPaperTitle: document.getElementById('rm-paper-title'),
         rmPaperOutput: document.getElementById('rm-paper-output'),
+        togglePaperOutlineBtn: document.getElementById('toggle-paper-outline-btn'),
+        paperOutlineRail: document.getElementById('paper-outline-rail'),
+        paperOutlineList: document.getElementById('paper-outline-list'),
+        paperStatsBadges: document.getElementById('paper-stats-badges'),
+        paperReadTimeVal: document.getElementById('paper-read-time-val'),
+        paperWordCountVal: document.getElementById('paper-word-count-val'),
         rmCopyPaperBtn: document.getElementById('rm-copy-paper-btn'),
         rmExportPdfBtn: document.getElementById('rm-export-pdf-btn'),
         rmExportDropdown: document.getElementById('rm-export-dropdown'),
@@ -659,6 +701,7 @@ function cacheDomElements() {
         rmSourcesPanel: document.getElementById('rm-sources-panel'),
         rmSourcesGrid: document.getElementById('rm-sources-grid'),
         rmSourcesCountTag: document.getElementById('rm-sources-count-tag'),
+        sourcesFilterBar: document.getElementById('sources-filter-bar'),
         paperDetailModal: document.getElementById('paper-detail-modal'),
         modalPaperTitle: document.getElementById('modal-paper-title'),
         modalPaperBody: document.getElementById('modal-paper-body'),
@@ -896,17 +939,111 @@ function setupEventListeners() {
     dom.rmHitlApproveBtn?.addEventListener('click', () => handleRMApprove('approve'));
     dom.rmCopyPaperBtn?.addEventListener('click', () => copyToClipboard(getPaperMarkdown(), dom.rmCopyPaperBtn));
 
-    // Paper inspector modal. This was wired at module scope, before
-    // cacheDomElements() had run, so dom.modalCloseBtn was always undefined and
-    // the modal could never be dismissed once opened.
+    // Outline rail toggle
+    dom.togglePaperOutlineBtn?.addEventListener('click', () => {
+        if (dom.paperOutlineRail) {
+            const isHidden = dom.paperOutlineRail.style.display === 'none';
+            dom.paperOutlineRail.style.display = isHidden ? 'flex' : 'none';
+            if (dom.togglePaperOutlineBtn) {
+                dom.togglePaperOutlineBtn.classList.toggle('active', isHidden);
+            }
+        }
+    });
+
+    // Sources filter bar chips
+    dom.sourcesFilterBar?.addEventListener('click', (e) => {
+        const chip = e.target.closest('.source-filter-chip');
+        if (!chip) return;
+        dom.sourcesFilterBar.querySelectorAll('.source-filter-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        state.rm.activeSourceFilter = chip.dataset.sourceFilter || 'all';
+        renderRMSourcesPanel();
+    });
+
+    // Input Word & Character Gauges
+    attachInputWordCounter(dom.queryInput, dom.queryCharCounter);
+    attachInputWordCounter(dom.feedbackInput, dom.feedbackCharCounter);
+    attachInputWordCounter(dom.rmPsInput, dom.rmPsCharCounter);
+    attachInputWordCounter(dom.rmHitlFeedbackInput, dom.rmHitlCharCounter);
+
+    // Paper inspector modal.
     dom.modalCloseBtn?.addEventListener('click', closePaperInspector);
     dom.paperDetailModal?.addEventListener('click', (e) => {
         if (e.target === dom.paperDetailModal) closePaperInspector();
     });
+
+    // Global Keyboard Shortcuts (⌘/Ctrl + Enter to approve/run, Esc to close modals)
+    setupGlobalKeyboardShortcuts();
+}
+
+function attachInputWordCounter(inputEl, counterEl) {
+    if (!inputEl || !counterEl) return;
+    function update() {
+        const val = inputEl.value.trim();
+        const words = val ? val.split(/\s+/).length : 0;
+        const chars = inputEl.value.length;
+        counterEl.textContent = `${words} ${words === 1 ? 'word' : 'words'} (${chars} chars)`;
+        counterEl.classList.toggle('has-content', words > 0);
+    }
+    inputEl.addEventListener('input', update);
+    update();
+}
+
+function setupGlobalKeyboardShortcuts() {
     document.addEventListener('keydown', (e) => {
-        if (e.key !== 'Escape') return;
-        if (dom.paperDetailModal && dom.paperDetailModal.style.display !== 'none') {
-            closePaperInspector();
+        // Esc dismisses modals and popovers
+        if (e.key === 'Escape') {
+            if (dom.paperDetailModal && dom.paperDetailModal.style.display !== 'none') {
+                closePaperInspector();
+                return;
+            }
+            const exportMenu = document.getElementById('rm-export-menu');
+            if (exportMenu && exportMenu.classList.contains('show')) {
+                exportMenu.classList.remove('show');
+                return;
+            }
+        }
+
+        // Cmd/Ctrl + Enter executes main action
+        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+            const gateModal = dom.setupGateModal || document.getElementById('setup-gate-modal');
+            if (gateModal && gateModal.style.display !== 'none') {
+                e.preventDefault();
+                submitSetupGate();
+                return;
+            }
+
+            if (state.mode === 'deepsearch') {
+                const landing = dom.landingPanel || document.getElementById('landing-panel');
+                const approval = dom.approvalPanel || document.getElementById('approval-panel');
+                if (landing && landing.classList.contains('active')) {
+                    e.preventDefault();
+                    handlePlanResearch();
+                } else if (approval && approval.classList.contains('active')) {
+                    e.preventDefault();
+                    const fb = dom.feedbackInput ? dom.feedbackInput.value.trim() : '';
+                    if (fb) {
+                        handleRevision();
+                    } else {
+                        submitPlanApproval();
+                    }
+                }
+            } else if (state.mode === 'researchmode') {
+                const rmInput = dom.rmInputPanel || document.getElementById('rm-input-panel');
+                const rmHitl = dom.rmHitlPanel || document.getElementById('rm-hitl-panel');
+                if (rmInput && rmInput.classList.contains('active')) {
+                    e.preventDefault();
+                    handleRMStart();
+                } else if (rmHitl && rmHitl.style.display !== 'none') {
+                    e.preventDefault();
+                    const fb = dom.rmHitlFeedbackInput ? dom.rmHitlFeedbackInput.value.trim() : '';
+                    if (fb) {
+                        handleRMApprove(fb);
+                    } else {
+                        handleRMApprove('approve');
+                    }
+                }
+            }
         }
     });
 }
@@ -1418,39 +1555,81 @@ function renderRMPipelineTracker() {
     if (!dom.rmPipelineStepsGrid) return;
     dom.rmPipelineStepsGrid.innerHTML = '';
 
-    RM_STAGES.forEach((stage, idx) => {
-        const stepEl = document.createElement('div');
-        stepEl.className = 'pipeline-step';
-        stepEl.id = `rm-step-${stage.id}`;
+    RM_PHASES.forEach(phase => {
+        const phaseGroupEl = document.createElement('div');
+        phaseGroupEl.className = 'pipeline-phase-group';
+        phaseGroupEl.id = `rm-phase-group-${phase.id}`;
 
-        if (stage.hitl) {
-            stepEl.classList.add('hitl');
-        }
-
-        stepEl.innerHTML = `
-            <span class="step-number">${stage.hitl ? 'REVIEW' : `STEP ${idx + 1}`}</span>
-            <span class="step-label">${stage.name}</span>
+        const headerEl = document.createElement('div');
+        headerEl.className = 'phase-group-header';
+        headerEl.innerHTML = `
+            <div class="phase-title-wrap">
+                <span class="phase-badge">${phase.badge}</span>
+                <span class="phase-title">${phase.name}</span>
+            </div>
         `;
-        dom.rmPipelineStepsGrid.appendChild(stepEl);
+        phaseGroupEl.appendChild(headerEl);
+
+        const stepsRowEl = document.createElement('div');
+        stepsRowEl.className = 'phase-steps-row';
+
+        phase.stages.forEach(stageId => {
+            const stage = RM_STAGES.find(s => s.id === stageId);
+            if (!stage) return;
+
+            const stepEl = document.createElement('div');
+            stepEl.className = 'pipeline-step';
+            stepEl.id = `rm-step-${stage.id}`;
+
+            if (stage.hitl) {
+                stepEl.classList.add('hitl');
+            }
+
+            const idx = RM_STAGES.findIndex(s => s.id === stageId);
+            stepEl.innerHTML = `
+                <span class="step-number">${stage.hitl ? 'REVIEW' : `STEP ${idx + 1}`}</span>
+                <span class="step-label">${stage.name}</span>
+            `;
+            stepsRowEl.appendChild(stepEl);
+        });
+
+        phaseGroupEl.appendChild(stepsRowEl);
+        dom.rmPipelineStepsGrid.appendChild(phaseGroupEl);
     });
 }
 
 function renderRMSourcesPanel() {
     if (!dom.rmSourcesPanel) return;
-    const papers = getScreenedPapers();
+    const allPapers = getScreenedPapers();
 
-    if (papers.length === 0) {
+    if (allPapers.length === 0) {
         dom.rmSourcesPanel.style.display = 'none';
         return;
     }
 
     dom.rmSourcesPanel.style.display = 'block';
     if (dom.rmSourcesCountTag) {
-        dom.rmSourcesCountTag.textContent = `${papers.length} papers`;
+        dom.rmSourcesCountTag.textContent = `${allPapers.length} papers`;
     }
 
-    dom.rmSourcesGrid.innerHTML = papers.map((p, i) => `
-        <div class="source-card-item" data-paper-index="${i}">
+    const currentFilter = state.rm.activeSourceFilter || 'all';
+    const papers = currentFilter === 'all'
+        ? allPapers
+        : allPapers.filter(p => p.source === currentFilter);
+
+    if (papers.length === 0) {
+        dom.rmSourcesGrid.innerHTML = `
+            <div style="padding: 1.25rem 0.5rem; text-align: center; color: var(--text-muted); font-size: 0.82rem;">
+                No sources matching filter "<strong>${escapeHtml(currentFilter)}</strong>".
+            </div>
+        `;
+        return;
+    }
+
+    dom.rmSourcesGrid.innerHTML = papers.map((p) => {
+        const realIdx = allPapers.indexOf(p);
+        return `
+        <div class="source-card-item" data-paper-index="${realIdx}">
             <div class="source-card-header">
                 ${sourceBadgeHtml(p.source)}
                 <span class="source-card-score">${p.relevance_score != null ? p.relevance_score + '/10' : ''}</span>
@@ -1458,12 +1637,13 @@ function renderRMSourcesPanel() {
             <div class="source-card-title">${escapeHtml(p.title || 'Untitled')}</div>
             <div class="source-card-meta">${escapeHtml(String(p.year || ''))}${p.authors && p.authors.length ? ' · ' + escapeHtml(Array.isArray(p.authors) ? p.authors[0] : String(p.authors)) : ''}</div>
         </div>
-    `).join('');
+    `;
+    }).join('');
 
     dom.rmSourcesGrid.querySelectorAll('.source-card-item').forEach((card) => {
         card.addEventListener('click', () => {
             const idx = parseInt(card.dataset.paperIndex, 10);
-            openPaperInspector(papers[idx]);
+            if (allPapers[idx]) openPaperInspector(allPapers[idx]);
         });
     });
 
@@ -1475,9 +1655,7 @@ function updateRMPipelineTracker(activeStageId, completedStages) {
     const anchoredStageId = hidden ? hidden.anchor : activeStageId;
     const activeIdx = RM_STAGES.findIndex(s => s.id === anchoredStageId);
 
-    // Completion is cumulative. It used to default to an empty array, so every
-    // node_start event cleared the ticks off all previously finished steps and
-    // the tracker appeared to restart from zero on each node.
+    // Completion is cumulative.
     const done = new Set(state.rm.completedStages || []);
     if (Array.isArray(completedStages)) {
         completedStages.forEach(id => done.add(id));
@@ -1495,6 +1673,21 @@ function updateRMPipelineTracker(activeStageId, completedStages) {
             el.classList.add('completed');
         } else if (stage.id === anchoredStageId) {
             el.classList.add('active');
+        }
+    });
+
+    // Update phase group states
+    RM_PHASES.forEach(phase => {
+        const groupEl = document.getElementById(`rm-phase-group-${phase.id}`);
+        if (!groupEl) return;
+        const allDone = phase.stages.every(st => done.has(st));
+        const hasActive = phase.stages.includes(anchoredStageId);
+
+        groupEl.classList.remove('phase-active', 'phase-completed');
+        if (allDone) {
+            groupEl.classList.add('phase-completed');
+        } else if (hasActive) {
+            groupEl.classList.add('phase-active');
         }
     });
 
@@ -2285,16 +2478,94 @@ function linkCitations(html) {
     );
 }
 
+function updatePaperStats(markdownText) {
+    const text = markdownText || '';
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    const readMinutes = Math.max(1, Math.ceil(words / 220));
+
+    if (dom.paperStatsBadges) {
+        if (words > 20) {
+            dom.paperStatsBadges.style.display = 'flex';
+            if (dom.paperWordCountVal) dom.paperWordCountVal.textContent = `${words.toLocaleString()} words`;
+            if (dom.paperReadTimeVal) dom.paperReadTimeVal.textContent = `~${readMinutes} min read`;
+            if (dom.togglePaperOutlineBtn) dom.togglePaperOutlineBtn.style.display = 'inline-flex';
+        } else {
+            dom.paperStatsBadges.style.display = 'none';
+            if (dom.togglePaperOutlineBtn) dom.togglePaperOutlineBtn.style.display = 'none';
+        }
+    }
+}
+
+let activePaperOutlineObserver = null;
+
+function updatePaperTableOfContents(scrollerEl) {
+    if (!dom.paperOutlineList || !dom.paperOutlineRail) return;
+    const headings = scrollerEl.querySelectorAll('h1, h2, h3');
+    if (headings.length <= 1) {
+        dom.paperOutlineRail.style.display = 'none';
+        return;
+    }
+
+    // Keep display state if user manually toggled, else default visible on wide screens
+    if (window.innerWidth > 960 && dom.paperOutlineRail.style.display === 'none' && !dom.togglePaperOutlineBtn?.classList.contains('manually-hidden')) {
+        dom.paperOutlineRail.style.display = 'flex';
+    }
+
+    dom.paperOutlineList.innerHTML = '';
+
+    headings.forEach((h, idx) => {
+        const id = h.id || `paper-sec-${idx}`;
+        h.id = id;
+        const text = h.textContent.replace(/^#+\s*/, '').trim();
+        const level = h.tagName.toLowerCase();
+
+        const li = document.createElement('li');
+        li.className = 'outline-item';
+        li.innerHTML = `
+            <a href="#${id}" class="outline-link ${level === 'h3' ? 'level-3' : ''}" title="${escapeHtml(text)}">
+                ${escapeHtml(text)}
+            </a>
+        `;
+        li.querySelector('a').addEventListener('click', (e) => {
+            e.preventDefault();
+            h.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            dom.paperOutlineList.querySelectorAll('.outline-link').forEach(l => l.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+        });
+        dom.paperOutlineList.appendChild(li);
+    });
+
+    if (activePaperOutlineObserver) {
+        activePaperOutlineObserver.disconnect();
+    }
+
+    if (window.IntersectionObserver) {
+        activePaperOutlineObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const id = entry.target.id;
+                    dom.paperOutlineList.querySelectorAll('.outline-link').forEach(link => {
+                        link.classList.toggle('active', link.getAttribute('href') === `#${id}`);
+                    });
+                }
+            });
+        }, { root: scrollerEl, rootMargin: '0px 0px -70% 0px', threshold: 0 });
+
+        headings.forEach(h => activePaperOutlineObserver.observe(h));
+    }
+}
+
 function renderRMPaperLive(isStreaming = true) {
     if (dom.rmPaperTitle) dom.rmPaperTitle.textContent = state.rm.title || 'Synthesizing Academic Paper...';
     if (dom.rmPaperOutput) {
-        // Re-rendering the whole document threw away the reader's scroll position
-        // on every node_update, yanking them back to the top mid-read.
         const scroller = dom.rmPaperOutput;
         const prevScroll = scroller.scrollTop;
         const wasAtBottom = scroller.scrollHeight - scroller.clientHeight - prevScroll < 40;
 
-        let content = linkCitations(renderMarkdown(getPaperMarkdown()));
+        const rawMd = getPaperMarkdown();
+        updatePaperStats(rawMd);
+
+        let content = linkCitations(renderMarkdown(rawMd));
         if (isStreaming) {
             content += '<span class="typing-cursor"></span>';
         }
@@ -2308,6 +2579,8 @@ function renderRMPaperLive(isStreaming = true) {
                 if (papers[idx]) openPaperInspector(papers[idx]);
             });
         });
+
+        updatePaperTableOfContents(scroller);
 
         scroller.scrollTop = wasAtBottom ? scroller.scrollHeight : prevScroll;
     }

@@ -1,11 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
     --bg-dark: #09090b;
-    --bg-panel: #121215;
-    --card-bg: rgba(20, 20, 25, 0.7);
-    --card-border: rgba(39, 39, 42, 0.6);
-    --border-hover: rgba(99, 102, 241, 0.4);
+    --bg-panel: #11141d;
+    --card-bg: rgba(18, 24, 38, 0.75);
+    --card-border: rgba(255, 255, 255, 0.08);
+    --border-hover: rgba(56, 189, 248, 0.4);
     
     --accent-purple: #6366f1;
     --accent-purple-hover: #4f46e5;
@@ -17,23 +17,34 @@
     --accent-yellow: #f59e0b;
     --accent-red: #ef4444;
     
-    --text-primary: #f4f4f5;
-    --text-secondary: #a1a1aa;
-    --text-muted: #52525b;
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8; /* Enhanced from #52525b for 4.8:1 WCAG AA/AAA readability */
     
     --radius-lg: 16px;
     --radius-md: 10px;
     --radius-sm: 6px;
     
-    --font-outfit: 'Outfit', 'Inter', sans-serif;
-    --font-inter: 'Inter', sans-serif;
+    --font-outfit: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-inter: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-fast: all 0.15s ease-out;
+    --transition-smooth: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    --transition-fast: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+
+    /* Apple Fluid Physics Spring Curves */
+    --spring-snappy: cubic-bezier(0.16, 1, 0.3, 1);
+    --spring-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --spring-smooth: cubic-bezier(0.32, 0.72, 0, 1);
+
+    /* Apple Specular Translucent Materials */
+    --apple-glass-dark: rgba(16, 22, 38, 0.75);
+    --apple-glass-border: rgba(255, 255, 255, 0.08);
+    --apple-specular-edge: inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
+    --apple-ambient-shadow: 0 12px 36px -4px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.06);
 
     /* Academic Lab Palette */
     --deep-space: #0B0F19;
-    --glass-panel: rgba(16, 22, 38, 0.75);
+    --glass-panel: rgba(16, 22, 38, 0.78);
     --academic-blue: #38BDF8;
     --violet-pulse: #818CF8;
     --emerald-verified: #34D399;
@@ -43,9 +54,9 @@
 :root.light-mode {
     --bg-dark: #f8fafc;
     --bg-panel: #ffffff;
-    --card-bg: #ffffff;
+    --card-bg: rgba(255, 255, 255, 0.88);
     --card-border: #e2e8f0;
-    --border-hover: rgba(99, 102, 241, 0.4);
+    --border-hover: rgba(2, 132, 199, 0.4);
     
     --accent-purple: #6366f1;
     --accent-purple-hover: #4f46e5;
@@ -54,16 +65,22 @@
     --accent-teal: #10b981;
     --accent-teal-glow: rgba(16, 185, 129, 0.15);
     
-    --accent-yellow: #f59e0b;
-    --accent-red: #ef4444;
+    --accent-yellow: #d97706;
+    --accent-red: #dc2626;
     
     --text-primary: #0f172a;
-    --text-secondary: #475569;
+    --text-secondary: #334155;
     --text-muted: #64748b;
+
+    /* Apple Specular Translucent Materials - Light Mode */
+    --apple-glass-dark: rgba(255, 255, 255, 0.88);
+    --apple-glass-border: rgba(0, 0, 0, 0.08);
+    --apple-specular-edge: inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+    --apple-ambient-shadow: 0 10px 30px -4px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
 
     /* Academic Lab Palette - Light Mode */
     --deep-space: #f8fafc;
-    --glass-panel: rgba(255, 255, 255, 0.95);
+    --glass-panel: rgba(255, 255, 255, 0.92);
     --academic-blue: #0284c7;
     --violet-pulse: #6366f1;
     --emerald-verified: #10b981;
@@ -4506,5 +4523,450 @@ select:focus-visible,
 :root.light-mode .rm-loader-footer-bar {
     border-color: #e2e8f0;
 }
+
+/* ==========================================================================
+   APPLE FLUID DESIGN & UI/UX PRO MAX UPGRADES
+   ========================================================================== */
+
+/* 1. Universal Tactile Spring Feedback */
+button, 
+.btn-primary, 
+.btn-secondary, 
+.chip, 
+.mode-tab, 
+.source-card-item, 
+.source-filter-chip,
+.stat-card,
+.modal-close-btn,
+.export-dropdown button {
+    transition: transform 0.16s var(--spring-snappy), 
+                box-shadow 0.2s ease, 
+                background-color 0.2s ease, 
+                border-color 0.2s ease;
+}
+
+button:active, 
+.btn-primary:active, 
+.btn-secondary:active {
+    transform: scale(0.96) !important;
+}
+
+.chip:active, 
+.source-filter-chip:active, 
+.mode-tab:active {
+    transform: scale(0.93) !important;
+}
+
+/* 2. Optical Typography & Number Tabulation */
+.hero-title, 
+.section-title, 
+.paper-heading, 
+.modal-title {
+    letter-spacing: -0.025em;
+}
+
+.filter-label, 
+.step-number, 
+.phase-badge, 
+.hitl-badge, 
+.label-tag,
+.tracker-toggle-lbl,
+.outline-header {
+    letter-spacing: 0.06em;
+    font-weight: 700;
+}
+
+.timer-value, 
+#rm-research-timer, 
+.stat-num, 
+#rm-log-count, 
+#rm-sources-count-tag, 
+.github-star-count,
+.input-char-counter,
+.paper-meta-chip {
+    font-variant-numeric: tabular-nums;
+}
+
+/* 3. Input Meta Bars & Character Word Gauges */
+.search-box-meta, 
+.input-meta-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.25rem 0.2rem;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+.search-box-meta {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.input-char-counter {
+    font-weight: 500;
+    color: var(--text-muted);
+    transition: color 0.2s ease;
+}
+
+.input-char-counter.has-content {
+    color: var(--academic-blue);
+}
+
+.input-shortcut-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.kbd-hint {
+    display: inline-block;
+    padding: 1px 5px;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Mono", Monaco, monospace;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+}
+
+:root.light-mode .kbd-hint {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #475569;
+}
+
+/* 4. Phased Pipeline Tracker Styling */
+.pipeline-phase-group {
+    background: rgba(255, 255, 255, 0.015);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    transition: border-color 0.25s ease, background-color 0.25s ease;
+}
+
+.pipeline-phase-group.phase-active {
+    background: rgba(56, 189, 248, 0.03);
+    border-color: rgba(56, 189, 248, 0.25);
+}
+
+.pipeline-phase-group.phase-completed {
+    border-color: rgba(52, 211, 153, 0.2);
+}
+
+.phase-group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.phase-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.phase-badge {
+    font-size: 0.68rem;
+    padding: 2px 7px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+.pipeline-phase-group.phase-active .phase-badge {
+    background: rgba(56, 189, 248, 0.15);
+    color: var(--academic-blue);
+}
+
+.pipeline-phase-group.phase-completed .phase-badge {
+    background: rgba(52, 211, 153, 0.15);
+    color: var(--emerald-verified);
+}
+
+.phase-title {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.phase-steps-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 0.45rem;
+}
+
+/* 5. Sticky Table of Contents Outline & Paper Workspace Layout */
+.paper-layout-wrapper {
+    display: flex;
+    gap: 1.25rem;
+    position: relative;
+    align-items: flex-start;
+}
+
+.paper-outline-rail {
+    width: 220px;
+    flex-shrink: 0;
+    position: sticky;
+    top: calc(var(--header-offset, 80px) + 1rem);
+    max-height: calc(100vh - 140px);
+    overflow-y: auto;
+    background: rgba(18, 24, 38, 0.6);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: all 0.25s var(--spring-snappy);
+}
+
+:root.light-mode .paper-outline-rail {
+    background: rgba(248, 250, 252, 0.8);
+    border-color: #e2e8f0;
+}
+
+.outline-header {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.outline-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+}
+
+.outline-item {
+    margin: 0;
+    padding: 0;
+}
+
+.outline-link {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    padding: 0.3rem 0.5rem;
+    border-radius: 4px;
+    line-height: 1.35;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.outline-link:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.outline-link.active {
+    color: var(--academic-blue);
+    background: rgba(56, 189, 248, 0.1);
+    font-weight: 600;
+}
+
+.outline-link.level-3 {
+    padding-left: 1.25rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.paper-stats-badges {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: 0.75rem;
+}
+
+.paper-meta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.76rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    padding: 0.2rem 0.55rem;
+    border-radius: 12px;
+}
+
+:root.light-mode .paper-meta-chip {
+    background: #f1f5f9;
+    border-color: #e2e8f0;
+    color: #475569;
+}
+
+/* 6. Sources Sidebar Database Filters & Cards */
+.sources-filter-bar {
+    display: flex;
+    gap: 0.35rem;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(0, 0, 0, 0.1);
+    overflow-x: auto;
+}
+
+.source-filter-chip {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: var(--text-muted);
+    font-size: 0.74rem;
+    font-weight: 600;
+    padding: 0.25rem 0.6rem;
+    border-radius: 50px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.source-filter-chip:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.source-filter-chip.active {
+    background: rgba(56, 189, 248, 0.15);
+    border-color: var(--academic-blue);
+    color: var(--academic-blue);
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.12);
+}
+
+.source-card-item {
+    cursor: pointer;
+    position: relative;
+    border-left: 3px solid transparent;
+}
+
+.source-card-item:hover {
+    border-left-color: var(--academic-blue);
+    transform: translateX(2px);
+}
+
+/* 7. Skeleton Shimmer Outline Preview */
+.paper-skeleton-outline {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    align-items: center;
+    width: 100%;
+    max-width: 480px;
+}
+
+.skeleton-pill, 
+.skeleton-bar {
+    height: 10px;
+    border-radius: 6px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.03) 100%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.8s infinite ease-in-out;
+}
+
+.skeleton-pill {
+    height: 20px;
+    border-radius: 20px;
+}
+
+@keyframes skeletonShimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* 8. Origin-Anchored Spring Dropdown */
+.export-dropdown {
+    position: relative;
+}
+
+.export-dropdown .dropdown-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    background: rgba(18, 24, 38, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-sm);
+    padding: 0.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 190px;
+    z-index: 100;
+    transform-origin: top right;
+    transform: scale(0.94) translateY(-6px);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.22s var(--spring-snappy), opacity 0.18s ease;
+}
+
+.export-dropdown .dropdown-menu.show {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.dropdown-item {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.dropdown-item:hover {
+    background: rgba(56, 189, 248, 0.15);
+    color: var(--text-primary);
+}
+
+:root.light-mode .export-dropdown .dropdown-menu {
+    background: rgba(255, 255, 255, 0.98);
+    border-color: #cbd5e1;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+}
+
+/* 9. WCAG 2.2 Accessible Focus Indicators */
+:focus-visible {
+    outline: 2px solid var(--academic-blue) !important;
+    outline-offset: 2px !important;
+}
+
+/* 10. Safe Area Insets for Mobile */
+body {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
 
 
