@@ -502,6 +502,53 @@ function initColdStartAutoReload() {
     }, COLD_START_RELOAD_DELAY_MS);
 }
 
+// Live Paper Synthesized Counter
+let currentPaperTotal = 33;
+
+function animatePaperCounter(targetVal, duration = 800) {
+    const el = dom.rmTotalPapers || document.getElementById('rm-total-papers');
+    if (!el) return;
+    const startVal = parseInt(el.textContent.replace(/,/g, ''), 10) || currentPaperTotal;
+    const endVal = Number.isFinite(targetVal) ? Math.max(targetVal, 33) : 33;
+    currentPaperTotal = endVal;
+
+    if (startVal === endVal) {
+        el.textContent = endVal.toLocaleString();
+        return;
+    }
+
+    const startTime = performance.now();
+    const range = endVal - startVal;
+
+    function step(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const ease = 1 - (1 - progress) * (1 - progress);
+        const current = Math.round(startVal + range * ease);
+        el.textContent = current.toLocaleString();
+
+        if (progress < 1) {
+            requestAnimationFrame(step);
+        } else {
+            el.textContent = endVal.toLocaleString();
+        }
+    }
+    requestAnimationFrame(step);
+}
+
+async function fetchLivePaperCount() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/research-mode/total-papers`);
+        if (res.ok) {
+            const data = await res.json();
+            const total = typeof data.total_papers === 'number' ? Math.max(data.total_papers, 33) : 33;
+            animatePaperCounter(total, 600);
+        }
+    } catch (e) {
+        console.warn('Failed to fetch live paper count:', e);
+    }
+}
+
 // DOM Cache
 let dom = {};
 
@@ -515,6 +562,7 @@ document.addEventListener('DOMContentLoaded', () => {
     checkBackendHealth();
     initColdStartAutoReload();
     checkConfigGate();
+    fetchLivePaperCount();
     renderRMPipelineTracker();
     restoreRMSessionOnLoad();
     rmPlaceholderCycle = initCyclingPlaceholder(dom.rmPsInput, RM_PLACEHOLDER_EXAMPLES);
@@ -668,6 +716,7 @@ function cacheDomElements() {
         rmModelPlanner: document.getElementById('rm-model-planner'),
         rmModelResearcher: document.getElementById('rm-model-researcher'),
         rmModelAggregator: document.getElementById('rm-model-aggregator'),
+        rmTotalPapers: document.getElementById('rm-total-papers'),
         rmStartBtn: document.getElementById('rm-start-btn'),
         rmPipelineStepsGrid: document.getElementById('rm-pipeline-steps-grid'),
         rmPipelineStatusTag: document.getElementById('rm-pipeline-status-tag'),
@@ -866,6 +915,7 @@ function switchMode(newMode) {
         dom.tabResearchMode.classList.add('active');
         dom.tabDeepSearch.classList.remove('active');
         switchPanel(lastPanelByMode.researchmode || dom.rmInputPanel);
+        fetchLivePaperCount();
     }
     updateModeTimeEstimate(newMode);
     updateNewRunVisibility();
@@ -1812,6 +1862,8 @@ async function handleRMStart() {
     if (aggregatorModel) models.aggregator = aggregatorModel;
 
     dom.rmStartBtn.disabled = true;
+    currentPaperTotal = Math.max(currentPaperTotal + 1, 34);
+    animatePaperCounter(currentPaperTotal, 400);
     dom.rmStartBtn.innerHTML = `
         <div class="btn-loader-wrap">
             <span class="apple-spin-ring"></span>
@@ -1868,6 +1920,9 @@ async function handleRMStart() {
         }
 
         state.rm.threadId = data.thread_id;
+        if (typeof data.papers_total === 'number') {
+            animatePaperCounter(data.papers_total, 400);
+        }
         state.rm.problemStatement = data.problem_statement;
         state.rm.researchObjectives = data.research_objectives || [];
         state.rm.researchQuestions = data.research_questions || [];
