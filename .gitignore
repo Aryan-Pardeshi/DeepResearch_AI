@@ -255,3 +255,6 @@ research-bot/backend/app/static/exports/
 
 # Superpowers SDD scratch workspaces (plan artifacts; git history is the record)
 .superpowers/
+
+# PDFs
+*.pdf

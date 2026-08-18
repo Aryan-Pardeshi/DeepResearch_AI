@@ -1,63 +1,146 @@
----
-title: DeepResearch
-emoji: 📚
-colorFrom: blue
-colorTo: indigo
-sdk: docker
-app_port: 8000
-pinned: false
+# <img src="https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011" width="32" height="32" style="vertical-align: middle;"> DeepResearch
+
+An AI-powered multi-agent research assistant that turns a query into a structured, cited research report — with human-in-the-loop plan approval and real-time streaming.
+
+<video src="https://github.com/user-attachments/assets/730c43ce-b750-4934-bc41-670b04a34db1" controls="controls" style="max-width: 100%;"></video>
+
 ---
 
-# DeepResearch
+## How It Works
 
-Multi-agent research assistant. Give it a problem statement and it searches OpenAlex,
-Semantic Scholar, and ArXiv, screens the corpus for relevance, and writes a full
-academic paper with a PRISMA flow diagram, verified citations, and PDF/DOCX export.
-Four human-in-the-loop checkpoints let you steer the scope, framework, hypotheses,
-and methodology before it commits to them.
+1. User submits a research query with optional topic filters (News, Academic, Finance, Patents)
+2. A **Planner Agent** generates a Problem Statement + up to 5 independent research sub-tasks
+3. User reviews and approves the plan (or requests revisions in natural language)
+4. Up to 5 **Parallel Research Workers** search the web simultaneously via Tavily
+5. An **Aggregator Agent** synthesizes all findings into a structured markdown report
+6. User can download the report as a `.md` file
 
-## Configuration
+<img width="455" height="586" alt="image" src="https://github.com/user-attachments/assets/ed7e9a3b-d51c-47dd-a660-009d627cf0ed" />
 
-Set these under **Settings → Variables and secrets**.
 
-Secrets:
+---
 
-| Name | Required | Purpose |
-|------|----------|---------|
-| `LLM_API_KEY` | yes | OpenAI-compatible API key |
-| `TAVILY_API_KEY` | for DeepSearch mode | Web search |
-| `CONFIG_API_TOKEN` | no | Enables the in-browser settings page, sent as `X-Config-Token` |
+## Tech Stack
 
-Variables:
+| Layer | Technology |
+|---|---|
+| Agent Graph | LangGraph (HITL, Send() API, MemorySaver) |
+| LLM | DeepSeek Pro (planner, aggregator) + Flash (approval, researchers) |
+| Web Search | Tavily API |
+| Backend | FastAPI + SSE streaming |
+| Frontend | Vanilla JS + Nginx |
+| Containerization | Docker + Docker Compose |
 
-| Name | Default | Purpose |
-|------|---------|---------|
-| `LLM_BASE_URL` | `https://api.deepseek.com` | Any OpenAI-compatible endpoint |
-| `LLM_MODEL_PLANNER` | `deepseek-chat` | Overridable per run in the UI |
-| `LLM_MODEL_RESEARCHER` | `deepseek-chat` | Screening; a cheaper model suits this |
-| `LLM_MODEL_AGGREGATOR` | `deepseek-chat` | Long-form writing |
-| `OPENALEX_EMAIL` | — | Required by OpenAlex and Unpaywall for the polite pool |
-| `CORE_API_KEY` | — | Free key that recovers extra open-access full texts |
+---
 
-The configuration API fails closed. Without `CONFIG_API_TOKEN` the in-browser
-settings page cannot write, which is deliberate: that endpoint can rewrite
-`LLM_API_KEY` and `LLM_BASE_URL`, so it must not be reachable unauthenticated on a
-public URL. Set the keys as secrets above and you never need it.
+## Features
 
-## Storage
+- **Multi-agent graph** — parallel researchers fan out via LangGraph's `Send()` API
+- **Human-in-the-Loop** — review and revise the research plan before execution
+- **Real-time SSE streaming** — live researcher progress updates in the UI
+- **Query validation** — rejects vague queries before hitting the LLM
+- **Markdown export** — download the final report as a `.md` file
+- **Session persistence** — resume interrupted sessions via localStorage
+- **Dark/Light mode** — theme toggle with persistent preference
 
-Graph checkpoints, the LLM response cache, and generated figures live in
-`/app/data`. On the free tier this is ephemeral — it is wiped when the Space
-restarts or rebuilds, so a run in progress loses its resume state. Attach
-persistent storage, or point `RESEARCH_DB_PATH` at an external database, to keep
-sessions across restarts.
+---
 
-## Running locally
+## Project Structure
 
-```bash
-cp .env.example .env      # then fill in your keys
-docker compose up --build
+```
+research-bot/
+├── backend/
+│   ├── app/
+│   │   ├── agents/          # planner, validator, approval, researcher, aggregator
+│   │   ├── api/             # FastAPI routes + SSE
+│   │   ├── graph/           # LangGraph state + builder
+│   │   ├── tools/           # Tavily search tool
+│   │   └── llm.py           # DeepSeek LLM config
+│   └── Dockerfile
+├── frontend/
+│   ├── index.html
+│   ├── app.js
+│   └── style.css
+├── docker-compose.yml
+├── requirements.txt
+└── .env.example
 ```
 
-Then open http://localhost:8000. For local use, add `ALLOW_OPEN_CONFIG_API=1` to
-`.env` if you want the in-browser settings page to work without a token.
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Docker + Docker Compose
+- DeepSeek API key → [platform.deepseek.com](https://platform.deepseek.com)
+- Tavily API key → [tavily.com](https://tavily.com)
+
+### 1. Clone the repo
+
+```bash
+git clone https://github.com/Aryan-Pardeshi/deep-research.git
+cd deep-research/research-bot
+```
+
+### 2. Set up environment variables
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env`:
+```
+DEEPSEEK_API_KEY=your_key_here
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+TAVILY_API_KEY=your_key_here
+```
+
+### 3. Run with Docker
+
+```bash
+docker compose up -d --build
+```
+
+- Frontend → [http://localhost:80](http://localhost:80)
+- Backend → [http://localhost:8000](http://localhost:8000)
+
+---
+
+### Local Development (without Docker)
+
+#### Backend
+
+```bash
+cd research-bot
+pip install -r requirements.txt
+uvicorn backend.app.main:app --reload --port 8000
+```
+
+#### Frontend
+
+Open `frontend/index.html` directly in your browser, or serve with any static file server:
+
+```bash
+npx serve frontend
+```
+
+> Make sure `API_BASE_URL` in `app.js` points to `http://localhost:8000`
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/research/start` | Validate query, generate PS + plan |
+| `POST` | `/research/approve` | Resume graph, stream SSE events |
+| `GET` | `/research/result/{thread_id}` | Fetch final report by thread |
+
+---
+
+## Author
+
+Built by [Aryan Pardeshi](https://github.com/Aryan-Pardeshi) — open to AI/ML internship opportunities.
+
+Connect: [LinkedIn](https://linkedin.com/in/aryan-pardeshi-dev) · [GitHub](https://github.com/Aryan-Pardeshi)
