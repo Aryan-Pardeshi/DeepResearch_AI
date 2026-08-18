@@ -20,9 +20,9 @@ document.head.appendChild(cursorStyle);
 // index.html straight off disk or from a dev server on another port (e.g. 5500)
 // falls back to the default backend port (http://localhost:8000).
 const API_BASE_URL = window.API_BASE_URL || (
-    (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '8000'))
-        ? 'http://localhost:8000'
-        : window.location.origin
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? (window.location.port === '8000' ? window.location.origin : 'http://localhost:8000')
+        : (window.location.protocol === 'file:' ? 'http://localhost:8000' : 'https://deepresearch-ai.fastapicloud.dev')
 );
 let activeResearchController = null;
 let activeRMController = null;
