@@ -2064,6 +2064,44 @@ main {
     -webkit-text-fill-color: transparent;
 }
 
+:root.light-mode .rm-metric-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 40%, rgba(99, 102, 241, 0.1) 100%);
+    border-color: #cbd5e1;
+    border-top-color: #ffffff;
+    box-shadow: 
+        inset 0 1.5px 1px 0 rgba(255, 255, 255, 1),
+        inset 0 -1px 1px 0 rgba(203, 213, 225, 0.4),
+        0 8px 24px -4px rgba(0, 0, 0, 0.08),
+        0 3px 12px rgba(0, 0, 0, 0.04);
+}
+
+:root.light-mode .rm-metric-card:hover {
+    border-color: #94a3b8;
+    border-top-color: #ffffff;
+    box-shadow: 
+        inset 0 2px 2px 0 rgba(255, 255, 255, 1),
+        inset 0 -1.5px 1px 0 rgba(148, 163, 184, 0.5),
+        0 12px 28px -6px rgba(0, 0, 0, 0.12),
+        0 0 20px rgba(99, 102, 241, 0.15);
+}
+
+:root.light-mode .metric-giant-val {
+    color: #1e293b;
+    background: linear-gradient(135deg, #0f172a 40%, #4f46e5 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
+}
+
+:root.light-mode .metric-label {
+    color: #334155;
+}
+
+:root.light-mode .metric-subtext {
+    color: #64748b;
+}
+
 :root.light-mode .label-tag {
     background: rgba(2, 132, 199, 0.1);
     color: #0284c7;
