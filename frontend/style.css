@@ -5426,14 +5426,22 @@ button:active,
 /* 6. Sources Sidebar Database Filters & Cards */
 .sources-filter-bar {
     display: flex;
+    align-items: center;
     gap: 0.35rem;
     padding: 0.6rem 0.75rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     background: rgba(0, 0, 0, 0.1);
     overflow-x: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.sources-filter-bar::-webkit-scrollbar {
+    display: none;
 }
 
 .source-filter-chip {
+    flex-shrink: 0;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.06);
     color: var(--text-muted);
