@@ -2349,10 +2349,11 @@ async function openRMEventStream(message) {
 
             if (isTerminal) break;
 
+            // RENDER ERROR HANDLING:
             // Stream ended without a terminal event (checkpoint/completed/error).
-            // This normally means the HTTP connection was dropped by a proxy timeout
-            // (e.g. Render's 90 s idle limit) while the backend was still running a
-            // long LLM call. Check if the backend task is still alive before giving up.
+            // This happens when Render's reverse proxy terminates idle SSE connections (90s limit)
+            // or when network drops occur between client and Render server during heavy LLM tasks.
+            // We check the pipeline-status endpoint to verify if the server on Render is still executing.
             if (!isTerminal && state.rm.threadId) {
                 try {
                     const statusRes = await fetch(
@@ -2361,8 +2362,9 @@ async function openRMEventStream(message) {
                     if (statusRes.ok) {
                         const statusData = await statusRes.json();
                         if (statusData.running) {
-                            // Backend is still executing — reconnect to pick up buffered
-                            // events that arrived while we were disconnected.
+                            // RENDER ERROR HANDLING:
+                            // Backend on Render is still executing — reconnect to pick up buffered
+                            // events that arrived while disconnected from Render.
                             appendLogLine('Connection dropped mid-run — reconnecting to resume stream…', 'warn');
                             if (dom.rmPipelineStatusTag) {
                                 dom.rmPipelineStatusTag.textContent = 'Reconnecting to pipeline…';
@@ -2370,7 +2372,7 @@ async function openRMEventStream(message) {
                             attempt++;
                             if (attempt > maxRetries) {
                                 showToast('Pipeline is still running on the server. Refresh to reconnect.', 'warning');
-                                // Show persistent reconnect banner
+                                // RENDER ERROR HANDLING: Show persistent reconnect banner if Render proxy severed connection
                                 const banner = document.getElementById('rm-resume-banner');
                                 if (!banner) {
                                     const b = document.createElement('div');

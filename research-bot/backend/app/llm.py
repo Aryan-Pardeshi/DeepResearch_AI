@@ -57,10 +57,11 @@ def get_llm(model: str | None = None, role: str | None = None, temperature: floa
         else:
             model = os.getenv("LLM_MODEL_PLANNER", "deepseek-chat")
 
-    # max_retries=0: LangChain/openai-client retries run inside a thread executor,
-    # which means asyncio.wait_for() cannot cancel them. A single stuck request
-    # with max_retries=1 can block for 2×request_timeout before returning.
-    # Our _safe_invoke_llm() already handles retries with proper async backoff.
+    # RENDER ERROR HANDLING:
+    # Set max_retries=0 because LangChain/openai-client retries run inside a thread executor,
+    # which prevents asyncio.wait_for() from cancelling them. On Render free/starter tiers,
+    # a single stuck request with max_retries=1 blocks the entire event loop for 2×request_timeout.
+    # Our custom _safe_invoke_llm() handles retries asynchronously with non-blocking backoff.
     timeout_val = float(os.getenv("LLM_REQUEST_TIMEOUT", "60.0"))
     return ChatOpenAI(
         model=model,
