@@ -385,9 +385,10 @@ async def approve_research_mode(
                 yield f"{seq_str}data: {json.dumps(evt)}\n\n"
                 await asyncio.sleep(0.001)
 
-            # Stream live events; send SSE comment heartbeats every 20 s so that
-            # Render's / nginx's 90-second idle-connection timeout is never reached
-            # during long LLM calls where no data flows for minutes at a time.
+            # RENDER ERROR HANDLING:
+            # Stream live events; send SSE comment heartbeats every 20s so that
+            # Render's 90-second HTTP proxy idle-connection timeout is never triggered
+            # during long LLM calls where no data frames flow for minutes at a time.
             HEARTBEAT_INTERVAL = 20.0
             last_activity = time.time()
             task_ref = buf.get("task")
@@ -403,9 +404,9 @@ async def approve_research_mode(
                 except asyncio.TimeoutError:
                     if (task_ref is None or task_ref.done()) and listener_queue.empty():
                         break
-                    # Send SSE comment heartbeat — proxies forward these as bytes
-                    # keeping the TCP connection alive without advancing the event
-                    # stream (browsers and the fetch() reader both ignore them).
+                    # RENDER ERROR HANDLING:
+                    # Send SSE comment heartbeat (': heartbeat\n\n') — Render/Cloudflare proxies
+                    # forward these bytes to keep the TCP connection alive without breaking event streams.
                     yield ": heartbeat\n\n"
 
         finally:
@@ -414,12 +415,15 @@ async def approve_research_mode(
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
+# RENDER ERROR HANDLING:
+# Lightweight endpoint allowing frontend to poll pipeline health if Render's proxy cuts the SSE stream.
 @router.get("/research-mode/pipeline-status/{thread_id}")
 @router.get("/research/mode/pipeline-status/{thread_id}")
 async def get_pipeline_status(thread_id: str):
-    """Lightweight endpoint for the frontend to poll whether the backend task is still alive.
+    """RENDER ERROR HANDLING:
+    Lightweight endpoint for the frontend to poll whether the backend task is still alive on Render.
     Returns running=True if the asyncio task for this thread is running, and completed=True
-    if it has finished. Used by the frontend when the SSE connection drops mid-execution.
+    if it has finished. Used by the frontend when the SSE connection drops mid-execution on Render.
     """
     valid_id = _validate_thread_id(thread_id)
     buf = thread_buffers.get(valid_id)

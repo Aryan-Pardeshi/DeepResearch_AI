@@ -86,8 +86,10 @@ def _strip_preamble(text: str) -> str:
 async def _safe_invoke_llm(llm, prompt: str, default_fallback: str = "", max_retries: int = 3, invoke_timeout: float | None = None) -> str:
     """Helper to safely invoke LLM with retry logic and fallback on API/JSON decode errors.
 
-    Uses exponential backoff: 2s, 4s, 8s between retries. Logs the exception
-    class name alongside the message so silent connection drops are diagnosable.
+    RENDER ERROR HANDLING:
+    Uses non-blocking async exponential backoff (1s, 2s, 4s) and custom timeouts
+    to handle gateway throttling, connection drops, and rate limits on Render
+    without freezing the server or terminating the pipeline.
     """
     if invoke_timeout is None:
         invoke_timeout = float(os.getenv("LLM_INVOKE_TIMEOUT", "90.0"))
