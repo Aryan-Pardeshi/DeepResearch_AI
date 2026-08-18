@@ -207,7 +207,22 @@ async def _execute_research_graph(thread_id: str, message: str):
         # Check if paused at next interrupt or finished
         is_completed = values.get("status") == "completed" or not (state and state.next)
         is_checkpoint, hitl_checkpoint = _resolve_checkpoint_state(state)
-        event_name = "completed" if is_completed else "checkpoint"
+        
+        # Determine the correct terminal event:
+        # - "completed" if the graph finished
+        # - "checkpoint" if genuinely paused at an HITL interrupt
+        # - "running" if the graph is actively executing (no interrupt, not finished)
+        #   In this case we don't send a terminal event; the stream simply ends
+        #   and the frontend will reconnect via pipeline-status polling.
+        if is_completed:
+            event_name = "completed"
+        elif is_checkpoint:
+            event_name = "checkpoint"
+        else:
+            # Graph is running but not at a checkpoint and not completed.
+            # This can happen if the stream was cut mid-execution.
+            # Don't send a terminal event; let the frontend handle reconnection.
+            event_name = None
 
         final_payload = {
             "event": event_name,
@@ -241,9 +256,10 @@ async def _execute_research_graph(thread_id: str, message: str):
                 "title": values.get("title")
             }
         }
-        await _broadcast_event(thread_id, final_payload, is_node_event=True)
+        if event_name is not None:
+            await _broadcast_event(thread_id, final_payload, is_node_event=True)
         if buf:
-            buf["completed"] = True
+            buf["completed"] = is_completed
 
     except Exception as e:
         logger.error(f"SSE Error in Research Mode approve: {e}", exc_info=True)

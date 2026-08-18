@@ -1531,8 +1531,8 @@ function showResumeBanner(data) {
         banner.style.marginBottom = '1.25rem';
 
         const workspace = document.getElementById('rm-workspace-panel');
-        if (workspace && workspace.firstChild) {
-            workspace.insertBefore(banner, workspace.firstChild);
+        if (workspace) {
+            workspace.prepend(banner);
         }
     }
 
@@ -1935,7 +1935,7 @@ async function handleRMStart() {
         state.rm.completedStages = [];
         switchPanel(dom.rmWorkspacePanel);
         const wsBody = dom.rmWorkspacePanel?.querySelector('.rm-workspace-body');
-        wsBody?.insertBefore(scopeLoader, wsBody.firstChild);
+        wsBody?.prepend(scopeLoader);
         updateRMPipelineTracker('checkpoint_1', ['scope_definition', 'keyword_extractor']);
         renderRMHitlPanel('checkpoint_1');
         updateNewRunVisibility();
@@ -2081,14 +2081,20 @@ function showRMCheckpointTransitionLoader(currentCp, isRevision = false) {
         </div>
     `;
 
-    const wsBody = dom.rmWorkspacePanel?.querySelector('.rm-workspace-body');
-    if (wsBody) {
-        if (dom.rmHitlPanel) {
-            wsBody.insertBefore(loaderCard, dom.rmHitlPanel);
+    try {
+        if (dom.rmHitlPanel && dom.rmHitlPanel.parentNode) {
+            dom.rmHitlPanel.parentNode.insertBefore(loaderCard, dom.rmHitlPanel);
         } else {
-            wsBody.appendChild(loaderCard);
+            const targetContainer = dom.rmWorkspacePanel?.querySelector('.rm-main-column')
+                || dom.rmWorkspacePanel?.querySelector('.rm-workspace-body')
+                || dom.rmWorkspacePanel;
+            if (targetContainer) {
+                targetContainer.prepend(loaderCard);
+            }
         }
         refreshIcons();
+    } catch (err) {
+        console.warn('Failed to mount RM transition loader card:', err);
     }
 }
 
@@ -2261,15 +2267,19 @@ async function handleRMApprove(feedback) {
     const completedStages = cpIdx >= 0 ? RM_STAGES.slice(0, cpIdx + 1).map(s => s.id) : ['scope_definition', 'keyword_extractor', 'checkpoint_1'];
     const nextStage = cpIdx >= 0 && cpIdx + 1 < RM_STAGES.length ? RM_STAGES[cpIdx + 1].id : 'paper_fetcher';
 
-    updateRMPipelineTracker(nextStage, completedStages);
-    rmTimer.resume();
-    showRMCheckpointTransitionLoader(currentCp, feedback !== 'approve');
-    appendLogLine(`Checkpoint '${currentCp}' approved. Resuming pipeline...`, 'info');
-    saveRMSession();
+    try {
+        updateRMPipelineTracker(nextStage, completedStages);
+        rmTimer.resume();
+        showRMCheckpointTransitionLoader(currentCp, feedback !== 'approve');
+        appendLogLine(`Checkpoint '${currentCp}' approved. Resuming pipeline...`, 'info');
+        saveRMSession();
 
-    if (dom.rmPaperTitle) dom.rmPaperTitle.textContent = state.rm.title || 'Synthesizing Paper...';
-    renderRMPaperLive(true);
-    renderRMSourcesPanel();
+        if (dom.rmPaperTitle) dom.rmPaperTitle.textContent = state.rm.title || 'Synthesizing Paper...';
+        renderRMPaperLive(true);
+        renderRMSourcesPanel();
+    } catch (err) {
+        console.warn('UI update failed before stream connection, proceeding with API call:', err);
+    }
 
     await openRMEventStream(feedback);
 }
@@ -2283,7 +2293,7 @@ async function openRMEventStream(message) {
     activeRMController = new AbortController();
 
     let attempt = 0;
-    const maxRetries = 5;
+    const maxRetries = 999;
     let isTerminal = false;
     let receivedEventsCount = 0;
 
@@ -2323,13 +2333,6 @@ async function openRMEventStream(message) {
                 buffer = events.pop();
 
                 for (const rawEvent of events) {
-                    // Every buffered event (node_start, node_update, checkpoint,
-                    // completed, error, resume) is prefixed with its own "id: N"
-                    // line before "data: ", so rawEvent never actually starts with
-                    // "data: " for those. Only token_stream (unbuffered, no id:
-                    // line) ever matched here — every other event was silently
-                    // dropped, which is why the tracker/paper/checkpoint panel
-                    // never advanced past the very first node_start.
                     for (const line of rawEvent.split('\n')) {
                         if (!line.startsWith('data: ')) continue;
                         try {
@@ -2370,21 +2373,7 @@ async function openRMEventStream(message) {
                                 dom.rmPipelineStatusTag.textContent = 'Reconnecting to pipeline…';
                             }
                             attempt++;
-                            if (attempt > maxRetries) {
-                                showToast('Pipeline is still running on the server. Refresh to reconnect.', 'warning');
-                                // RENDER ERROR HANDLING: Show persistent reconnect banner if Render proxy severed connection
-                                const banner = document.getElementById('rm-resume-banner');
-                                if (!banner) {
-                                    const b = document.createElement('div');
-                                    b.id = 'rm-resume-banner';
-                                    b.className = 'rm-resume-banner';
-                                    b.innerHTML = `<i data-lucide="refresh-cw" style="width:14px;height:14px"></i> Pipeline is running on server — <button onclick="reconnectRMStream()">Reconnect</button>`;
-                                    document.querySelector('.rm-pipeline-tracker')?.prepend(b);
-                                    if (window.lucide) lucide.createIcons();
-                                }
-                                break;
-                            }
-                            await new Promise(res => setTimeout(res, 2000));
+                            await new Promise(res => setTimeout(res, 3000));
                             continue; // retry the SSE connection
                         } else if (statusData.completed) {
                             // Backend finished while we were disconnected — sync final state
@@ -2403,6 +2392,7 @@ async function openRMEventStream(message) {
                             } catch (e) {
                                 console.warn('RM result sync failed:', e);
                             }
+                            break;
                         }
                     }
                 } catch (e) {
@@ -2410,8 +2400,9 @@ async function openRMEventStream(message) {
                 }
             }
 
-            // Fallback sync if stream ended cleanly without events
-            if (receivedEventsCount === 0 && state.rm.threadId) {
+            // Fallback sync if stream ended cleanly without a terminal event
+            // (regardless of whether we received some events before the disconnect)
+            if (!isTerminal && state.rm.threadId) {
                 try {
                     const syncRes = await fetch(`${API_BASE_URL}/research-mode/result/${state.rm.threadId}`);
                     if (syncRes.ok) {
@@ -2420,6 +2411,8 @@ async function openRMEventStream(message) {
                         if (syncData.is_checkpoint) {
                             const cp = (syncData.hitl_checkpoint || 'checkpoint_1').replace(/_(approved|revising)$/, '');
                             renderRMHitlPanel(cp);
+                        } else if (!syncData.next || syncData.next.length === 0) {
+                            renderRMPaperFinal();
                         }
                     }
                 } catch (e) {
@@ -2438,8 +2431,8 @@ async function openRMEventStream(message) {
                 showToast('Connection lost. Auto-reconnect failed: ' + e.message, 'error');
                 break;
             }
-            showToast(`Connection dropped. Auto-reconnecting (attempt ${attempt}/${maxRetries})...`, 'warning');
-            await new Promise(res => setTimeout(res, 1000 * Math.pow(1.5, attempt - 1)));
+            showToast(`Connection dropped. Auto-reconnecting (attempt ${attempt})...`, 'warning');
+            await new Promise(res => setTimeout(res, Math.min(1000 * Math.pow(1.5, attempt - 1), 10000)));
         }
     }
 }
