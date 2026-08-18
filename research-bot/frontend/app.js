@@ -2349,6 +2349,65 @@ async function openRMEventStream(message) {
 
             if (isTerminal) break;
 
+            // Stream ended without a terminal event (checkpoint/completed/error).
+            // This normally means the HTTP connection was dropped by a proxy timeout
+            // (e.g. Render's 90 s idle limit) while the backend was still running a
+            // long LLM call. Check if the backend task is still alive before giving up.
+            if (!isTerminal && state.rm.threadId) {
+                try {
+                    const statusRes = await fetch(
+                        `${API_BASE_URL}/research-mode/pipeline-status/${state.rm.threadId}`
+                    );
+                    if (statusRes.ok) {
+                        const statusData = await statusRes.json();
+                        if (statusData.running) {
+                            // Backend is still executing — reconnect to pick up buffered
+                            // events that arrived while we were disconnected.
+                            appendLogLine('Connection dropped mid-run — reconnecting to resume stream…', 'warn');
+                            if (dom.rmPipelineStatusTag) {
+                                dom.rmPipelineStatusTag.textContent = 'Reconnecting to pipeline…';
+                            }
+                            attempt++;
+                            if (attempt > maxRetries) {
+                                showToast('Pipeline is still running on the server. Refresh to reconnect.', 'warning');
+                                // Show persistent reconnect banner
+                                const banner = document.getElementById('rm-resume-banner');
+                                if (!banner) {
+                                    const b = document.createElement('div');
+                                    b.id = 'rm-resume-banner';
+                                    b.className = 'rm-resume-banner';
+                                    b.innerHTML = `<i data-lucide="refresh-cw" style="width:14px;height:14px"></i> Pipeline is running on server — <button onclick="reconnectRMStream()">Reconnect</button>`;
+                                    document.querySelector('.rm-pipeline-tracker')?.prepend(b);
+                                    if (window.lucide) lucide.createIcons();
+                                }
+                                break;
+                            }
+                            await new Promise(res => setTimeout(res, 2000));
+                            continue; // retry the SSE connection
+                        } else if (statusData.completed) {
+                            // Backend finished while we were disconnected — sync final state
+                            try {
+                                const syncRes = await fetch(`${API_BASE_URL}/research-mode/result/${state.rm.threadId}`);
+                                if (syncRes.ok) {
+                                    const syncData = await syncRes.json();
+                                    if (syncData.values) applyRMStatePayload(syncData.values);
+                                    if (syncData.is_checkpoint) {
+                                        const cp = (syncData.hitl_checkpoint || 'checkpoint_1').replace(/_(approved|revising)$/, '');
+                                        renderRMHitlPanel(cp);
+                                    } else if (!syncData.next || syncData.next.length === 0) {
+                                        renderRMPaperFinal();
+                                    }
+                                }
+                            } catch (e) {
+                                console.warn('RM result sync failed:', e);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Pipeline status check failed:', e);
+                }
+            }
+
             // Fallback sync if stream ended cleanly without events
             if (receivedEventsCount === 0 && state.rm.threadId) {
                 try {
@@ -2382,6 +2441,7 @@ async function openRMEventStream(message) {
         }
     }
 }
+
 
 // Re-attaches to an already-running pipeline after a page reload. The backend
 // keeps executing in its own asyncio task regardless of whether any browser is
