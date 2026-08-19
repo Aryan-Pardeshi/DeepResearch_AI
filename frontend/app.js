@@ -565,6 +565,18 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchLivePaperCount();
     renderRMPipelineTracker();
     restoreRMSessionOnLoad();
+    
+    // Check URL parameters for explicit mode selection
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const requestedMode = (urlParams.get('mode') || '').toLowerCase();
+        if (requestedMode === 'deepsearch' || requestedMode === 'researchmode') {
+            switchMode(requestedMode);
+        }
+    } catch (e) {
+        console.warn('URL mode param error:', e);
+    }
+
     rmPlaceholderCycle = initCyclingPlaceholder(dom.rmPsInput, RM_PLACEHOLDER_EXAMPLES);
     dsPlaceholderCycle = initCyclingPlaceholder(dom.queryInput, DS_PLACEHOLDER_EXAMPLES);
     updateNewRunVisibility();
