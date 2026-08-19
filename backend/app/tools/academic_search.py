@@ -1,27 +1,46 @@
+"""Academic search orchestration, multi-index retrieval, deduplication, and screening.
+
+Integrates OpenAlex, Semantic Scholar, ArXiv, Crossref, and PubMed with
+deterministic PRISMA 2020 tracking and structured PaperRecord outputs.
+"""
+
+from __future__ import annotations
+
 import os
 import re
 import json
 import asyncio
 import logging
-import httpx
-import feedparser
 from typing import List, Dict, Any, Optional, Tuple
+import httpx
+
+try:
+    import feedparser
+except ImportError:
+    feedparser = None
+
 from backend.app.llm import get_llm
+from backend.app.models.evidence import PaperRecord, PRISMATracker, make_paper_id
+from backend.app.tools.crossref_search import search_crossref
+from backend.app.tools.pubmed_search import search_pubmed
 
 logger = logging.getLogger(__name__)
 
-# Strict 5 second HTTP timeout to prevent hanging
-HTTP_TIMEOUT = 5.0
+# Strict 6 second HTTP timeout to prevent hanging
+HTTP_TIMEOUT = 6.0
 
 # Corpus limits for the screening stage
-MAX_SEARCH_KEYWORDS = 8      # keywords queried against every index
+MAX_SEARCH_KEYWORDS = 10      # keywords queried against every index
 SCREEN_THRESHOLD = 30        # corpus sizes at or below this skip screening entirely
-SCREEN_CANDIDATES = 60       # papers sent to the LLM relevance scorer
-SCREEN_KEEP = 30             # papers retained for synthesis
+SCREEN_CANDIDATES = 80       # papers sent to the LLM relevance scorer (raised to include new sources)
+SCREEN_KEEP = 40             # papers retained for synthesis
+SCREEN_MIN_PER_SOURCE = 2   # guaranteed minimum papers kept per source after screening
 SCREEN_BATCH_SIZE = 15       # papers per LLM scoring call
-SCREEN_CONCURRENCY = 2       # scoring calls in flight at once
+SCREEN_CONCURRENCY = 4       # scoring calls in flight at once
+
 
 def _reconstruct_openalex_abstract(inverted_index: Optional[Dict[str, List[int]]]) -> str:
+    """Reconstruct plain text abstract from OpenAlex inverted index."""
     if not inverted_index or not isinstance(inverted_index, dict):
         return ""
     word_pos = []
@@ -31,7 +50,9 @@ def _reconstruct_openalex_abstract(inverted_index: Optional[Dict[str, List[int]]
     word_pos.sort(key=lambda x: x[0])
     return " ".join(wp[1] for wp in word_pos)
 
+
 def _normalize_doi(doi: Optional[str]) -> str:
+    """Canonicalize DOI string."""
     if not doi:
         return ""
     doi = doi.strip().lower()
@@ -40,11 +61,14 @@ def _normalize_doi(doi: Optional[str]) -> str:
 
 
 def _normalize_title(title: Optional[str]) -> str:
+    """Normalize title for fuzzy collision-resistant deduplication."""
     if not title:
         return ""
     return re.sub(r"\W+", "", title.lower())
 
-async def fetch_openalex_papers(client: httpx.AsyncClient, keyword: str, max_results: int = 50) -> List[Dict[str, Any]]:
+
+async def fetch_openalex_papers(client: httpx.AsyncClient, keyword: str, max_results: int = 50) -> List[PaperRecord]:
+    """Retrieve papers from OpenAlex."""
     papers = []
     try:
         url = "https://api.openalex.org/works"
@@ -73,30 +97,35 @@ async def fetch_openalex_papers(client: httpx.AsyncClient, keyword: str, max_res
                         name = auth_obj.get("display_name")
                         if name:
                             authors.append(name)
-                year = item.get("publication_year")
+                year = str(item.get("publication_year") or "n.d.")
                 doi = _normalize_doi(item.get("doi"))
                 landing_page = item.get("doi") or (item.get("primary_location") or {}).get("landing_page_url") or ""
                 oa_info = item.get("open_access") or {}
                 best_oa = item.get("best_oa_location") or {}
                 pdf_url = oa_info.get("oa_url") or best_oa.get("pdf_url") or ""
+                citations = int(item.get("cited_by_count", 0) or 0)
 
-                
-                papers.append({
-                    "title": title.strip(),
-                    "abstract": abstract.strip(),
-                    "authors": authors,
-                    "year": year or "n.d.",
-                    "doi": doi,
-                    "url": landing_page,
-                    "pdf_url": pdf_url,
-                    "source": "openalex",
-                    "citation_count": item.get("cited_by_count", 0)
-                })
+                paper_id = make_paper_id(doi=doi, title=title, year=year)
+                papers.append(PaperRecord(
+                    paper_id=paper_id,
+                    doi=doi or None,
+                    title=title.strip(),
+                    abstract=abstract.strip(),
+                    authors=authors,
+                    year=year,
+                    source_url=landing_page,
+                    pdf_url=pdf_url or None,
+                    retrieval_source="openalex",
+                    citation_count=citations,
+                    screening_status="retrieved"
+                ))
     except Exception as e:
         logger.warning(f"OpenAlex search skipped for '{keyword}': {e}")
     return papers
 
-async def fetch_semantic_scholar_papers(client: httpx.AsyncClient, keyword: str, max_results: int = 50) -> List[Dict[str, Any]]:
+
+async def fetch_semantic_scholar_papers(client: httpx.AsyncClient, keyword: str, max_results: int = 50) -> List[PaperRecord]:
+    """Retrieve papers from Semantic Scholar."""
     papers = []
     try:
         url = "https://api.semanticscholar.org/graph/v1/paper/search"
@@ -117,7 +146,6 @@ async def fetch_semantic_scholar_papers(client: httpx.AsyncClient, keyword: str,
             resp = await client.get(url, params=params, headers=headers)
 
         if resp.status_code == 200:
-
             data = resp.json()
             for item in data.get("data", []):
                 title = item.get("title") or ""
@@ -125,31 +153,42 @@ async def fetch_semantic_scholar_papers(client: httpx.AsyncClient, keyword: str,
                     continue
                 abstract = item.get("abstract") or ""
                 authors = [a.get("name", "") for a in item.get("authors", []) if a.get("name")]
-                year = item.get("year")
+                year = str(item.get("year") or "n.d.")
                 ext_ids = item.get("externalIds") or {}
                 doi = _normalize_doi(ext_ids.get("DOI"))
                 pdf_url = (item.get("openAccessPdf") or {}).get("url")
                 paper_url = pdf_url or (f"https://doi.org/{doi}" if doi else f"https://www.semanticscholar.org/paper/{item.get('paperId')}")
+                citations = int(item.get("citationCount", 0) or 0)
 
-                papers.append({
-                    "title": title.strip(),
-                    "abstract": abstract.strip(),
-                    "authors": authors,
-                    "year": year or "n.d.",
-                    "doi": doi,
-                    "url": paper_url,
-                    "pdf_url": pdf_url or "",
-                    "source": "semantic_scholar",
-                    "citation_count": item.get("citationCount", 0)
-                })
+                paper_id = make_paper_id(doi=doi, title=title, year=year)
+                papers.append(PaperRecord(
+                    paper_id=paper_id,
+                    doi=doi or None,
+                    title=title.strip(),
+                    abstract=abstract.strip(),
+                    authors=authors,
+                    year=year,
+                    source_url=paper_url,
+                    pdf_url=pdf_url or None,
+                    retrieval_source="semantic_scholar",
+                    citation_count=citations,
+                    screening_status="retrieved"
+                ))
     except Exception as e:
         logger.warning(f"Semantic Scholar search skipped for '{keyword}': {e}")
     return papers
 
-async def fetch_arxiv_papers(client: httpx.AsyncClient, keyword: str, max_results: int = 50) -> List[Dict[str, Any]]:
+
+async def fetch_arxiv_papers(client: httpx.AsyncClient, keyword: str, max_results: int = 50) -> List[PaperRecord]:
+    """Retrieve papers from arXiv."""
     papers = []
+    if feedparser is None:
+        logger.warning(
+            f"ArXiv search skipped for '{keyword}': optional dependency 'feedparser' is not installed."
+        )
+        return papers
     try:
-        clean_kw = re.sub(r'[^\w\s]', '', keyword).strip()
+        clean_kw = re.sub(r"[^\w\s]", "", keyword).strip()
         url = f"http://export.arxiv.org/api/query?search_query=all:{clean_kw}&start=0&max_results={min(max_results, 50)}&sortBy=relevance"
         
         resp = await client.get(url)
@@ -166,24 +205,29 @@ async def fetch_arxiv_papers(client: httpx.AsyncClient, keyword: str, max_result
                 arxiv_id = entry.get("id", "")
                 doi = _normalize_doi(entry.get("arxiv_doi"))
 
-                papers.append({
-                    "title": title,
-                    "abstract": abstract,
-                    "authors": authors,
-                    "year": year,
-                    "doi": doi or arxiv_id.split("/")[-1],
-                    "url": arxiv_id,
-                    "pdf_url": arxiv_id.replace("/abs/", "/pdf/") if arxiv_id else "",
-                    "source": "arxiv",
-                    "citation_count": 0
-                })
-
+                paper_id = make_paper_id(doi=doi, title=title, year=year)
+                papers.append(PaperRecord(
+                    paper_id=paper_id,
+                    doi=doi or None,
+                    arxiv_id=arxiv_id.split("/")[-1] if arxiv_id else None,
+                    title=title,
+                    abstract=abstract,
+                    authors=authors,
+                    year=year,
+                    source_url=arxiv_id,
+                    pdf_url=arxiv_id.replace("/abs/", "/pdf/") if arxiv_id else None,
+                    retrieval_source="arxiv",
+                    citation_count=0,
+                    study_type="theoretical",
+                    screening_status="retrieved"
+                ))
     except Exception as e:
         logger.warning(f"ArXiv search skipped for '{keyword}': {e}")
     return papers
 
-async def fetch_tavily_web_papers(keyword: str, max_results: int = 5) -> List[Dict[str, Any]]:
-    """LAST RESORT FALLBACK: Fetches web articles via Tavily when academic database indexes return insufficient literature."""
+
+async def fetch_tavily_web_papers(keyword: str, max_results: int = 5) -> List[PaperRecord]:
+    """LAST RESORT FALLBACK: Web articles via Tavily when academic databases return insufficient literature."""
     papers = []
     try:
         api_key = os.getenv("TAVILY_API_KEY")
@@ -200,96 +244,144 @@ async def fetch_tavily_web_papers(keyword: str, max_results: int = 5) -> List[Di
             url = r.get("url", "").strip()
             if not title or not content:
                 continue
-            papers.append({
-                "title": title,
-                "abstract": content,
-                "authors": ["Web Source"],
-                "year": "2026",
-                "doi": "",
-                "url": url,
-                "pdf_url": url if url.lower().endswith(".pdf") else "",
-                "source": "tavily_web_fallback",
-                "citation_count": 0
-            })
+            paper_id = make_paper_id(doi=None, title=title, year="n.d.")
+            papers.append(PaperRecord(
+                paper_id=paper_id,
+                title=title,
+                abstract=content,
+                authors=["Web Source"],
+                source_url=url,
+                pdf_url=url if url.lower().endswith(".pdf") else None,
+                retrieval_source="tavily_web_fallback",
+                citation_count=0,
+                screening_status="retrieved"
+            ))
     except Exception as e:
         logger.warning(f"Tavily web fallback search skipped for '{keyword}': {e}")
     return papers
 
-async def search_academic_papers(keywords: List[str]) -> Tuple[List[Dict[str, Any]], Dict[str, int]]:
-    """Searches OpenAlex, Semantic Scholar, and ArXiv concurrently with strict timeouts and deduplication.
 
-    Equipped with Tavily web search as a LAST RESORT fallback if academic indexes return < 5 papers.
-    """
-    # All extracted keywords are queried; every request runs concurrently on one client
+async def search_academic_papers_structured(
+    keywords: List[str]
+) -> Tuple[List[PaperRecord], PRISMATracker]:
+    """Concurrent multi-source academic search returning typed PaperRecords and PRISMATracker."""
     selected_keywords = keywords[:MAX_SEARCH_KEYWORDS] if keywords else ["research"]
-    
+    records_by_source: Dict[str, int] = {
+        "openalex": 0,
+        "semantic_scholar": 0,
+        "arxiv": 0,
+        "crossref": 0,
+        "pubmed": 0,
+        "tavily_web_fallback": 0,
+    }
+
     async with httpx.AsyncClient(timeout=HTTP_TIMEOUT, follow_redirects=True) as client:
         tasks = []
         for kw in selected_keywords:
             tasks.append(fetch_openalex_papers(client, kw))
             tasks.append(fetch_semantic_scholar_papers(client, kw))
             tasks.append(fetch_arxiv_papers(client, kw))
+            tasks.append(search_crossref(kw, limit=15))
+            tasks.append(search_pubmed(kw, limit=15))
 
         results_list = await asyncio.gather(*tasks, return_exceptions=True)
-        
-        combined: List[Dict[str, Any]] = []
+        combined: List[PaperRecord] = []
         for res in results_list:
             if isinstance(res, list):
-                combined.extend(res)
+                for p in res:
+                    if isinstance(p, PaperRecord):
+                        combined.append(p)
+                        src = p.retrieval_source
+                        records_by_source[src] = records_by_source.get(src, 0) + 1
 
     # Deduplicate by DOI and normalized title
     seen_dois = set()
     seen_titles = set()
-    deduped = []
+    seen_paper_ids = set()
+    deduped: List[PaperRecord] = []
 
-    for paper in combined:
-        doi = paper.get("doi")
-        norm_title = _normalize_title(paper.get("title"))
+    for p in combined:
+        doi = p.doi
+        norm_title = _normalize_title(p.title)
+        pid = p.paper_id
 
+        if pid in seen_paper_ids:
+            continue
         if doi and doi in seen_dois:
             continue
-        if norm_title in seen_titles:
+        if norm_title and norm_title in seen_titles:
             continue
 
+        seen_paper_ids.add(pid)
         if doi:
             seen_dois.add(doi)
         if norm_title:
             seen_titles.add(norm_title)
 
-        deduped.append(paper)
+        deduped.append(p)
 
-    # LAST RESORT FALLBACK: If academic indexes returned fewer than 5 papers, trigger Tavily web search
+    # LAST RESORT FALLBACK: If academic indexes returned fewer than 5 papers, trigger Tavily
     if len(deduped) < 5 and selected_keywords:
-        logger.warning(f"Academic database search yield low ({len(deduped)} papers). Invoking LAST RESORT Tavily web search fallback...")
+        logger.warning(f"Academic search yield low ({len(deduped)} papers). Invoking Tavily web fallback...")
         tavily_tasks = [fetch_tavily_web_papers(kw, max_results=5) for kw in selected_keywords[:3]]
         tavily_results = await asyncio.gather(*tavily_tasks, return_exceptions=True)
         for res in tavily_results:
             if isinstance(res, list):
-                for paper in res:
-                    norm_title = _normalize_title(paper.get("title"))
+                for p in res:
+                    norm_title = _normalize_title(p.title)
                     if norm_title and norm_title not in seen_titles:
                         seen_titles.add(norm_title)
-                        combined.append(paper)
-                        deduped.append(paper)
+                        seen_paper_ids.add(p.paper_id)
+                        combined.append(p)
+                        deduped.append(p)
+                        records_by_source["tavily_web_fallback"] = records_by_source.get("tavily_web_fallback", 0) + 1
 
-    stats = {"retrieved": len(combined), "after_dedup": len(deduped)}
-    logger.info(f"Academic search retrieved {len(combined)} raw papers, {len(deduped)} after deduplication.")
-    return deduped, stats
+    duplicates_count = max(0, len(combined) - len(deduped))
+    tracker = PRISMATracker(
+        records_identified=len(combined),
+        records_by_source=records_by_source,
+        duplicates_removed=duplicates_count,
+        records_after_dedup=len(deduped),
+        records_screened=0,
+        excluded_title_abstract=0,
+        full_text_requested=0,
+        full_text_assessed=0,
+        excluded_full_text=0,
+        studies_included=0,
+    )
 
-def _select_candidates(papers: List[Dict[str, Any]], limit: int) -> List[Dict[str, Any]]:
-    """Picks the candidate pool for screening, round-robin across sources.
+    logger.info(
+        f"Search complete: {len(combined)} identified, {duplicates_count} duplicates removed, "
+        f"{len(deduped)} retained after deduplication."
+    )
+    return deduped, tracker
 
-    Citation count alone would erase ArXiv (preprints report 0 citations), so each
-    index contributes its most-cited papers in turn until the pool is full.
-    """
-    by_source: Dict[str, List[Dict[str, Any]]] = {}
-    for paper in papers:
-        by_source.setdefault(paper.get("source", "unknown"), []).append(paper)
+
+async def search_academic_papers(
+    keywords: List[str]
+) -> Tuple[List[Dict[str, Any]], Dict[str, int]]:
+    """Legacy adapter returning dictionary papers and stats for backward compatibility."""
+    records, tracker = await search_academic_papers_structured(keywords)
+    dict_papers = [r.model_dump() for r in records]
+    stats = {
+        "retrieved": tracker.records_identified,
+        "after_dedup": tracker.records_after_dedup,
+        "screened": tracker.records_screened,
+        "included": tracker.studies_included,
+    }
+    return dict_papers, stats
+
+
+def _select_candidates(papers: List[PaperRecord], limit: int) -> List[PaperRecord]:
+    """Select candidate pool for screening using round-robin distribution across sources."""
+    by_source: Dict[str, List[PaperRecord]] = {}
+    for p in papers:
+        by_source.setdefault(p.retrieval_source, []).append(p)
 
     for bucket in by_source.values():
-        bucket.sort(key=lambda p: p.get("citation_count", 0) or 0, reverse=True)
+        bucket.sort(key=lambda p: p.citation_count or 0, reverse=True)
 
-    candidates: List[Dict[str, Any]] = []
+    candidates: List[PaperRecord] = []
     buckets = list(by_source.values())
     idx = 0
     while len(candidates) < limit and any(idx < len(b) for b in buckets):
@@ -304,12 +396,12 @@ def _select_candidates(papers: List[Dict[str, Any]], limit: int) -> List[Dict[st
 
 async def _score_batch(
     llm,
-    batch: List[Dict[str, Any]],
+    batch: List[PaperRecord],
     problem_statement: str,
     objectives_str: str,
     semaphore: asyncio.Semaphore
-) -> List[Dict[str, Any]]:
-    """Scores one batch of papers 1-10 for relevance. Falls back to a neutral 5 on failure."""
+) -> List[PaperRecord]:
+    """Scores one batch of papers 1-10 for relevance."""
     prompt = f"""Problem Statement:
 {problem_statement}
 
@@ -322,7 +414,7 @@ For each paper, return a score from 1 to 10 (10 = highly relevant, 1 = irrelevan
 Papers:
 """
     for idx, p in enumerate(batch):
-        prompt += f"\n[{idx+1}] Title: {p.get('title', '')}\nAbstract snippet: {(p.get('abstract') or '')[:300]}\n"
+        prompt += f"\n[{idx+1}] Title: {p.title}\nAbstract snippet: {(p.abstract or '')[:300]}\n"
 
     prompt += """\nReturn ONLY a JSON array of objects with fields 'id' (1-based index) and 'score' (1-10). Example:
 [{"id": 1, "score": 9}, {"id": 2, "score": 4}]"""
@@ -343,38 +435,45 @@ Papers:
                 if isinstance(item, dict) and "id" in item
             }
         except Exception as e:
-            logger.warning(
-                f"Screening batch failed or timed out, defaulting to neutral scores "
-                f"[{type(e).__name__}]: {e!r}"
-            )
+            logger.warning(f"Screening batch scoring defaulted to neutral [5]: {e}")
 
     scored = []
     for idx, p in enumerate(batch):
-        p_copy = dict(p)
-        p_copy["relevance_score"] = score_map.get(idx + 1, 5)
+        p_copy = p.model_copy(deep=True)
+        p_copy.relevance_score = float(score_map.get(idx + 1, 5))
         scored.append(p_copy)
     return scored
 
 
-async def screen_papers(
-    papers: List[Dict[str, Any]],
+async def screen_papers_structured(
+    papers: List[PaperRecord],
     problem_statement: str,
     objectives: List[str],
+    tracker: Optional[PRISMATracker] = None,
     model: Optional[str] = None
-) -> Tuple[List[Dict[str, Any]], Dict[str, int]]:
-    """Screens the corpus for relevance to the problem statement.
+) -> Tuple[List[PaperRecord], PRISMATracker]:
+    """Screen candidate corpus for relevance, updating PRISMATracker deterministically."""
+    tr = tracker.model_copy(deep=True) if tracker else PRISMATracker(
+        records_identified=len(papers),
+        records_after_dedup=len(papers)
+    )
 
-    Batches are scored concurrently (bounded by SCREEN_CONCURRENCY) so a large corpus
-    costs a few seconds rather than a serial call per batch.
-    """
     if len(papers) <= SCREEN_THRESHOLD:
-        return papers, {"screened": len(papers), "included": len(papers)}
+        tr.records_screened = len(papers)
+        tr.excluded_title_abstract = 0
+        tr.full_text_requested = len(papers)
+        tr.full_text_assessed = len(papers)
+        tr.studies_included = len(papers)
+        copied_papers = []
+        for p in papers:
+            p_copy = p.model_copy(deep=True)
+            p_copy.screening_status = "included"
+            copied_papers.append(p_copy)
+        return copied_papers, tr
 
     candidates = _select_candidates(papers, SCREEN_CANDIDATES)
-    logger.info(
-        f"Corpus size {len(papers)} > {SCREEN_THRESHOLD}. "
-        f"Screening {len(candidates)} candidates for relevance..."
-    )
+    tr.records_screened = len(papers)
+    logger.info(f"Screening {len(candidates)} candidates for relevance against problem statement...")
 
     llm = get_llm(model=model, role="researcher")
     objectives_str = "\n".join(f"- {obj}" for obj in objectives)
@@ -384,12 +483,18 @@ async def screen_papers(
         candidates[i:i + SCREEN_BATCH_SIZE]
         for i in range(0, len(candidates), SCREEN_BATCH_SIZE)
     ]
+
+    tasks = [
+        _score_batch(llm, b, problem_statement, objectives_str, semaphore)
+        for b in batches
+    ]
+
     results = await asyncio.gather(
-        *(_score_batch(llm, b, problem_statement, objectives_str, semaphore) for b in batches),
+        *tasks,
         return_exceptions=True
     )
 
-    scored_papers: List[Dict[str, Any]] = []
+    scored_papers: List[PaperRecord] = []
     for res in results:
         if isinstance(res, list):
             scored_papers.extend(res)
@@ -397,19 +502,91 @@ async def screen_papers(
             logger.warning(f"Screening batch raised: {res}")
 
     if not scored_papers:
-        scored_papers = candidates
+        scored_papers = [p.model_copy(deep=True) for p in candidates]
 
     scored_papers.sort(
-        key=lambda p: (p.get("relevance_score", 0), p.get("citation_count", 0) or 0),
+        key=lambda p: (p.relevance_score or 0, p.citation_count or 0),
         reverse=True
     )
-    screened = scored_papers[:SCREEN_KEEP]
-    stats = {"screened": len(candidates), "included": len(screened)}
-    logger.info(f"Screening complete. Selected top {len(screened)} papers.")
-    return screened, stats
+
+    # Primary selection: top SCREEN_KEEP by score
+    top_pool = scored_papers[:SCREEN_KEEP]
+    top_ids = {id(p) for p in top_pool}
+
+    # Guaranteed minimum per source: ensure every source that made it into
+    # candidates gets at least SCREEN_MIN_PER_SOURCE papers in the included
+    # set, even if they scored below the cutoff. This prevents Crossref /
+    # PubMed / OpenCitations from being completely eliminated by citation-count
+    # bias (older indexed sources tend to have higher citation counts).
+    by_source: Dict[str, List[PaperRecord]] = {}
+    for p in scored_papers:
+        by_source.setdefault(p.retrieval_source, []).append(p)
+
+    guaranteed: List[PaperRecord] = []
+    for src, src_papers in by_source.items():
+        present = [p for p in src_papers if id(p) in top_ids]
+        if len(present) < SCREEN_MIN_PER_SOURCE:
+            deficit = SCREEN_MIN_PER_SOURCE - len(present)
+            extras = [p for p in src_papers if id(p) not in top_ids][:deficit]
+            guaranteed.extend(extras)
+
+    included_set = list(top_pool)
+    g_ids = {id(p) for p in included_set}
+    for p in guaranteed:
+        if id(p) not in g_ids:
+            included_set.append(p)
+            g_ids.add(id(p))
+
+    included = included_set
+    excluded = [p for p in scored_papers if id(p) not in g_ids]
+    excluded_count = max(0, len(candidates) - len(included))
+    # Deduplicated papers that never entered the candidate pool are still
+    # screened records in PRISMA terms: account for them as title/abstract
+    # exclusions so records_screened - excluded == full_text_requested holds.
+    unscreened_surplus = max(0, len(papers) - len(candidates))
+
+    for p in included:
+        p.screening_status = "included"
+    for p in excluded:
+        p.screening_status = "excluded"
+        p.exclusion_reason = "Low relevance score during title/abstract screening"
+
+    tr.excluded_title_abstract = excluded_count + unscreened_surplus
+    tr.full_text_requested = len(included)
+    tr.full_text_assessed = len(included)
+    tr.studies_included = len(included)
+    tr.exclusion_reasons["Title/abstract irrelevance"] = excluded_count
+    if unscreened_surplus:
+        tr.exclusion_reasons["Not screened: candidate pool limit"] = unscreened_surplus
+
+    logger.info(
+        f"Screening complete: {len(included)} included ({len(guaranteed)} via source-guarantee), "
+        f"{excluded_count} excluded, {unscreened_surplus} not screened (candidate pool limit)."
+    )
+    return included, tr
+
+
+async def screen_papers(
+    papers: List[Dict[str, Any]],
+    problem_statement: str,
+    objectives: List[str],
+    model: Optional[str] = None
+) -> Tuple[List[Dict[str, Any]], Dict[str, int]]:
+    """Legacy screening adapter returning dicts and stats."""
+    records = [PaperRecord.from_dict(p) for p in papers]
+    screened_records, tracker = await screen_papers_structured(records, problem_statement, objectives, model=model)
+    dict_screened = [r.model_dump() for r in screened_records]
+    stats = {
+        "screened": tracker.records_screened,
+        "included": tracker.studies_included,
+        "retrieved": tracker.records_identified,
+        "after_dedup": tracker.records_after_dedup,
+    }
+    return dict_screened, stats
+
 
 def format_apa(paper: Dict[str, Any]) -> str:
-    """Formats paper metadata into APA 7th edition citation string."""
+    """Format paper metadata into APA 7th edition citation string."""
     authors = paper.get("authors") or []
     if not authors:
         author_str = "Anonymous"
@@ -423,11 +600,11 @@ def format_apa(paper: Dict[str, Any]) -> str:
         author_str = ", ".join(authors[:6]) + f", et al."
 
     year = paper.get("year", "n.d.")
-    title = paper.get("title", "").strip().rstrip(".")
+    title = str(paper.get("title", "")).strip().rstrip(".")
     doi = paper.get("doi")
-    url = paper.get("url")
+    url = paper.get("url") or paper.get("source_url")
 
-    source = paper.get("source", "").title()
+    source = str(paper.get("venue") or paper.get("source", "")).strip()
     link = f"https://doi.org/{doi}" if doi else (url or "")
 
     apa_str = f"{author_str} ({year}). {title}."

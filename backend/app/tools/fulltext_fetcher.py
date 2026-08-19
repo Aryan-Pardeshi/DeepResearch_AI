@@ -147,6 +147,8 @@ async def _download_and_extract(client: httpx.AsyncClient, url: str, title: str)
 
 
 async def _fetch_single_pdf(paper: dict, semaphore: asyncio.Semaphore) -> tuple[str, str | None]:
+    """Attempts to fetch, resolve via OA fallback, download, and extract text for a single paper."""
+    pid = paper.get("paper_id") or paper.get("id") or paper.get("title", "")
     title = paper.get("title", "")
     initial_pdf_url = paper.get("pdf_url", "")
 
@@ -160,7 +162,7 @@ async def _fetch_single_pdf(paper: dict, semaphore: asyncio.Semaphore) -> tuple[
                 if initial_pdf_url:
                     excerpt = await _download_and_extract(client, initial_pdf_url, title)
                     if excerpt:
-                        return (title, excerpt)
+                        return (pid, excerpt)
                     logger.info(f"Direct fetch failed for '{title}'. Attempting OA resolution...")
 
                 paper_for_oa = dict(paper)
@@ -171,12 +173,12 @@ async def _fetch_single_pdf(paper: dict, semaphore: asyncio.Semaphore) -> tuple[
                     logger.info(f"Retrying fetch for '{title}' with resolved OA URL: {resolved_url}")
                     excerpt = await _download_and_extract(client, resolved_url, title)
                     if excerpt:
-                        return (title, excerpt)
+                        return (pid, excerpt)
 
-                return (title, None)
+                return (pid, None)
         except Exception as e:
             logger.warning(f"Error processing PDF for '{title}': {e}")
-            return (title, None)
+            return (pid, None)
 
 
 async def fetch_fulltext_excerpts(papers: list[dict]) -> dict[str, str]:
@@ -197,8 +199,8 @@ async def fetch_fulltext_excerpts(papers: list[dict]) -> dict[str, str]:
         )
         for res in raw_results:
             if isinstance(res, tuple) and res[1] is not None:
-                title, excerpt = res
-                results[title] = excerpt
+                pid, excerpt = res
+                results[pid] = excerpt
     except (asyncio.TimeoutError, asyncio.CancelledError):
         logger.warning(f"Batch full-text fetch timed out or cancelled after {FULLTEXT_TOTAL_BUDGET_SECONDS}s")
         for t in tasks:
@@ -219,3 +221,15 @@ async def fetch_fulltext_excerpts(papers: list[dict]) -> dict[str, str]:
     return results
 
 
+async def fetch_fulltexts(papers: list[dict]) -> list[dict]:
+    """Fetches full-text excerpts and attaches them to paper dictionaries under 'fulltext_excerpt' and 'content_excerpt'."""
+    excerpts_map = await fetch_fulltext_excerpts(papers)
+    enriched = []
+    for p in papers:
+        p_copy = dict(p)
+        pid = p_copy.get("paper_id") or p_copy.get("id") or p_copy.get("title", "")
+        if pid in excerpts_map:
+            p_copy["fulltext_excerpt"] = excerpts_map[pid]
+            p_copy["content_excerpt"] = excerpts_map[pid]
+        enriched.append(p_copy)
+    return enriched

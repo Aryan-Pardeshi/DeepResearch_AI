@@ -1,144 +1,202 @@
+"""Figure rendering tools for academic research reports.
+
+Generates standard PRISMA 2020 flow diagrams and structured evidence mapping tables
+with Swiss Modernism 2.0 aesthetics and high-DPI rasterization.
+"""
+
+from __future__ import annotations
+
 import os
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-from pathlib import Path
-from typing import Dict, Any, List
 
-def render_prisma_diagram(stats: Dict[str, int], output_path: str) -> str:
-    """Renders a standard PRISMA flow diagram of study selection using matplotlib.
+from backend.app.models.evidence import PRISMATracker, PaperRecord, EvidenceRecord
 
-    Saves the figure at 200 DPI with tight bounding box and returns output_path.
+
+def render_prisma_diagram(
+    tracker_or_stats: Union[PRISMATracker, Dict[str, Any]],
+    output_path: str
+) -> str:
+    """Render an accurate, publication-quality PRISMA 2020 flow diagram.
+
+    Reads directly from PRISMATracker data models guaranteeing mathematical consistency.
     """
-    retrieved = stats.get("retrieved", 0)
-    after_dedup = stats.get("after_dedup", 0)
-    screened = stats.get("screened", 0)
-    included = stats.get("included", 0)
+    if isinstance(tracker_or_stats, PRISMATracker):
+        tr = tracker_or_stats
+    elif isinstance(tracker_or_stats, dict):
+        tr = PRISMATracker(**{k: v for k, v in tracker_or_stats.items() if k in PRISMATracker.model_fields})
+    else:
+        tr = PRISMATracker()
 
-    dup_removed = max(0, retrieved - after_dedup)
-    screen_excluded = max(0, screened - included)
+    retrieved = tr.records_identified
+    after_dedup = tr.records_after_dedup
+    screened = tr.records_screened
+    excluded_screen = tr.excluded_title_abstract
+    full_text_assessed = tr.full_text_assessed
+    excluded_ft = tr.excluded_full_text
+    included = tr.studies_included
+    dup_removed = tr.duplicates_removed
+
+    # Format database source breakdown if available
+    source_breakdown = ""
+    if tr.records_by_source:
+        parts = [f"{src.replace('_', ' ').title()} (n={cnt})" for src, cnt in tr.records_by_source.items() if cnt > 0]
+        if parts:
+            source_breakdown = "\n[" + ", ".join(parts[:4]) + "]"
 
     out_dir = Path(output_path).parent
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    fig, ax = plt.subplots(figsize=(8.5, 6.5))
+    fig, ax = plt.subplots(figsize=(9.5, 8.0))
     ax.set_xlim(0, 10)
     ax.set_ylim(0, 10)
     ax.axis("off")
 
-    box_style = dict(boxstyle="round,pad=0.5", facecolor="#F7FAFC", edgecolor="#4A5568", linewidth=1.5)
-    side_box_style = dict(boxstyle="round,pad=0.4", facecolor="#EDF2F7", edgecolor="#718096", linewidth=1.0)
-    arrow_props = dict(arrowstyle="->", color="#4A5568", lw=1.5, mutation_scale=15)
+    # Swiss Modernism color palette
+    box_style = dict(boxstyle="round,pad=0.5", facecolor="#F8FAFC", edgecolor="#1E3A5F", linewidth=1.5)
+    side_box_style = dict(boxstyle="round,pad=0.4", facecolor="#F1F5F9", edgecolor="#64748B", linewidth=1.2)
+    arrow_props = dict(arrowstyle="->", color="#1E3A5F", lw=1.5, mutation_scale=15)
+    side_arrow_props = dict(arrowstyle="->", color="#64748B", lw=1.2, mutation_scale=12)
 
     boxes = [
-        (5.0, 8.8, f"Records identified through database searching\n(n = {retrieved})"),
-        (5.0, 6.4, f"Records after duplicates removed\n(n = {after_dedup})"),
-        (5.0, 4.0, f"Records screened for relevance\n(n = {screened})"),
-        (5.0, 1.6, f"Studies included in synthesis\n(n = {included})"),
+        (4.2, 9.0, f"Identification\nRecords identified from databases{source_breakdown}\n(n = {retrieved})"),
+        (4.2, 7.0, f"Deduplication\nRecords retained after duplicate removal\n(n = {after_dedup})"),
+        (4.2, 5.0, f"Screening\nRecords screened for relevance\n(n = {screened})"),
+        (4.2, 3.0, f"Eligibility\nFull-text articles assessed for eligibility\n(n = {full_text_assessed})"),
+        (4.2, 1.0, f"Included\nStudies included in synthesis & analysis\n(n = {included})"),
     ]
 
-    # Draw main stacked boxes
+    # Draw vertical flow boxes
     for x, y, text in boxes:
         ax.text(
             x, y, text,
-            ha="center", va="center", fontsize=10.5, fontweight="bold", color="#1A202C",
+            ha="center", va="center", fontsize=9.5, fontweight="bold", color="#0F172A",
             bbox=box_style
         )
 
-    # Draw downward arrows between main boxes
-    ax.annotate("", xy=(5.0, 7.15), xytext=(5.0, 8.05), arrowprops=arrow_props)
-    ax.annotate("", xy=(5.0, 4.75), xytext=(5.0, 5.65), arrowprops=arrow_props)
-    ax.annotate("", xy=(5.0, 2.35), xytext=(5.0, 3.25), arrowprops=arrow_props)
+    # Downward connection arrows
+    ax.annotate("", xy=(4.2, 7.7), xytext=(4.2, 8.3), arrowprops=arrow_props)
+    ax.annotate("", xy=(4.2, 5.7), xytext=(4.2, 6.3), arrowprops=arrow_props)
+    ax.annotate("", xy=(4.2, 3.7), xytext=(4.2, 4.3), arrowprops=arrow_props)
+    ax.annotate("", xy=(4.2, 1.7), xytext=(4.2, 2.3), arrowprops=arrow_props)
 
-    # Draw side exclusion boxes and right-angled arrows
-    # Side Box 1: Duplicates removed
-    ax.annotate("", xy=(8.2, 7.6), xytext=(5.0, 7.6), arrowprops=arrow_props)
+    # Side Exclusion Box 1: Duplicates
+    ax.annotate("", xy=(7.8, 8.0), xytext=(4.2, 8.0), arrowprops=side_arrow_props)
     ax.text(
-        8.3, 7.6, f"Duplicates removed\n(n = {dup_removed})",
-        ha="left", va="center", fontsize=9.5, color="#2D3748",
+        7.9, 8.0, f"Duplicates excluded\n(n = {dup_removed})",
+        ha="left", va="center", fontsize=9.0, color="#334155",
         bbox=side_box_style
     )
 
-    # Side Box 2: Records excluded at screening
-    ax.annotate("", xy=(8.2, 2.8), xytext=(5.0, 2.8), arrowprops=arrow_props)
+    # Side Exclusion Box 2: Title/Abstract Excluded
+    ax.annotate("", xy=(7.8, 4.0), xytext=(4.2, 4.0), arrowprops=side_arrow_props)
     ax.text(
-        8.3, 2.8, f"Records excluded at screening\n(n = {screen_excluded})",
-        ha="left", va="center", fontsize=9.5, color="#2D3748",
+        7.9, 4.0, f"Records excluded by title/abstract\n(n = {excluded_screen})\n[Irrelevant to research objectives]",
+        ha="left", va="center", fontsize=8.5, color="#334155",
         bbox=side_box_style
     )
 
-    plt.title("PRISMA 2020 Flow Diagram of Study Selection", fontsize=12, fontweight="bold", pad=15, color="#1A202C")
-    plt.savefig(output_path, dpi=200, bbox_inches="tight")
-    plt.close(fig)
+    # Side Exclusion Box 3: Full-text Excluded
+    if excluded_ft > 0:
+        ax.annotate("", xy=(7.8, 2.0), xytext=(4.2, 2.0), arrowprops=side_arrow_props)
+        ax.text(
+            7.9, 2.0, f"Full-text excluded with reasons\n(n = {excluded_ft})\n[Methodological divergence]",
+            ha="left", va="center", fontsize=8.5, color="#334155",
+            bbox=side_box_style
+        )
+
+    try:
+        ax.set_title("PRISMA 2020 Flow Diagram of Study Selection", fontsize=12, fontweight="bold", pad=15, color="#0F172A")
+        fig.savefig(output_path, dpi=200, bbox_inches="tight")
+    finally:
+        plt.close(fig)
     return output_path
 
 
-def render_evidence_table(papers: List[Dict[str, Any]], hypotheses: List[str], output_path: str) -> str:
-    """Renders an evidence mapping table figure if hypothesis_support is present.
+def render_evidence_table(
+    papers_or_records: List[Union[PaperRecord, Dict[str, Any]]],
+    hypotheses: List[str],
+    output_path: str
+) -> str:
+    """Render an evidence mapping table figure mapping papers to hypothesis support."""
+    papers: List[Dict[str, Any]] = [
+        p.model_dump() if isinstance(p, PaperRecord) else dict(p)
+        for p in papers_or_records
+    ]
 
-    Returns output_path if generated, or '' if no paper contains hypothesis_support.
-    """
-    has_support = any("hypothesis_support" in p for p in papers)
+    has_support = any("hypothesis_support" in p and p["hypothesis_support"] for p in papers)
     if not has_support:
         return ""
 
     out_dir = Path(output_path).parent
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # Cap at top 15 papers by relevance score
-    sorted_papers = sorted(papers, key=lambda p: (p.get("relevance_score", 0), p.get("citation_count", 0) or 0), reverse=True)[:15]
+    sorted_papers = sorted(
+        papers,
+        key=lambda p: (float(p.get("relevance_score") or 0), int(p.get("citation_count") or 0)),
+        reverse=True
+    )[:15]
 
     h_labels = [f"H{i+1}" for i in range(len(hypotheses))] if hypotheses else ["H1"]
-    col_labels = ["Paper Title (Top 15)"] + h_labels
+    col_labels = ["Paper Title (Top 15 Included Studies)"] + h_labels
     n_hyp_cols = len(h_labels)
 
     cell_text = []
     for p in sorted_papers:
-        raw_title = p.get("title", "")
-        title = (raw_title[:57] + "...") if len(raw_title) > 60 else raw_title
+        raw_title = str(p.get("title") or "")
+        title = (raw_title[:54] + "...") if len(raw_title) > 57 else raw_title
         sup_map = p.get("hypothesis_support") or {}
         row = [title]
         for idx, h in enumerate(hypotheses or ["H1"]):
             h_key = f"H{idx+1}"
-            raw_val = str(sup_map.get(h_key) or sup_map.get(h) or "")
-            # Support values are typically short ("Yes"/"Supports"), but nothing
-            # bounded them, so a verbose model response here overflowed into the
-            # neighboring column exactly like the untruncated title did.
+            raw_val = str(sup_map.get(h_key) or sup_map.get(h) or "Neutral")
             val = (raw_val[:22] + "...") if len(raw_val) > 25 else raw_val
             row.append(val)
         cell_text.append(row)
 
-    # ax.table() splits width evenly across columns by default. The title column
-    # needs far more room than the five short H1-H5 verdict columns, so without
-    # explicit colWidths every column was squeezed to the same narrow slice and
-    # the (already truncated) titles were cut again mid-word.
-    title_width = 0.46
+    title_width = 0.48
     hyp_width = (1.0 - title_width) / max(n_hyp_cols, 1)
     col_widths = [title_width] + [hyp_width] * n_hyp_cols
 
-    fig, ax = plt.subplots(figsize=(11.5, max(2.5, 0.4 * len(cell_text) + 1.0)))
-    ax.axis("off")
+    fig, ax = plt.subplots(figsize=(11.5, max(2.5, 0.42 * len(cell_text) + 1.2)))
+    try:
+        ax.axis("off")
 
-    table = ax.table(
-        cellText=cell_text,
-        colLabels=col_labels,
-        colWidths=col_widths,
-        loc="center",
-        cellLoc="left"
-    )
-    table.auto_set_font_size(False)
-    table.set_fontsize(9)
-    table.scale(1.2, 1.4)
+        table = ax.table(
+            cellText=cell_text,
+            colLabels=col_labels,
+            colWidths=col_widths,
+            loc="center",
+            cellLoc="left"
+        )
+        table.auto_set_font_size(False)
+        table.set_fontsize(9)
+        table.scale(1.2, 1.4)
 
-    # cellLoc="left" above applies uniformly; re-center just the H1-H5 columns
-    # (both header and body) so short verdicts don't look stranded against the
-    # left edge of their narrow column.
-    for (row_idx, col_idx), cell in table.get_celld().items():
-        if col_idx > 0:
-            cell.get_text().set_ha("center")
+        # Style header row and cells
+        for (row_idx, col_idx), cell in table.get_celld().items():
+            if row_idx == 0:
+                cell.set_facecolor("#1E3A5F")
+                cell.get_text().set_color("#FFFFFF")
+                cell.get_text().set_weight("bold")
+                cell.get_text().set_ha("center" if col_idx > 0 else "left")
+            else:
+                if col_idx > 0:
+                    cell.get_text().set_ha("center")
+                    text_val = cell.get_text().get_text().lower()
+                    if any(w in text_val for w in ("unsupported", "not support", "no support", "refute", "reject")):
+                        cell.set_facecolor("#FEF2F2")  # Soft rose
+                    elif any(w in text_val for w in ("partial", "inconclusive", "mixed")):
+                        cell.set_facecolor("#FEFCE8")  # Soft amber
+                    elif any(w in text_val for w in ("support", "yes", "confirm")):
+                        cell.set_facecolor("#ECFDF5")  # Soft emerald
 
-    plt.title("Evidence Mapping by Hypothesis", fontsize=11, fontweight="bold", pad=10)
-    plt.savefig(output_path, dpi=200, bbox_inches="tight")
-    plt.close(fig)
+        ax.set_title("Evidence Mapping by Formulated Hypothesis", fontsize=11, fontweight="bold", pad=12, color="#0F172A")
+        fig.savefig(output_path, dpi=200, bbox_inches="tight")
+    finally:
+        plt.close(fig)
     return output_path

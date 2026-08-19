@@ -117,12 +117,12 @@ def _resolve_checkpoint_state(state) -> tuple[bool, Optional[str]]:
     # 2. Check state.next for checkpoint nodes
     if getattr(state, "next", None):
         for n in state.next:
-            if n in ("checkpoint_1", "checkpoint_2", "checkpoint_3", "checkpoint_4"):
+            if n in ("checkpoint_1", "checkpoint_2", "checkpoint_3"):
                 return True, n
 
     # 3. Check values["hitl_checkpoint"] or values["status"]
     cp = values.get("hitl_checkpoint")
-    if cp and not cp.endswith("_approved") and cp in ("checkpoint_1", "checkpoint_2", "checkpoint_3", "checkpoint_4"):
+    if cp and not cp.endswith("_approved") and cp in ("checkpoint_1", "checkpoint_2", "checkpoint_3"):
         return True, cp
 
     # No genuine interrupt found by any of the checks above: the graph is either
@@ -234,8 +234,22 @@ async def _execute_research_graph(thread_id: str, message: str):
                 "research_objectives": values.get("research_objectives"),
                 "research_questions": values.get("research_questions"),
                 "keywords": values.get("keywords"),
-                "raw_papers_count": len(values.get("raw_papers", [])),
-                "screened_papers_count": len(values.get("screened_papers", [])),
+                "search_protocol": values.get("search_protocol"),
+                "raw_papers_count": (
+                    values.get("prisma_tracker", {}).get("records_identified")
+                    if isinstance(values.get("prisma_tracker"), dict) and "records_identified" in values.get("prisma_tracker")
+                    else len(values.get("raw_papers") or values.get("paper_records") or [])
+                ),
+                "screened_papers_count": (
+                    values.get("prisma_tracker", {}).get("studies_included")
+                    if isinstance(values.get("prisma_tracker"), dict) and "studies_included" in values.get("prisma_tracker")
+                    else len(values.get("screened_papers") or values.get("paper_records") or [])
+                ),
+                "evidence_records_count": len(values.get("evidence_records") or []),
+                "evidence_records": values.get("evidence_records") or [],
+                "prisma_tracker": values.get("prisma_tracker"),
+                "taxonomy": values.get("taxonomy"),
+                "validation_report": values.get("validation_report"),
                 "literature_review": values.get("literature_review"),
                 "research_gap": values.get("research_gap"),
                 "conceptual_framework": values.get("conceptual_framework"),

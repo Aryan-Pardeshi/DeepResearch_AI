@@ -1,22 +1,24 @@
 # <img src="frontend/assets/logo.png" width="32" height="32" style="vertical-align: middle; border-radius: 7px;"> DeepResearch
 
-An AI-powered multi-agent research workspace with **two modes**: fast web research that returns a cited report, and a full academic pipeline that writes a complete, citation-verified research paper with human-in-the-loop approval at every major decision.
+An AI-powered multi-agent research workspace with **two modes**: fast web research that returns a cited report, and a full evidence-grounded academic pipeline that writes complete, citation-verified research papers with human-in-the-loop quality gates.
 
-**🔗 Live demo → [deepresearch-ai-gxiu.onrender.com](https://deep-research-ai-xi.vercel.app/)**
-
+**🔗 Live demo → [deep-research-ai-xi.vercel.app](https://deep-research-ai-xi.vercel.app/)**
 
 ---
 
 ## Two Modes
 
-| | **DeepSearch** | **Research Mode** |
+| | **DeepSearch** | **Research Mode (Evidence-First)** |
 |---|---|---|
-| **Goal** | Answer a question from the live web | Write a full academic paper |
-| **Sources** | Tavily web search | OpenAlex · Semantic Scholar · arXiv |
-| **Agents** | 5 (fan-out researchers) | 25 across 8 phases |
-| **HITL checkpoints** | 1 (plan approval) | 4 (scope, framework, hypotheses, methodology) |
-| **Runtime** | ~1-2 min | ~10-25 min |
-| **Output** | Structured markdown report | Paper + PRISMA diagram + evidence matrix |
+| **Goal** | Answer a question from the live web | Write a full, evidence-grounded academic paper |
+| **Sources** | Tavily web search | OpenAlex · Semantic Scholar · Crossref · PubMed · arXiv · OpenCitations |
+| **Agents** | 5 (fan-out parallel researchers) | 25 specialized agents across 5 evidence phases |
+| **HITL Checkpoints** | 1 (plan approval) | 3 Quality Gates (Protocol, Evidence Corpus, Hypotheses) |
+| **Data Invariant** | LLM web summary | Deterministic `EvidenceRecord` store (quotes, metrics, baselines) |
+| **PRISMA Tracking** | N/A | Deterministic PRISMA 2020 flow counts & assertions |
+| **Integrity Audit** | Citation regex | Automated citation & numerical claim grounding verification |
+| **Runtime** | ~1-2 min | ~5-15 min |
+| **Output** | Structured markdown report | Full paper + PRISMA flow chart + evidence mapping matrix |
 | **Export** | `.md` | `.pdf` · `.docx` |
 
 ---
@@ -27,18 +29,18 @@ Both modes run as separate LangGraph state machines behind one FastAPI backend, 
 
 ```mermaid
 flowchart TB
-    UI["🖥️ Frontend<br/>Vanilla JS · no build step"]
-    API["⚡ FastAPI<br/>SSE streaming"]
+    UI["🖥️ Frontend<br/>Vanilla JS · Swiss Modernism 2.0"]
+    API["⚡ FastAPI<br/>SSE streaming & Heartbeats"]
 
     UI <-->|"Server-Sent<br/>Events"| API
 
     API --> DS["🔎 DeepSearch<br/>Graph"]
-    API --> RM["📚 Research Mode<br/>Graph"]
+    API --> RM["📚 Research Mode<br/>25-Agent Graph"]
 
     DS --> TAV["🌐 Tavily<br/>Web Search"]
-    RM --> ACAD["🎓 Academic APIs<br/>OpenAlex · S2 · arXiv<br/>Unpaywall · PMC · CORE"]
+    RM --> ACAD["🎓 Multi-Source Academic APIs<br/>OpenAlex · Semantic Scholar · Crossref<br/>PubMed · arXiv · OpenCitations"]
 
-    DS --> LLM["🧠 LLM Layer<br/>any OpenAI-compatible<br/>endpoint"]
+    DS --> LLM["🧠 LLM Layer<br/>Structured JSON Outputs"]
     RM --> LLM
     LLM --> CACHE[("💾 SQLite<br/>response cache")]
 
@@ -58,118 +60,112 @@ flowchart TB
 
 ---
 
-## DeepSearch Mode
-
-Web research with a plan you approve before anything runs.
+## 25-Agent Evidence-First Research Pipeline
 
 ```mermaid
 flowchart TB
-    Q(["Query + topic filters"]) --> V{"query_validator"}
-    V -->|"too vague"| REJ["Rejected before<br/>any LLM cost"]
-    V -->|"valid"| P["planner<br/><i>problem statement + up to 5 sub-tasks</i>"]
-    P --> A{"🧑 Plan Approval"}
-    A -.->|"revise in plain English"| P
-
-    A -->|"approved"| R1["researcher 1"]
-    A --> R2["researcher 2"]
-    A --> R3["researcher 3"]
-    A --> R4["researcher 4"]
-    A --> R5["researcher 5"]
-
-    R1 --> AGG["aggregator"]
-    R2 --> AGG
-    R3 --> AGG
-    R4 --> AGG
-    R5 --> AGG
-
-    AGG --> OUT(["📄 Cited Report · .md export"])
-
-    style Q fill:#6366f1,stroke:#4338ca,color:#fff
-    style A fill:#f59e0b,stroke:#b45309,color:#fff
-    style REJ fill:#ef4444,stroke:#b91c1c,color:#fff
-    style OUT fill:#10b981,stroke:#047857,color:#fff
-```
-
-**How it works**
-
-1. Submit a query with optional topic filters (News, Academic, Finance, Patents)
-2. A **Validator** rejects vague queries before spending a single token
-3. A **Planner** generates a problem statement plus up to 5 independent sub-tasks
-4. You approve the plan, or request revisions in plain English — it loops until you're happy
-5. Up to 5 **Researchers** fan out in parallel via LangGraph's `Send()` API
-6. An **Aggregator** synthesizes every finding into one structured markdown report
-
----
-
-## Research Mode
-
-A 25-agent academic pipeline. You steer it at four checkpoints; it does everything else.
-
-```mermaid
-flowchart TB
-    subgraph L1 ["Phase 1 & 2 · Scope & Literature Review"]
-        direction LR
-        START(["Problem Statement"]) --> SCOPE["<b>1 · Scope</b><br/>definition & keywords"]
-        SCOPE --> CP1{"🧑 Checkpoint 1"}
-        CP1 -.->|"revise"| SCOPE
-        CP1 -->|"approved"| CORPUS["<b>2 · Literature</b><br/>corpus, review & framework"]
-        CORPUS --> CP2{"🧑 Checkpoint 2"}
-        CP2 -.->|"revise"| CORPUS
+    subgraph P1 ["Phase 1: Planning & Protocol"]
+        direction TB
+        START(["Problem Statement"]) --> SCOPE["<b>1. scope_definition</b><br/>PICOC Scoping"]
+        SCOPE --> PROT["<b>2. protocol_agent</b><br/>Search Protocol"]
+        PROT --> KW["<b>3. keyword_extractor</b><br/>Boolean Search Strings"]
+        KW --> G1{"🧑 Gate 1: Protocol Review"}
+        G1 -.->|"revise"| REVISER["scope_reviser"]
+        REVISER -.-> G1
     end
 
-    subgraph L2 ["Phase 3 to 5 · Hypotheses, Methodology & Paper Assembly"]
-        direction LR
-        HYP["<b>3 · Hypotheses</b><br/>theoretical & empirical"] --> CP3{"🧑 Checkpoint 3"}
-        CP3 -.->|"revise"| HYP
-        CP3 -->|"approved"| METH["<b>4 · Methodology</b><br/>design & analysis plan"]
-        METH --> CP4{"🧑 Checkpoint 4"}
-        CP4 -.->|"revise"| METH
-        CP4 -->|"approved"| WRITE["<b>5 · Paper Assembly</b><br/>sections, refs & figures"]
-        WRITE --> DONE(["📄 Complete Paper · PDF · DOCX"])
+    subgraph P2 ["Phase 2: Multi-Source Retrieval & Screening"]
+        direction TB
+        G1 -->|"approved"| FETCH["<b>4. paper_fetcher</b><br/>OpenAlex, S2, Crossref, PubMed, arXiv"]
+        FETCH --> CITE["<b>5. citation_expander</b><br/>OpenCitations 1-Hop Graph"]
+        CITE --> META["<b>6. metadata_validator</b><br/>DOI Normalization & Dedup"]
+        META --> SCREEN["<b>7. paper_screener</b><br/>Title/Abstract Scored Filter"]
+        SCREEN --> FULL["<b>8. fulltext_eligibility</b><br/>OA Full-Text PDF Ingestion"]
+        FULL --> QUAL["<b>9. quality_appraisal</b><br/>Methodological Rigor Scoring"]
+    end
+
+    subgraph P3 ["Phase 3: Structured Evidence Extraction"]
+        direction TB
+        QUAL --> EX_FIND["<b>10. evidence_extractor</b><br/>Qualitative Findings & Quotes"]
+        EX_FIND --> EX_QUANT["<b>11. quantitative_extractor</b><br/>Metrics & Baseline Values"]
+        EX_QUANT --> EX_METH["<b>12. methodology_extractor</b><br/>Study Design & Sample Sizes"]
+        EX_METH --> EX_LIM["<b>13. limitation_extractor</b><br/>Reported Constraints"]
+        EX_LIM --> PROV["<b>14. provenance_agent</b><br/>Deterministic ID Anchoring"]
+        PROV --> G2{"🧑 Gate 2: Evidence & Corpus Review"}
+    end
+
+    subgraph P4 ["Phase 4: Theoretical Framing & Synthesis"]
+        direction TB
+        G2 -->|"approved"| TAX["<b>15. taxonomy_agent</b><br/>Hierarchical Thematic Clustering"]
+        TAX --> GAP["<b>16. gap_analysis</b><br/>Contradictions & Open Questions"]
+        GAP --> FRAME["<b>17. conceptual_framework</b><br/>Theoretical Paradigm"]
+        FRAME --> HYP["<b>18. hypotheses</b><br/>Directional Hypotheses (H1..H5)"]
+        HYP --> G3{"🧑 Gate 3: Hypotheses Review"}
+    end
+
+    subgraph P5 ["Phase 5: Methodology, Synthesis & Validation"]
+        direction TB
+        G3 -->|"approved"| M_DES["<b>19. research_design</b>"]
+        M_DES --> M_COL["<b>20. data_collection</b>"]
+        M_COL --> M_ANA["<b>21. data_analysis</b>"]
+        M_ANA --> W_REV["<b>Literature Review</b>"]
+        W_REV --> W_RES["<b>22. results</b> (Empirical Matrix)"]
+        W_RES --> W_DISC["<b>23. discussion</b>"]
+        W_DISC --> W_LIM["<b>24. limitations</b>"]
+        W_LIM --> W_CONC["<b>25. conclusion</b>"]
+        W_CONC --> W_REF["<b>References & Citations</b>"]
+        W_REF --> V_CITE["🔍 citation_validator"]
+        V_CITE --> V_CLAIM["🔍 claim_validator"]
+        V_CLAIM --> V_AUDIT["🛡️ integrity_auditor"]
+        V_AUDIT --> FIGS["📊 figures_node (PRISMA + Evidence Matrix)"]
+        FIGS --> APPS["Appendices & Search Protocol Audit"]
+        APPS --> END_NODE(["📄 Complete Publication-Grade Paper (PDF / DOCX)"])
     end
 
     style START fill:#6366f1,stroke:#4338ca,color:#fff
-    style CP1 fill:#f59e0b,stroke:#b45309,color:#fff
-    style CP2 fill:#f59e0b,stroke:#b45309,color:#fff
-    style CP3 fill:#f59e0b,stroke:#b45309,color:#fff
-    style CP4 fill:#f59e0b,stroke:#b45309,color:#fff
-    style DONE fill:#10b981,stroke:#047857,color:#fff
-    style L1 fill:none,stroke:#64748b,stroke-width:1px,stroke-dasharray: 4 4
-    style L2 fill:none,stroke:#64748b,stroke-width:1px,stroke-dasharray: 4 4
+    style G1 fill:#f59e0b,stroke:#b45309,color:#fff
+    style G2 fill:#f59e0b,stroke:#b45309,color:#fff
+    style G3 fill:#f59e0b,stroke:#b45309,color:#fff
+    style END_NODE fill:#10b981,stroke:#047857,color:#fff
+    style P1 fill:none,stroke:#64748b,stroke-width:1px,stroke-dasharray: 4 4
+    style P2 fill:none,stroke:#64748b,stroke-width:1px,stroke-dasharray: 4 4
+    style P3 fill:none,stroke:#64748b,stroke-width:1px,stroke-dasharray: 4 4
+    style P4 fill:none,stroke:#64748b,stroke-width:1px,stroke-dasharray: 4 4
+    style P5 fill:none,stroke:#64748b,stroke-width:1px,stroke-dasharray: 4 4
 ```
 
-**The four checkpoints** — each pauses the graph via LangGraph `interrupt()`, so nothing downstream runs until you say so. Reject one and the LLM revises from your feedback in natural language.
+---
 
-| # | You review | Before it commits to |
-|---|---|---|
-| **1** | Problem statement, objectives, research questions, keywords | Fetching hundreds of papers |
-| **2** | Literature review, research gap, conceptual framework | Generating hypotheses |
-| **3** | Proposed hypotheses | Formulating methodology |
-| **4** | Research design, data collection, analysis plan | Writing the full paper |
+## 3 Human-in-the-Loop Quality Gates
 
-### Corpus pipeline
+Each gate genuinely pauses graph execution via LangGraph `interrupt()`, allowing the author to approve or request targeted revisions in natural language:
 
-```mermaid
-flowchart TB
-    K(["Approved keywords"]) --> OA["OpenAlex"] & S2["Semantic Scholar"] & AX["arXiv"]
+| Gate | Phase | Review Artifacts | Guarantees |
+|---|---|---|---|
+| **Gate 1: Planning & Protocol** | Phase 1 | PICOC Protocol, Objectives, Research Questions, Boolean Keywords | Prevents query divergence before initiating multi-source retrieval |
+| **Gate 2: Evidence & Corpus** | Phase 3 | PRISMA Flow Tracker, Screened Literature, Extracted Evidence Records | Verifies empirical grounding before theoretical synthesis begins |
+| **Gate 3: Hypotheses & Framework** | Phase 4 | Conceptual Framework, Research Gaps, Formulated Hypotheses (H1..H5) | Confirms theoretical validity before committing to full paper generation |
 
-    OA & S2 & AX --> DEDUP["Deduplicate<br/><i>by DOI + normalized title</i>"]
+---
 
-    DEDUP --> SCREEN{"LLM relevance screening<br/><i>scored 0-10, batched</i>"}
-    SCREEN -->|"below threshold"| DROP["Excluded"]
-    SCREEN -->|"included"| KEEP["Included corpus"]
+## Academic Integrity & Research Invariants
 
-    KEEP --> RESOLVE["Open-access PDF resolution<br/><i>Unpaywall → Europe PMC → CORE</i>"]
-    RESOLVE --> TEXT["PDF text extraction"]
+1. **Deterministic Flow-Tracking State Machine (PRISMA 2020-aligned)**:
+   `PRISMATracker.validate_invariants()` asserts these *internal* conservation relations:
+   $$\text{records\_identified} - \text{duplicates\_removed} = \text{records\_after\_dedup}$$
+   $$\text{records\_screened} - \text{excluded\_title\_abstract} = \text{full\_text\_requested}$$
+   $$\text{full\_text\_assessed} - \text{excluded\_full\_text} = \text{studies\_included}$$
+   `full_text_requested` is the tracker's internal shortcut for PRISMA's *reports sought for retrieval*. The distinct PRISMA stages *reports not retrieved* (`full_text_unavailable`) and *reports assessed for eligibility* (`full_text_assessed`) are tracked as separate fields, but the hand-off between them is not asserted—so the equations above are internal invariants rather than the complete PRISMA 2020 flow. Every count is tracked deterministically in code—never generated or estimated by an LLM.
 
-    TEXT & DROP --> PRISMA(["📊 PRISMA flow diagram<br/><i>counts at every stage</i>"])
+2. **Immutable Evidence Store**:
+   - `PaperRecord.paper_id`: first 16 hex characters of a SHA-256 digest (a truncated representation, not the full digest) computed over a source-qualified key: `doi:<canonicalized DOI>` when a DOI is available, otherwise `title:<normalized title>:<year>`. Normalized titles are not assumed unique, so the fallback key also folds in the publication year (`nd` when unknown).
+   - `EvidenceRecord.evidence_id`: deterministic composite identifier `{paper_id}_ev001` (the composite is not itself hashed) anchoring exact quote, metric, baseline value, and effect direction.
+   - `ReviewClaim.claim_id`: deterministic composite identifier `{section}_cl001` (section slug truncated to 8 characters) linking paper claims to supporting evidence IDs.
 
-    style K fill:#6366f1,stroke:#4338ca,color:#fff
-    style DROP fill:#ef4444,stroke:#b91c1c,color:#fff
-    style PRISMA fill:#10b981,stroke:#047857,color:#fff
-```
-
-Every stage is counted and rendered into a **PRISMA flow diagram** — the standard systematic-review figure showing identification, screening, and inclusion at each step.
+3. **Deterministic Validation Pipeline**:
+   - `citation_validator`: Audits every in-text citation against known `PaperRecord` metadata; flags unverified or hallucinated citations.
+   - `claim_validator`: Audits quantitative sentences against extracted `EvidenceRecord` benchmark metrics.
+   - `integrity_auditor`: Validates PRISMA invariants and issues comprehensive `ValidationReport`.
 
 ---
 
@@ -177,159 +173,52 @@ Every stage is counted and rendered into a **PRISMA flow diagram** — the stand
 
 | Layer | Technology |
 |---|---|
-| Agent graphs | LangGraph — `interrupt()` HITL, `Send()` fan-out, checkpointer persistence |
-| LLM | Any OpenAI-compatible endpoint (DeepSeek by default), per-role model config |
-| LLM caching | SQLite response cache — identical prompts never billed twice |
-| Web search | Tavily API |
-| Academic sources | OpenAlex, Semantic Scholar, arXiv |
-| Full-text recovery | Unpaywall → Europe PMC → CORE fallback chain |
-| Backend | FastAPI + Server-Sent Events |
-| Frontend | Vanilla JS + CSS — no framework, no bundler, no build step |
-| Figures | matplotlib (PRISMA diagram, evidence matrix) |
-| Export | FPDF2 (`.pdf`), python-docx (`.docx`) |
-| Deploy | Docker · single container · Render / HF Spaces |
-
----
-
-## Features
-
-**Both modes**
-
-- **Human-in-the-Loop** — approve or revise in natural language; the graph genuinely pauses via `interrupt()`
-- **Real-time SSE streaming** — live agent progress, token-by-token writing
-- **Session persistence** — close the tab mid-run, come back, pick up exactly where you left off
-- **Resumable graph state** — checkpointed to SQLite, survives a backend restart
-- **Bring your own model** — point `LLM_BASE_URL` at any OpenAI-compatible gateway
-- **Dark/Light mode** with persistent preference
-
-**Research Mode**
-
-- **Sources library panel** — every screened paper, sorted by relevance, one click to full metadata
-- **Evidence strip at Checkpoint 2** — see the actual papers behind the literature review, not just its conclusions
-- **Inline citation links** — `(Author, 2024)` in the paper body opens that exact source
-- **Citation verification** — a dedicated agent checks claims against the retrieved corpus
-- **PRISMA flow diagram** + **evidence matrix** auto-generated as figures
-- **PDF and DOCX export** with real heading hierarchy, lists, and formatting
-
----
-
-## Project Structure
-
-```
-research-bot/
-├── backend/
-│   └── app/
-│       ├── agents/
-│       │   ├── planner.py, researcher.py, aggregator.py    # DeepSearch
-│       │   ├── supervisor.py, query_validator.py
-│       │   └── research_mode/agents.py                     # all 25 RM agents
-│       ├── api/
-│       │   ├── agent.py                                    # DeepSearch routes
-│       │   └── research_mode.py                            # Research Mode routes
-│       ├── graph/
-│       │   ├── builder.py, state.py                        # DeepSearch graph
-│       │   └── research_mode_builder.py, research_mode_state.py
-│       ├── tools/
-│       │   ├── tavily_search.py                            # web search
-│       │   ├── academic_search.py                          # OpenAlex/S2/arXiv
-│       │   ├── oa_resolver.py, fulltext_fetcher.py         # open-access PDFs
-│       │   ├── figures.py                                  # PRISMA + evidence table
-│       │   └── pdf_generator.py, docx_generator.py         # export
-│       ├── llm.py                                          # model config + cache
-│       └── main.py                                         # app + static serving
-├── frontend/                                               # index.html, app.js, style.css
-├── tests/
-├── docker-compose.yml
-├── Dockerfile
-├── requirements.txt
-└── .env.example
-```
+| **Orchestration** | LangGraph (StateGraph, `interrupt()` HITL, `Send()` fan-out, SQLite persistence) |
+| **Structured LLM** | Pydantic v2 schemas + `ainvoke_structured_with_retry` |
+| **Academic Sources** | OpenAlex, Semantic Scholar, Crossref, PubMed, arXiv, OpenCitations |
+| **Full-Text Ingestion** | Unpaywall → Europe PMC → CORE fallback chain |
+| **Backend API** | FastAPI + Server-Sent Events (SSE) with keep-alive heartbeats |
+| **Frontend UI/UX** | Vanilla JS + CSS (Swiss Modernism 2.0, zero-build, responsive) |
+| **Figures & Charts** | matplotlib (PRISMA 2020 Flowchart, Hypothesis Evidence Matrix) |
+| **Document Export** | FPDF2 (`.pdf` with hanging APA indents) · python-docx (`.docx`) |
 
 ---
 
 ## Getting Started
 
-### Prerequisites
-
-- Docker + Docker Compose
-- An LLM API key — [DeepSeek](https://platform.deepseek.com) is the default and cheapest, but any OpenAI-compatible endpoint works
-- [Tavily](https://tavily.com) API key — DeepSearch mode only
-
-### 1. Clone
+### 1. Clone & Configure
 
 ```bash
 git clone https://github.com/Aryan-Pardeshi/DeepResearch_AI.git
+cd DeepResearch_AI
+cp .env.example .env
 ```
 
-### 2. Configure
+Minimum `.env` configuration:
 
 ```bash
-cd DeepResearch_AI/research-bot && cp .env.example .env
-```
-
-Minimum viable `.env`:
-
-```bash
-LLM_API_KEY="your_key_here"
+LLM_API_KEY="your_api_key_here"
 LLM_BASE_URL="https://api.deepseek.com"
-TAVILY_API_KEY="your_key_here"
+TAVILY_API_KEY="your_tavily_key_here"
 OPENALEX_EMAIL="you@example.com"
 ```
 
-> `OPENALEX_EMAIL` needs a real address — OpenAlex and Unpaywall require it for their polite pool. Without it you get heavily rate-limited.
-
-Optional but useful: `SEMANTIC_SCHOLAR_API_KEY` (higher rate limit), `CORE_API_KEY` (free, recovers extra open-access full texts).
-
-### 3. Run
+### 2. Run with Docker
 
 ```bash
 docker compose up -d --build
 ```
 
-App → **[http://localhost:8000](http://localhost:8000)** — one container serves both the API and the UI.
+Access the UI at **[http://localhost:8000](http://localhost:8000)**.
 
----
-
-### Local Development (without Docker)
+### 3. Local Development
 
 ```bash
-cd research-bot && pip install -r requirements.txt && uvicorn backend.app.main:app --reload --port 8000
+python -m venv .venv
+.venv\Scripts\activate      # Windows (or source .venv/bin/activate on Unix)
+pip install -r requirements.txt
+uvicorn backend.app.main:app --reload --port 8000
 ```
-
-The frontend is served from the same origin at `/`, so no separate server and no CORS setup. Edit `frontend/*` and hard-refresh — no build step.
-
----
-
-## API Endpoints
-
-**DeepSearch**
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/research/start` | Validate query, generate problem statement + plan |
-| `POST` | `/research/approve` | Resume graph, stream SSE events |
-| `GET` | `/research/result/{thread_id}` | Fetch report by thread |
-| `POST` | `/research/cancel` | Cancel an in-flight run |
-
-**Research Mode**
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/research-mode/start` | Define scope, run to Checkpoint 1 |
-| `POST` | `/research-mode/approve` | Approve/revise a checkpoint, stream SSE |
-| `GET` | `/research-mode/result/{thread_id}` | Full graph state + checkpoint status |
-| `POST` | `/research-mode/export/{thread_id}` | Export paper as PDF |
-| `POST` | `/research-mode/export/docx/{thread_id}` | Export paper as DOCX |
-
-**System**
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/healthz` | Liveness probe |
-| `GET` | `/config/status` | Which keys are configured (never returns values) |
-| `POST` | `/config/setup` | Update config — auth-gated, fails closed |
-
-> `/config/setup` can rewrite `LLM_API_KEY` and `LLM_BASE_URL`, so it is **disabled by default**. Set `CONFIG_API_TOKEN` to enable it behind an `X-Config-Token` header, or `ALLOW_OPEN_CONFIG_API=1` for local development only. Never enable the latter on a public URL.
 
 ---
 

@@ -425,12 +425,12 @@
                 <div class="rm-metric-card">
                     <div class="metric-giant-val">250M+</div>
                     <div class="metric-label">Indexed Sources</div>
-                    <div class="metric-subtext">OpenAlex, Semantic Scholar &amp; arXiv</div>
+                    <div class="metric-subtext">OpenAlex, Semantic Scholar, Crossref, PubMed &amp; arXiv</div>
                 </div>
                 <div class="rm-metric-card">
-                    <div class="metric-giant-val">20</div>
+                    <div class="metric-giant-val">25</div>
                     <div class="metric-label">Specialist Agents</div>
-                    <div class="metric-subtext">Autonomous multi-agent academic pipeline</div>
+                    <div class="metric-subtext">5-Phase Evidence-First LangGraph Architecture</div>
                 </div>
             </div>
 
@@ -468,11 +468,11 @@
                     <span>Launch Autonomous Academic Pipeline</span>
                 </button>
 
-                <!-- The three indexes actually queried by academic_search.py. -->
+                <!-- The academic retrieval indexes queried by academic_search.py. -->
                 <div class="index-strip">
                     <span class="index-strip-label">Indexed sources</span>
                     <div class="index-list">
-                        <a class="index-chip" href="https://openalex.org" target="_blank" rel="noopener noreferrer" title="OpenAlex — open catalogue of scholarly works">
+                        <a class="index-chip" href="https://openalex.org" target="_blank" rel="noopener noreferrer" title="OpenAlex — open catalogue of 250M+ scholarly works">
                             <img class="index-mark index-mark-openalex" src="assets/openalex.png" alt="OpenAlex scholarly catalog logo" width="22" height="22" loading="lazy">
                             <span class="index-name">OpenAlex</span>
                         </a>
@@ -480,9 +480,21 @@
                             <img class="index-mark" src="assets/semantic-scholar.png" alt="Semantic Scholar research corpus logo" width="22" height="22" loading="lazy">
                             <span class="index-name">Semantic Scholar</span>
                         </a>
+                        <a class="index-chip" href="https://www.crossref.org" target="_blank" rel="noopener noreferrer" title="Crossref — official DOI metadata registry">
+                            <img class="index-mark" src="assets/crossref.svg" alt="Crossref official DOI registry logo" width="22" height="22" loading="lazy">
+                            <span class="index-name">Crossref</span>
+                        </a>
+                        <a class="index-chip" href="https://pubmed.ncbi.nlm.nih.gov" target="_blank" rel="noopener noreferrer" title="PubMed — NCBI biomedical and clinical literature">
+                            <img class="index-mark" src="assets/pubmed.svg" alt="PubMed NCBI biomedical literature logo" width="22" height="22" loading="lazy">
+                            <span class="index-name">PubMed</span>
+                        </a>
                         <a class="index-chip" href="https://arxiv.org" target="_blank" rel="noopener noreferrer" title="arXiv — open-access preprint archive">
                             <img class="index-mark" src="assets/arxiv.png" alt="arXiv open preprint archive logo" width="22" height="22" loading="lazy">
                             <span class="index-name">arXiv</span>
+                        </a>
+                        <a class="index-chip" href="https://opencitations.net" target="_blank" rel="noopener noreferrer" title="OpenCitations — open citation graph infrastructure">
+                            <img class="index-mark" src="assets/opencitations.svg" alt="OpenCitations open graph logo" width="22" height="22" loading="lazy">
+                            <span class="index-name">OpenCitations</span>
                         </a>
                     </div>
                 </div>
@@ -683,8 +695,11 @@
                     <div class="sources-filter-bar" id="sources-filter-bar" role="group" aria-label="Filter sources by database">
                         <button type="button" class="source-filter-chip active" data-source-filter="all">All</button>
                         <button type="button" class="source-filter-chip" data-source-filter="openalex">OpenAlex</button>
-                        <button type="button" class="source-filter-chip" data-source-filter="semantic_scholar">Semantic</button>
                         <button type="button" class="source-filter-chip" data-source-filter="arxiv">arXiv</button>
+                        <button type="button" class="source-filter-chip" data-source-filter="crossref">Crossref</button>
+                        <button type="button" class="source-filter-chip" data-source-filter="pubmed">PubMed</button>
+                        <button type="button" class="source-filter-chip" data-source-filter="opencitations">OpenCitations</button>
+                        <button type="button" class="source-filter-chip" data-source-filter="semantic_scholar">Semantic</button>
                     </div>
                     <div class="rm-sources-grid" id="rm-sources-grid"></div>
                 </aside>

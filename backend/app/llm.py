@@ -1,5 +1,6 @@
 import os
 import logging
+import asyncio
 from pathlib import Path
 from langchain_openai import ChatOpenAI
 from langchain_community.cache import SQLiteCache
@@ -22,15 +23,17 @@ class LoggingSQLiteCache(SQLiteCache):
 
 
 def init_llm_cache():
-    cache_path_str = os.getenv("LLM_CACHE_PATH", "./data/llm_cache.db")
-    cache_path = Path(cache_path_str).resolve()
-    cache_path.parent.mkdir(parents=True, exist_ok=True)
-    set_llm_cache(LoggingSQLiteCache(database_path=str(cache_path)))
-    logger.info(f"LLM cache initialized at {cache_path}")
+    try:
+        cache_path_str = os.getenv("LLM_CACHE_PATH", "./data/llm_cache.db")
+        cache_path = Path(cache_path_str).resolve()
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        set_llm_cache(LoggingSQLiteCache(database_path=str(cache_path)))
+        logger.info(f"LLM cache initialized at {cache_path}")
+    except Exception as e:
+        logger.warning(f"Failed to initialize SQLite LLM cache: {e}")
 
 
 init_llm_cache()
-
 
 
 def get_llm_config():
@@ -57,11 +60,6 @@ def get_llm(model: str | None = None, role: str | None = None, temperature: floa
         else:
             model = os.getenv("LLM_MODEL_PLANNER", "deepseek-chat")
 
-    # RENDER ERROR HANDLING:
-    # Set max_retries=0 because LangChain/openai-client retries run inside a thread executor,
-    # which prevents asyncio.wait_for() from cancelling them. On Render free/starter tiers,
-    # a single stuck request with max_retries=1 blocks the entire event loop for 2×request_timeout.
-    # Our custom _safe_invoke_llm() handles retries asynchronously with non-blocking backoff.
     timeout_val = float(os.getenv("LLM_REQUEST_TIMEOUT", "60.0"))
     return ChatOpenAI(
         model=model,
@@ -97,22 +95,12 @@ llm_fast = _LazyLLM(role="researcher")
 llm_pro = _LazyLLM(role="aggregator")
 
 
-# Structured output is not implemented the same way everywhere. LLM_BASE_URL can
-# point at any OpenAI-compatible gateway, and they disagree: some reject
-# response_format={"type":"json_object"} outright with a 400 on the
-# response_format parameter, others do not implement json_schema. Rather than
-# hardcoding one method, try them in order and remember what worked.
 STRUCTURED_METHODS = ("json_schema", "function_calling", "json_mode")
-
 _structured_method_cache: dict[tuple[str, str], str] = {}
 
 
 def invoke_structured(base_llm, schema, prompt):
-    """Invokes an LLM with structured output, negotiating the method per provider.
-
-    Returns the parsed schema instance. Raises the last error only if no method
-    worked, so a provider that supports none of them still surfaces a real error.
-    """
+    """Invokes an LLM with structured output, negotiating the method per provider."""
     model = getattr(base_llm, "model_name", "?")
     base = str(getattr(base_llm, "openai_api_base", "") or "")
     key = (base, model)
@@ -127,8 +115,6 @@ def invoke_structured(base_llm, schema, prompt):
         try:
             result = base_llm.with_structured_output(schema, method=method).invoke(prompt)
             if result is None:
-                # The call succeeded but produced nothing usable; try the next method
-                # rather than handing a None back to the caller.
                 last_error = ValueError(f"{method} returned no parsed output")
                 continue
             if _structured_method_cache.get(key) != method:
@@ -140,3 +126,56 @@ def invoke_structured(base_llm, schema, prompt):
             logger.debug(f"Structured output method '{method}' failed for {model}: {e}")
 
     raise last_error if last_error else RuntimeError("Structured output failed")
+
+
+async def ainvoke_structured_with_retry(
+    base_llm,
+    schema,
+    prompt: str,
+    max_retries: int = 2,
+    strict: bool = False
+):
+    """Async structured output invocation with exponential backoff retry.
+    
+    strict=True enforces json_schema method only (for critical extraction agents).
+    strict=False negotiates the full fallback chain (json_schema -> function_calling -> json_mode).
+    """
+    model = getattr(base_llm, "model_name", "?")
+    base = str(getattr(base_llm, "openai_api_base", "") or "")
+    key = (base, model)
+
+    methods = ("json_schema",) if strict else STRUCTURED_METHODS
+    cached = _structured_method_cache.get(key)
+    if cached and not strict:
+        methods = (cached,) + tuple(m for m in STRUCTURED_METHODS if m != cached)
+
+    last_error = None
+    start_time = asyncio.get_event_loop().time()
+    total_deadline = 60.0  # seconds
+
+    for attempt in range(max_retries + 1):
+        if asyncio.get_event_loop().time() - start_time > total_deadline:
+            break
+        for method in methods:
+            try:
+                structured_chain = base_llm.with_structured_output(schema, method=method)
+                result = await asyncio.to_thread(structured_chain.invoke, prompt)
+                if result is not None:
+                    if not strict and _structured_method_cache.get(key) != method:
+                        _structured_method_cache[key] = method
+                    return result
+                last_error = ValueError(f"{method} returned empty structured output")
+            except Exception as e:
+                last_error = e
+                logger.debug(f"Structured attempt {attempt+1}/{max_retries+1} ({method}) failed: {e}")
+                err_str = str(e).lower()
+                # If non-transient error like invalid parameter/schema, don't repeat full method matrix
+                is_transient = any(kw in err_str for kw in ("timeout", "rate", "429", "500", "502", "503", "connection", "overloaded"))
+                if not is_transient and strict:
+                    break
+
+        if attempt < max_retries:
+            backoff = min(1.5 ** attempt, 5.0)
+            await asyncio.sleep(backoff)
+
+    raise last_error or RuntimeError("Structured output failed after retries")
