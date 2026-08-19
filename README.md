@@ -1,4 +1,4 @@
-# <img src="https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011" width="32" height="32" style="vertical-align: middle;"> DeepResearch
+# <img src="frontend/assets/logo.png" width="32" height="32" style="vertical-align: middle; border-radius: 7px;"> DeepResearch
 
 An AI-powered multi-agent research workspace with **two modes**: fast web research that returns a cited report, and a full academic pipeline that writes a complete, citation-verified research paper with human-in-the-loop approval at every major decision.
 

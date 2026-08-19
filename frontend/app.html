@@ -29,16 +29,14 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="DeepResearch">
     <link rel="manifest" href="site.webmanifest">
-
     <!-- Icons -->
-    <link rel="icon" type="image/png" sizes="256x256" href="https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011">
-    <link rel="apple-touch-icon" href="https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011">
+    <link rel="icon" type="image/png" sizes="64x64" href="/assets/favicon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
 
     <!-- Resource Preconnects & Hints for Core Web Vitals -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
-    <link rel="dns-prefetch" href="https://cdn-1.webcatalog.io">
 
     <!-- Open Graph / Facebook / LinkedIn / Discord -->
     <meta property="og:type" content="website">
@@ -46,10 +44,10 @@
     <meta property="og:title" content="DeepResearch — AI Multi-Agent Research Assistant & Academic Lab Workspace">
     <meta property="og:description" content="Autonomous multi-agent research workspace. Transforms research queries into cited academic papers and synthesized reports with Human-in-the-Loop review and real-time streaming.">
     <meta property="og:url" content="https://deepresearch.dev/app">
-    <meta property="og:image" content="https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011">
+    <meta property="og:image" content="https://deepresearch.dev/assets/logo.png">
     <meta property="og:image:alt" content="DeepResearch AI Multi-Agent Platform">
-    <meta property="og:image:width" content="256">
-    <meta property="og:image:height" content="256">
+    <meta property="og:image:width" content="512">
+    <meta property="og:image:height" content="512">
     <meta property="og:locale" content="en_US">
 
     <!-- Twitter Card -->
@@ -58,7 +56,7 @@
     <meta name="twitter:creator" content="@AryanPardeshi">
     <meta name="twitter:title" content="DeepResearch — AI Multi-Agent Research Assistant Workspace">
     <meta name="twitter:description" content="Autonomous multi-agent research workspace powered by LangGraph, OpenAlex, Semantic Scholar, and arXiv with Human-in-the-Loop approval.">
-    <meta name="twitter:image" content="https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011">
+    <meta name="twitter:image" content="https://deepresearch.dev/assets/logo.png">
     <meta name="twitter:image:alt" content="DeepResearch AI Multi-Agent Platform">
 
     <!-- Schema.org JSON-LD Structured Data for Google Knowledge Graph & Rich Results -->
@@ -68,22 +66,18 @@
       "@graph": [
         {
           "@type": "WebApplication",
-          "@id": "https://deepresearch.dev/#webapp",
-          "name": "DeepResearch",
-          "alternateName": ["DeepResearch AI", "DeepResearch Academic Lab"],
-          "description": "An AI-powered multi-agent research assistant that turns research queries into structured, cited reports and academic papers with human-in-the-loop plan approval and real-time streaming.",
-          "applicationCategory": "EducationalApplication, BusinessApplication, ResearchApplication",
+          "@id": "https://deepresearch.dev/app#webapp",
+          "name": "DeepResearch Workspace",
+          "applicationCategory": "EducationalApplication, ResearchApplication",
           "operatingSystem": "All",
-          "browserRequirements": "Requires JavaScript. Requires HTML5.",
           "url": "https://deepresearch.dev/app",
+          "description": "Interactive autonomous multi-agent research application with Human-in-the-Loop approval checkpoints and live SSE streaming.",
+          "browserRequirements": "Requires JavaScript. Requires HTML5.",
+          "softwareVersion": "2.8.9",
           "author": {
             "@type": "Person",
             "name": "Aryan Pardeshi",
-            "url": "https://github.com/Aryan-Pardeshi",
-            "sameAs": [
-              "https://linkedin.com/in/aryan-pardeshi-dev",
-              "https://github.com/Aryan-Pardeshi"
-            ]
+            "url": "https://github.com/Aryan-Pardeshi"
           },
           "offers": {
             "@type": "Offer",
@@ -98,7 +92,7 @@
             "Automated PRISMA Flowchart & Evidence Matrix Generation",
             "Export to Markdown (.md), PDF (.pdf), and Word (.docx)"
           ],
-          "screenshot": "https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011"
+          "screenshot": "https://deepresearch.dev/assets/logo.png"
         },
         {
           "@type": "WebSite",
@@ -116,7 +110,7 @@
     }
     </script>
 
-    <link rel="stylesheet" href="style.css?v=2.8.9">
+    <link rel="stylesheet" href="style.css?v=3.5.0">
     <!-- Marked.js for markdown parsing -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- DOMPurify for XSS sanitization -->
@@ -267,7 +261,7 @@
         
         <!-- View 1: Landing Panel -->
         <section id="landing-panel" class="panel" aria-label="DeepSearch Web Research">
-            <h1 class="hero-title">Ask anything. We will <span class="canvas-text-target hero-accent" data-text="plan, research, and synthesize.">plan, research, and synthesize.</span></h1>
+            <h1 class="hero-title">Ask anything. We will <span class="text-gradient">plan, research, and synthesize.</span></h1>
             <p class="hero-subtitle">Multi-agent web research workspace driven by autonomous agent loops.</p>
 
             <div class="search-box-container">
@@ -418,7 +412,7 @@
         <!-- Research Mode View 1: Input Panel -->
         <section id="rm-input-panel" class="panel active">
             <div class="rm-hero-header">
-                <h1 class="hero-title">Academic Research <span class="canvas-text-target hero-accent" data-text="Paper Synthesis">Paper Synthesis</span></h1>
+                <h1 class="hero-title">Academic Research <span class="text-gradient">Paper Synthesis</span></h1>
             </div>
 
             <!-- Social Proof & Scale Metric Bento Showcase -->
@@ -706,19 +700,8 @@
         <div class="footer-container">
             <div class="footer-col footer-brand-col">
                 <div class="footer-logo" style="display: flex; align-items: center; gap: 0.6rem;">
-                    <svg class="logo-icon-svg" viewBox="0 0 36 36" fill="none" width="26" height="26" xmlns="http://www.w3.org/2000/svg" style="border-radius: 6px;">
-                        <rect width="36" height="36" rx="8" fill="url(#appFooterGrad)"/>
-                        <path d="M10 18L18 10L26 18L18 26L10 18Z" stroke="#ffffff" stroke-width="2" stroke-linejoin="round"/>
-                        <circle cx="18" cy="18" r="3.5" fill="#38bdf8"/>
-                        <path d="M18 6V10M18 26V30M6 18H10M26 18H30" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>
-                        <defs>
-                            <linearGradient id="appFooterGrad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
-                                <stop stop-color="#0284c7"/>
-                                <stop offset="1" stop-color="#2563eb"/>
-                            </linearGradient>
-                        </defs>
-                    </svg>
-                    <span class="footer-brand-title">DEEPRESEARCH</span>
+                    <img src="/assets/logo.png" alt="DeepResearch Logo" width="28" height="28" style="border-radius: 7px; overflow: hidden; object-fit: cover; box-shadow: 0 1px 3px rgba(0,0,0,0.25);">
+                    <span class="footer-brand-title">DEEPRERESEARCH</span>
                     <span class="footer-brand-tag">ACADEMIC LAB</span>
                 </div>
                 <p class="footer-desc">
@@ -792,6 +775,6 @@
     <div class="toast-container" id="toast-container"></div>
 
     <!-- Application Script -->
-    <script src="app.js?v=2.8.9"></script>
+    <script src="app.js?v=3.5.0"></script>
 </body>
 </html>

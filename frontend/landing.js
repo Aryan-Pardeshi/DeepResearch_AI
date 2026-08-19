@@ -208,19 +208,24 @@ function initNavbarScroll() {
     if (!header) return;
 
     let ticking = false;
+    function checkScroll() {
+        if (window.scrollY > 15) {
+            header.classList.add('scrolled');
+        } else {
+            header.classList.remove('scrolled');
+        }
+        ticking = false;
+    }
+
     window.addEventListener('scroll', () => {
         if (!ticking) {
-            window.requestAnimationFrame(() => {
-                if (window.scrollY > 24) {
-                    header.classList.add('scrolled');
-                } else {
-                    header.classList.remove('scrolled');
-                }
-                ticking = false;
-            });
+            window.requestAnimationFrame(checkScroll);
             ticking = true;
         }
     }, { passive: true });
+
+    // Initial check on load
+    checkScroll();
 }
 
 /* ==========================================================================
