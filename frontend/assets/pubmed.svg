@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="pm-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3288C5"/>
+      <stop offset="100%" stop-color="#20558A"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="6" fill="url(#pm-grad)"/>
+  <!-- PubMed stylized typography & medical cross -->
+  <path d="M7 8h6a4.5 4.5 0 0 1 0 9H10v7H7V8zm3 6h3a1.5 1.5 0 0 0 0-3h-3v3z" fill="#FFFFFF"/>
+  <circle cx="21.5" cy="11.5" r="2.5" fill="#46BAEB"/>
+  <path d="M19 16h5v2.5h-5V24h-2.5v-5.5H16V16h0.5v-2.5h2.5V16z" fill="#FFFFFF"/>
+</svg>

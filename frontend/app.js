@@ -72,79 +72,107 @@ const state = {
         title: '',
         activeStage: 'scope_definition',
         completedStages: [],
-        screenedPapers: []
+        screenedPapers: [],
+        searchProtocol: null,
+        evidenceRecordsCount: 0,
+        evidenceRecords: [],
+        prismaTracker: null,
+        taxonomy: null,
+        validationReport: null
     }
 };
 
-// Research Mode Pipeline Stage Metadata (agent research flow order)
+// Research Mode Pipeline Stage Metadata (30 numbered stages + 3 checkpoints = 33 pipeline steps)
 const RM_STAGES = [
-    { id: 'scope_definition', name: '1-3. Scope Definition', role: 'scoper' },
-    { id: 'keyword_extractor', name: 'Keyword Extraction', role: 'extractor' },
-    { id: 'checkpoint_1', name: 'Checkpoint 1', hitl: true },
-    { id: 'paper_fetcher', name: 'Corpus Retrieval', role: 'fetcher' },
-    { id: 'paper_screener', name: 'Corpus Screening', role: 'screener' },
-    { id: 'literature_review', name: '4. Literature Review', role: 'synthesizer' },
-    { id: 'gap_analysis', name: '5. Research Gap', role: 'analyst' },
-    { id: 'framework', name: '6. Conceptual Framework', role: 'architect' },
-    { id: 'checkpoint_2', name: 'Checkpoint 2', hitl: true },
-    { id: 'hypotheses', name: '7. Hypotheses', role: 'formulator' },
-    { id: 'checkpoint_3', name: 'Checkpoint 3', hitl: true },
-    { id: 'research_design', name: '8. Research Design', role: 'methodologist' },
-    { id: 'data_collection', name: '9. Data Collection', role: 'methodologist' },
-    { id: 'data_analysis', name: '10. Data Analysis', role: 'methodologist' },
-    { id: 'checkpoint_4', name: 'Checkpoint 4', hitl: true },
-    { id: 'results', name: '11. Results', role: 'synthesizer' },
-    { id: 'discussion', name: '12. Discussion + Implications', role: 'interpreter' },
-    { id: 'limitations', name: '13. Limitations', role: 'critic' },
-    { id: 'conclusion', name: '14. Conclusion', role: 'summarizer' },
-    { id: 'future_scope', name: '15. Future Scope', role: 'visionary' },
-    { id: 'references', name: '16. References', role: 'indexer' },
-    { id: 'appendices', name: '17. Appendices', role: 'archivist' },
-    { id: 'introduction', name: '18. Introduction', role: 'framer' },
-    { id: 'abstract', name: '19. Abstract', role: 'summarizer' },
-    { id: 'title', name: '20. Title', role: 'finalizer' }
+    // ── Phase 1: Planning & Protocol ──────────────────────────────────────────
+    { id: 'scope_definition',      name: '1. Scope & PICOC',         role: 'scoper'      },
+    { id: 'protocol_agent',        name: '2. Search Protocol',       role: 'strategist'  },
+    { id: 'keyword_extractor',     name: '3. Boolean Keywords',      role: 'extractor'   },
+    { id: 'checkpoint_1',          name: 'Checkpoint 1: Protocol',   hitl: true          },
+    // ── Phase 2: Retrieval & Screening ────────────────────────────────────────
+    { id: 'paper_fetcher',         name: '4. Multi-Source Retrieval', role: 'fetcher'   },
+    { id: 'citation_expander',     name: '5. Citation Graph Expand',  role: 'expander'  },
+    { id: 'metadata_validator',    name: '6. Metadata Validation',    role: 'validator' },
+    { id: 'paper_screener',        name: '7. Title/Abstract Screen',  role: 'screener'  },
+    { id: 'fulltext_eligibility',  name: '8. Full-Text Eligibility',  role: 'screener'  },
+    { id: 'quality_appraisal',     name: '9. Quality Appraisal',      role: 'appraiser' },
+    // ── Phase 3: Evidence Extraction ─────────────────────────────────────────
+    { id: 'evidence_extractor',    name: '10. Evidence Extraction',   role: 'extractor' },
+    { id: 'quantitative_extractor',name: '11. Quantitative Data',     role: 'extractor' },
+    { id: 'methodology_extractor', name: '12. Methodology Extraction',role: 'extractor' },
+    { id: 'limitation_extractor',  name: '13. Limitation Extraction', role: 'extractor' },
+    { id: 'provenance_agent',      name: '14. Provenance Anchoring',  role: 'validator' },
+    { id: 'checkpoint_2',          name: 'Checkpoint 2: Evidence',   hitl: true          },
+    // ── Phase 4: Theoretical Framing ─────────────────────────────────────────
+    { id: 'taxonomy_agent',        name: '15. Evidence Taxonomy',    role: 'architect'  },
+    { id: 'gap_analysis',          name: '16. Research Gaps',        role: 'analyst'    },
+    { id: 'framework',             name: '17. Conceptual Framework', role: 'architect'  },
+    { id: 'hypotheses',            name: '18. Hypotheses',           role: 'formulator' },
+    { id: 'checkpoint_3',          name: 'Checkpoint 3: Hypotheses', hitl: true          },
+    // ── Phase 5: Methodology & Full Paper Synthesis ───────────────────────────
+    { id: 'research_design',       name: '19. Research Design',      role: 'methodologist' },
+    { id: 'data_collection',       name: '20. Data Collection',      role: 'methodologist' },
+    { id: 'data_analysis',         name: '21. Data Analysis',        role: 'methodologist' },
+    { id: 'literature_review',     name: '22. Literature Review',    role: 'aggregator'   },
+    { id: 'results',               name: '23. Results',              role: 'synthesizer'  },
+    { id: 'discussion',            name: '24. Discussion',           role: 'interpreter'  },
+    { id: 'limitations',           name: '25. Limitations',          role: 'critic'       },
+    { id: 'conclusion',            name: '26. Conclusion',           role: 'summarizer'   },
+    { id: 'references',            name: '27. References',           role: 'indexer'      },
+    { id: 'introduction',          name: '28. Introduction',         role: 'framer'       },
+    { id: 'abstract',              name: '29. Abstract',             role: 'summarizer'   },
+    { id: 'title',                 name: '30. Title',                role: 'finalizer'    },
 ];
 
-// Phased grouping for the 20 stages + 4 checkpoints
+// Phased grouping for the 5-phase Evidence Pipeline
 const RM_PHASES = [
     {
         id: 'phase_1',
-        name: 'Inception & Scoping',
-        badge: 'Phase 1 of 4',
-        stages: ['scope_definition', 'keyword_extractor', 'checkpoint_1']
+        name: 'Planning & Protocol',
+        badge: 'Phase 1 of 5',
+        stages: ['scope_definition', 'protocol_agent', 'keyword_extractor', 'checkpoint_1']
     },
     {
         id: 'phase_2',
-        name: 'Corpus Retrieval & Screening',
-        badge: 'Phase 2 of 4',
-        stages: ['paper_fetcher', 'paper_screener', 'literature_review', 'gap_analysis', 'framework', 'checkpoint_2']
+        name: 'Retrieval & Screening',
+        badge: 'Phase 2 of 5',
+        stages: ['paper_fetcher', 'citation_expander', 'metadata_validator', 'paper_screener', 'fulltext_eligibility', 'quality_appraisal']
     },
     {
         id: 'phase_3',
-        name: 'Theoretical & Empirical Hypotheses',
-        badge: 'Phase 3 of 4',
-        stages: ['hypotheses', 'checkpoint_3']
+        name: 'Evidence Extraction',
+        badge: 'Phase 3 of 5',
+        stages: ['evidence_extractor', 'quantitative_extractor', 'methodology_extractor', 'limitation_extractor', 'provenance_agent', 'checkpoint_2']
     },
     {
         id: 'phase_4',
-        name: 'Methodology & Full Paper Synthesis',
-        badge: 'Phase 4 of 4',
+        name: 'Theoretical Framing',
+        badge: 'Phase 4 of 5',
+        stages: ['taxonomy_agent', 'gap_analysis', 'framework', 'hypotheses', 'checkpoint_3']
+    },
+    {
+        id: 'phase_5',
+        name: 'Methodology & Synthesis',
+        badge: 'Phase 5 of 5',
         stages: [
-            'research_design', 'data_collection', 'data_analysis', 'checkpoint_4',
-            'results', 'discussion', 'limitations', 'conclusion', 'future_scope',
-            'references', 'appendices', 'introduction', 'abstract', 'title'
+            'research_design', 'data_collection', 'data_analysis', 'literature_review',
+            'results', 'discussion', 'limitations', 'conclusion',
+            'references', 'introduction', 'abstract', 'title'
         ]
     }
 ];
 
-// Graph nodes that run without their own tile in the tracker grid. Every node in
-// research_mode_builder.py must appear either in RM_STAGES or here, otherwise the
-// tracker cannot resolve the node and falls back to a bare "Pipeline Running".
+// Hidden nodes running without their own standalone grid tile
 const RM_HIDDEN_STAGES = {
     scope_reviser: { label: 'Revising Scope', anchor: 'checkpoint_1' },
     fulltext_fetcher: { label: 'Fetching Full Text', anchor: 'paper_screener' },
-    citation_verifier: { label: 'Verifying Citations', anchor: 'literature_review' },
-    figures: { label: 'Generating Figures', anchor: 'references' }
+    evidence_auditor: { label: 'Running Evidence Audit', anchor: 'provenance_agent' },
+    citation_validator: { label: 'Validating Citations', anchor: 'references' },
+    claim_validator: { label: 'Validating Claims', anchor: 'references' },
+    integrity_auditor: { label: 'Research Integrity Pass', anchor: 'references' },
+    figures: { label: 'Generating Figures', anchor: 'results' },
+    future_scope: { label: 'Future Scope', anchor: 'conclusion' },
+    appendices: { label: 'Appendices', anchor: 'title' }
 };
 
 // Maps the snake_case state payload from the backend onto the camelCase UI state
@@ -154,8 +182,14 @@ const RM_STATE_KEY_MAP = {
     research_objectives: 'researchObjectives',
     research_questions: 'researchQuestions',
     keywords: 'keywords',
+    search_protocol: 'searchProtocol',
     raw_papers_count: 'rawPapersCount',
     screened_papers_count: 'screenedPapersCount',
+    evidence_records_count: 'evidenceRecordsCount',
+    evidence_records: 'evidenceRecords',
+    prisma_tracker: 'prismaTracker',
+    taxonomy: 'taxonomy',
+    validation_report: 'validationReport',
     literature_review: 'literatureReview',
     research_gap: 'researchGap',
     conceptual_framework: 'conceptualFramework',
@@ -177,13 +211,8 @@ const RM_STATE_KEY_MAP = {
 };
 
 // Keys copied through under their own name because the UI reads them directly.
-const RM_PASSTHROUGH_KEYS = ['corpus_stats', 'status', 'hitl_checkpoint'];
+const RM_PASSTHROUGH_KEYS = ['corpus_stats', 'status', 'hitl_checkpoint', 'prisma_tracker', 'validation_report'];
 
-// Single mapper for every snake_case payload the backend sends (SSE node_update,
-// SSE checkpoint/completed state, and the /research-mode/result rehydrate call).
-// Unknown keys are ignored on purpose: the raw graph state carries large arrays
-// (raw_papers, screened_papers, messages) that used to be copied verbatim into
-// state.rm and then straight into localStorage, blowing the storage quota.
 function applyRMStatePayload(payload) {
     if (!payload || typeof payload !== 'object') return;
     Object.entries(RM_STATE_KEY_MAP).forEach(([snake, camel]) => {
@@ -198,19 +227,19 @@ function applyRMStatePayload(payload) {
             state.rm[key] = value;
         }
     });
-    // paper_fetcher sends raw_papers before screening; paper_screener and
-    // fulltext_fetcher both send screened_papers (the latter adds
-    // content_excerpt). Whichever arrives most recently wins — screened_papers
-    // is always the more complete list once it exists.
+
     if (Array.isArray(payload.screened_papers)) {
         state.rm.screenedPapers = payload.screened_papers;
     } else if (Array.isArray(payload.raw_papers) && state.rm.screenedPapers.length === 0) {
         state.rm.screenedPapers = payload.raw_papers;
     }
-    // The backend sends counts under different names depending on the endpoint:
-    // SSE sends raw_papers_count, the rehydrate endpoint sends the arrays.
+
     if (Array.isArray(payload.raw_papers)) state.rm.rawPapersCount = payload.raw_papers.length;
     if (Array.isArray(payload.screened_papers)) state.rm.screenedPapersCount = payload.screened_papers.length;
+    if (Array.isArray(payload.evidence_records)) {
+        state.rm.evidenceRecords = payload.evidence_records;
+        state.rm.evidenceRecordsCount = payload.evidence_records.length;
+    }
 
     // Corpus stats synchronization
     if (payload.corpus_stats) {
@@ -307,21 +336,6 @@ function renderMarkdownSafe(md) {
         return escapeHtml(unwrapped);
     }
     return `<pre class="markdown-fallback">${safe}</pre>`;
-}
-
-const SOURCE_BADGE_MAP = {
-    openalex: { src: 'assets/openalex.png', label: 'OpenAlex', cls: 'index-mark-openalex' },
-    semantic_scholar: { src: 'assets/semantic-scholar.png', label: 'Semantic Scholar', cls: '' },
-    arxiv: { src: 'assets/arxiv.png', label: 'arXiv', cls: '' }
-};
-
-// Reuses the same brand marks the landing page already downloaded (see
-// assets/*.png) so a paper's origin index is visually recognizable instead
-// of a plain text label like "openalex".
-function sourceBadgeHtml(source) {
-    const entry = SOURCE_BADGE_MAP[source];
-    if (!entry) return '';
-    return `<img class="source-badge ${entry.cls}" src="${entry.src}" alt="${entry.label}" title="${entry.label}" width="14" height="14" loading="lazy">`;
 }
 
 let truncatableIdCounter = 0;
@@ -1395,6 +1409,15 @@ function clearRMSession() {
     }
 }
 
+function inferCurrentRMCheckpoint(checkpointName) {
+    if (!checkpointName) return 'checkpoint_1';
+    const clean = String(checkpointName).replace(/_(approved|revising)$/, '');
+    if (clean === 'checkpoint_1' || clean === 'checkpoint_2' || clean === 'checkpoint_3') {
+        return clean;
+    }
+    return 'checkpoint_1';
+}
+
 async function restoreRMSessionOnLoad() {
     try {
         const raw = localStorage.getItem('rm_session');
@@ -1578,8 +1601,14 @@ function resetResearchModeForm() {
     state.rm.researchObjectives = [];
     state.rm.researchQuestions = [];
     state.rm.keywords = [];
+    state.rm.searchProtocol = null;
     state.rm.rawPapersCount = 0;
     state.rm.screenedPapersCount = 0;
+    state.rm.evidenceRecordsCount = 0;
+    state.rm.evidenceRecords = [];
+    state.rm.prismaTracker = null;
+    state.rm.taxonomy = null;
+    state.rm.validationReport = null;
     state.rm.literatureReview = '';
     state.rm.researchGap = '';
     state.rm.conceptualFramework = '';
@@ -1665,65 +1694,6 @@ function updateCorpusStats(stats) {
     if (statsBar) statsBar.style.display = 'grid';
 }
 
-function renderRMSourcesPanel() {
-    if (!dom.rmSourcesPanel) return;
-    const allPapers = getScreenedPapers();
-
-    if (!state.rm || !state.rm.threadId) {
-        dom.rmSourcesPanel.style.display = 'none';
-        return;
-    }
-
-    dom.rmSourcesPanel.style.display = 'flex';
-    if (dom.rmSourcesCountTag) {
-        dom.rmSourcesCountTag.textContent = allPapers.length > 0 ? `${allPapers.length} papers` : 'Awaiting retrieval...';
-    }
-
-    const currentFilter = state.rm.activeSourceFilter || 'all';
-    const papers = currentFilter === 'all'
-        ? allPapers
-        : allPapers.filter(p => p.source === currentFilter);
-
-    if (papers.length === 0) {
-        dom.rmSourcesGrid.innerHTML = `
-            <div class="sources-empty-state">
-                <i data-lucide="compass" style="width: 24px; height: 24px; color: var(--academic-blue); opacity: 0.6; margin-bottom: 0.5rem;"></i>
-                <p style="color: var(--text-secondary); font-weight: 500; font-size: 0.85rem;">
-                    ${allPapers.length === 0 ? 'Corpus retrieval in progress…' : `No sources in "${escapeHtml(currentFilter)}"`}
-                </p>
-                <p style="color: var(--text-muted); font-size: 0.74rem; margin-top: 0.25rem;">
-                    ${allPapers.length === 0 ? 'Screened papers from OpenAlex, Semantic Scholar & arXiv will appear here.' : 'Try selecting "All" to view all indexed papers.'}
-                </p>
-            </div>
-        `;
-        refreshIcons();
-        return;
-    }
-
-    dom.rmSourcesGrid.innerHTML = papers.map((p) => {
-        const realIdx = allPapers.indexOf(p);
-        return `
-        <div class="source-card-item" data-paper-index="${realIdx}">
-            <div class="source-card-header">
-                ${sourceBadgeHtml(p.source)}
-                <span class="source-card-score">${p.relevance_score != null ? p.relevance_score + '/10' : ''}</span>
-            </div>
-            <div class="source-card-title">${escapeHtml(p.title || 'Untitled')}</div>
-            <div class="source-card-meta">${escapeHtml(String(p.year || ''))}${p.authors && p.authors.length ? ' · ' + escapeHtml(Array.isArray(p.authors) ? p.authors[0] : String(p.authors)) : ''}</div>
-        </div>
-    `;
-    }).join('');
-
-    dom.rmSourcesGrid.querySelectorAll('.source-card-item').forEach((card) => {
-        card.addEventListener('click', () => {
-            const idx = parseInt(card.dataset.paperIndex, 10);
-            if (allPapers[idx]) openPaperInspector(allPapers[idx]);
-        });
-    });
-
-    refreshIcons();
-}
-
 function updateRMPipelineTracker(activeStageId, completedStages) {
     const hidden = RM_HIDDEN_STAGES[activeStageId];
     const anchoredStageId = hidden ? hidden.anchor : activeStageId;
@@ -1798,19 +1768,19 @@ function updateRMPipelineTracker(activeStageId, completedStages) {
                 const isHitl = !!stageObj.hitl;
 
                 let chipClass = 'pending';
-                let iconHtml = '<i data-lucide="circle" style="width: 10px; height: 10px;"></i>';
+                let iconHtml = '<i data-lucide="circle" style="width: 8px; height: 8px; opacity: 0.5;"></i>';
 
                 if (isDone) {
                     chipClass = 'completed';
-                    iconHtml = '<i data-lucide="check" style="width: 11px; height: 11px; color: var(--emerald-verified);"></i>';
+                    iconHtml = '<i data-lucide="check" style="width: 9px; height: 9px; color: var(--emerald-verified); stroke-width: 3;"></i>';
                 } else if (isActive) {
                     chipClass = isHitl ? 'review active' : 'active';
                     iconHtml = isHitl 
-                        ? '<i data-lucide="shield-alert" style="width: 12px; height: 12px; color: #f59e0b;"></i>' 
+                        ? '<i data-lucide="shield-alert" style="width: 10px; height: 10px; color: #f59e0b;"></i>' 
                         : '<span class="micro-spin-dot"></span>';
                 } else if (isHitl) {
                     chipClass = 'hitl-pending';
-                    iconHtml = '<i data-lucide="shield" style="width: 10px; height: 10px;"></i>';
+                    iconHtml = '<i data-lucide="shield" style="width: 9px; height: 9px; color: rgba(251, 191, 36, 0.7);"></i>';
                 }
 
                 matrixHtml += `
@@ -1961,47 +1931,38 @@ async function handleRMStart() {
         if (window.lucide) lucide.createIcons();
     }
 }
-
 const RM_CHECKPOINT_TRANSITIONS = {
     checkpoint_1: {
-        phaseBadge: 'Phase 2 of 4: Evidence & Literature Synthesis',
-        title: 'Retrieving Academic Corpus & Synthesizing Literature…',
-        subtitle: 'Querying OpenAlex, Semantic Scholar & arXiv across extracted keywords, deduplicating, screening relevant papers, and formulating the conceptual framework.',
+        phaseBadge: 'Phase 2 of 5: Retrieval & Screening',
+        title: 'Retrieving Multi-Source Literature & Citation Graph…',
+        subtitle: 'Querying OpenAlex, Semantic Scholar, ArXiv, Crossref, and PubMed concurrently to build the comprehensive academic candidate pool.',
         subtasks: [
-            { icon: 'globe', label: 'Querying OpenAlex, Semantic Scholar & arXiv indexes' },
-            { icon: 'filter', label: 'Relevance screening & deduplication of retrieved corpus' },
-            { icon: 'book-open', label: 'Synthesizing literature review, research gap & framework' }
+            { icon: 'globe', label: 'Executing concurrent multi-source API queries' },
+            { icon: 'git-merge', label: 'Resolving OpenCitations forward/backward references graph' },
+            { icon: 'check-square', label: 'Deterministic deduplication & metadata normalization' },
+            { icon: 'filter', label: 'Title & abstract eligibility screening' }
         ]
     },
     checkpoint_2: {
-        phaseBadge: 'Phase 3 of 4: Theoretical & Empirical Hypotheses',
-        title: 'Formulating Research Hypotheses…',
-        subtitle: 'Deriving testable, theoretically grounded hypotheses from the identified research gap and conceptual framework.',
+        phaseBadge: 'Phase 4 of 5: Theoretical Framing',
+        title: 'Structuring Evidence Taxonomy & Research Gaps…',
+        subtitle: 'Synthesizing extracted quantitative metrics and qualitative findings into hierarchical thematic clusters and identifying research gaps.',
         subtasks: [
-            { icon: 'git-branch', label: 'Mapping core empirical constructs & relationships' },
-            { icon: 'sparkles', label: 'Formulating directional hypotheses (H1, H2, ...)' },
-            { icon: 'check-circle-2', label: 'Validating theoretical mechanism alignment' }
+            { icon: 'folder-tree', label: 'Clustering evidence by taxonomy and methodology' },
+            { icon: 'search', label: 'Evaluating research gaps and theoretical conflicts' },
+            { icon: 'layout', label: 'Constructing conceptual framework architecture' }
         ]
     },
     checkpoint_3: {
-        phaseBadge: 'Phase 4 of 4: Empirical Methodology Design',
-        title: 'Designing Research Methodology & Analysis Protocols…',
-        subtitle: 'Constructing empirical research design, data collection protocols, and statistical analysis plans to evaluate the formulated hypotheses.',
+        phaseBadge: 'Phase 5 of 5: Methodology & Full Paper Synthesis',
+        title: 'Formulating Hypotheses & Synthesizing Academic Paper…',
+        subtitle: 'Drafting empirical methodology, results, in-depth discussion, deterministic citation validation, and complete paper sections.',
         subtasks: [
-            { icon: 'layout', label: 'Specifying research design & methodology framework' },
-            { icon: 'database', label: 'Formulating data collection protocols & sampling plan' },
-            { icon: 'bar-chart-2', label: 'Structuring qualitative & quantitative analysis plans' }
-        ]
-    },
-    checkpoint_4: {
-        phaseBadge: 'Final Phase: Full Academic Paper Synthesis',
-        title: 'Synthesizing Full Academic Paper & Report…',
-        subtitle: 'Generating empirical results, in-depth discussion, theoretical and practical implications, limitations, future scope, formatted references, and complete paper sections.',
-        subtasks: [
-            { icon: 'award', label: 'Synthesizing results, discussion & implications' },
-            { icon: 'alert-circle', label: 'Articulating study limitations & future research scope' },
-            { icon: 'book-open', label: 'Formatting verified academic references & appendices' },
-            { icon: 'file-check', label: 'Finalizing paper title, abstract & introduction' }
+            { icon: 'sparkles', label: 'Formulating testable directional hypotheses' },
+            { icon: 'layout', label: 'Specifying proposed research design and analysis plans' },
+            { icon: 'book-open', label: 'Synthesizing evidence-grounded literature review & results' },
+            { icon: 'shield-check', label: 'Running citation & claim integrity verification' },
+            { icon: 'file-check', label: 'Rendering APA references, PRISMA figures & appendices' }
         ]
     }
 };
@@ -2126,8 +2087,6 @@ function updateRMTransitionLoaderNode(nodeId) {
 }
 
 function renderRMHitlPanel(checkpoint) {
-    // The transient scope-definition loader is only shown while the start
-    // request is in flight; once a checkpoint panel renders it is obsolete.
     hideRMCheckpointTransitionLoader();
     dom.rmHitlPanel.style.display = 'block';
     dom.rmHitlBody.innerHTML = '';
@@ -2135,18 +2094,29 @@ function renderRMHitlPanel(checkpoint) {
     dom.rmHitlFeedbackInput.placeholder = 'Specify any edits or revisions for this phase...';
 
     if (checkpoint === 'checkpoint_1') {
-        dom.rmHitlTitle.textContent = 'Checkpoint 1: Scope Review — Problem, Objectives & Questions';
-        dom.rmHitlBadge.textContent = 'Checkpoint 1 of 4';
-        dom.rmHitlFeedbackInput.placeholder = 'e.g. Make objective 2 focus on cost, not latency. Add a question about long-term stability.';
+        dom.rmHitlTitle.textContent = 'Gate 1: Planning & Protocol Review';
+        dom.rmHitlBadge.textContent = 'Gate 1 of 3';
+        dom.rmHitlFeedbackInput.placeholder = 'e.g. Include population constraints, add boolean keyword for transformer models...';
 
         const objectives = state.rm.researchObjectives || [];
         const questions = state.rm.researchQuestions || [];
+        const protocol = state.rm.searchProtocol || {};
 
         dom.rmHitlBody.innerHTML = `
             <div class="form-group">
                 <label class="form-label">Problem Statement</label>
                 <div class="problem-statement-text">${renderMarkdownSafe(state.rm.problemStatement)}</div>
             </div>
+            ${protocol && (protocol.population || protocol.inclusion_criteria) ? `
+            <div class="form-group">
+                <label class="form-label">Systematic Search Protocol (PICOC)</label>
+                <div class="protocol-card" style="background: var(--surface-bg-subtle, rgba(255,255,255,0.03)); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 0.85rem; font-size: 0.85rem;">
+                    <p style="margin-bottom: 0.35rem;"><strong>Domain / Population:</strong> ${escapeHtml(protocol.population || 'General')}</p>
+                    <p style="margin-bottom: 0.35rem;"><strong>Inclusion Criteria:</strong> ${escapeHtml((protocol.inclusion_criteria || []).join('; ') || 'Standard peer-reviewed literature')}</p>
+                    <p style="margin-bottom: 0;"><strong>Exclusion Criteria:</strong> ${escapeHtml((protocol.exclusion_criteria || []).join('; ') || 'Non-English or non-empirical preprints')}</p>
+                </div>
+            </div>
+            ` : ''}
             <div class="form-group">
                 <label class="form-label">Research Objectives <span class="label-tag">auto-defined</span></label>
                 <div class="subtasks-list">
@@ -2177,38 +2147,43 @@ function renderRMHitlPanel(checkpoint) {
             </div>
         `;
     } else if (checkpoint === 'checkpoint_2') {
-        dom.rmHitlTitle.textContent = 'Checkpoint 2: Literature Review & Framework Review';
-        dom.rmHitlBadge.textContent = 'Checkpoint 2 of 4';
+        dom.rmHitlTitle.textContent = 'Gate 2: Evidence & Corpus Review';
+        dom.rmHitlBadge.textContent = 'Gate 2 of 3';
+        dom.rmHitlFeedbackInput.placeholder = 'e.g. Filter out non-benchmark papers, prioritize higher sample studies...';
 
-        const topPapers = getScreenedPapers().slice(0, 10);
-        const evidenceRows = topPapers.map((p, i) => `
-            <div class="evidence-row" data-paper-index="${i}">
-                ${sourceBadgeHtml(p.source)}
-                <span class="evidence-title">${escapeHtml(p.title || 'Untitled')}</span>
-                <span class="evidence-year">${escapeHtml(String(p.year || ''))}</span>
-                <span class="evidence-score">${p.relevance_score != null ? p.relevance_score + '/10' : ''}</span>
+        const topPapers = getScreenedPapers().slice(0, 8);
+        const evidenceRecords = (state.rm.evidenceRecords || []).slice(0, 6);
+
+        const evidenceCards = evidenceRecords.map(e => `
+            <div class="evidence-extract-card" style="background: var(--surface-bg-subtle, rgba(255,255,255,0.02)); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.65rem; margin-bottom: 0.5rem; font-size: 0.82rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                    <span style="font-family: monospace; font-size: 0.75rem; color: var(--academic-blue);">${escapeHtml(e.evidence_id || '')}</span>
+                    <span style="font-size: 0.72rem; padding: 0.1rem 0.4rem; border-radius: 4px; background: rgba(59,130,246,0.15); color: var(--academic-blue); font-weight: 600;">${escapeHtml(e.source_section || 'Abstract')}</span>
+                </div>
+                <p style="margin: 0.25rem 0; font-weight: 500;">${escapeHtml(e.claim_summary || '')}</p>
+                ${e.reported_value != null ? `<div style="font-size: 0.75rem; color: var(--text-secondary);">Metric: <code>${escapeHtml(e.metric_name || '')} = ${e.reported_value}</code></div>` : ''}
             </div>
         `).join('');
 
         dom.rmHitlBody.innerHTML = `
-            ${topPapers.length ? `
             <div class="form-group">
-                <label class="form-label">Evidence Used <span class="label-tag">${state.rm.screenedPapers.length} papers screened</span></label>
-                <div class="evidence-list">${evidenceRows}</div>
+                <label class="form-label">Screened Literature Corpus <span class="label-tag">${state.rm.screenedPapersCount || topPapers.length} studies included</span></label>
+                <div class="evidence-list">
+                    ${topPapers.map((p, i) => `
+                        <div class="evidence-row" data-paper-index="${i}">
+                            ${sourceBadgeHtml(p.retrieval_source || p.source)}
+                            <span class="evidence-title">${escapeHtml(p.title || 'Untitled')}</span>
+                            <span class="evidence-year">${escapeHtml(String(p.year || ''))}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            ${evidenceRecords.length ? `
+            <div class="form-group">
+                <label class="form-label">Extracted Structured Evidence Records <span class="label-tag">${state.rm.evidenceRecordsCount || evidenceRecords.length} records</span></label>
+                <div>${evidenceCards}</div>
             </div>
             ` : ''}
-            <div class="form-group">
-                <label class="form-label">Synthesized Literature Review Snippet</label>
-                ${renderTruncatable(state.rm.literatureReview)}
-            </div>
-            <div class="form-group">
-                <label class="form-label">Identified Research Gap</label>
-                ${renderTruncatable(state.rm.researchGap)}
-            </div>
-            <div class="form-group">
-                <label class="form-label">Proposed Conceptual Framework</label>
-                ${renderTruncatable(state.rm.conceptualFramework)}
-            </div>
         `;
 
         dom.rmHitlBody.querySelectorAll('.evidence-row').forEach((row) => {
@@ -2218,8 +2193,9 @@ function renderRMHitlPanel(checkpoint) {
             });
         });
     } else if (checkpoint === 'checkpoint_3') {
-        dom.rmHitlTitle.textContent = 'Checkpoint 3: Hypotheses Review';
-        dom.rmHitlBadge.textContent = 'Checkpoint 3 of 4';
+        dom.rmHitlTitle.textContent = 'Gate 3: Hypotheses & Theoretical Framework Review';
+        dom.rmHitlBadge.textContent = 'Gate 3 of 3';
+        dom.rmHitlFeedbackInput.placeholder = 'e.g. Refine H2 to specify causal mechanism, adjust conceptual framework boundary...';
 
         dom.rmHitlBody.innerHTML = `
             <div class="form-group">
@@ -2233,33 +2209,25 @@ function renderRMHitlPanel(checkpoint) {
                     `).join('')}
                 </div>
             </div>
-        `;
-    } else if (checkpoint === 'checkpoint_4') {
-        dom.rmHitlTitle.textContent = 'Checkpoint 4: Research Methodology Review';
-        dom.rmHitlBadge.textContent = 'Checkpoint 4 of 4';
-
-        dom.rmHitlBody.innerHTML = `
+            ${state.rm.conceptualFramework ? `
             <div class="form-group">
-                <label class="form-label">Research Design</label>
-                <div class="problem-statement-text">${renderMarkdownSafe(state.rm.researchDesign)}</div>
+                <label class="form-label">Proposed Conceptual Framework</label>
+                ${renderTruncatable(state.rm.conceptualFramework)}
             </div>
+            ` : ''}
+            ${state.rm.researchGap ? `
             <div class="form-group">
-                <label class="form-label">Data Collection Plan</label>
-                <div class="problem-statement-text">${renderMarkdownSafe(state.rm.dataCollectionPlan)}</div>
+                <label class="form-label">Identified Research Gaps</label>
+                ${renderTruncatable(state.rm.researchGap)}
             </div>
-            <div class="form-group">
-                <label class="form-label">Data Analysis Plan</label>
-                <div class="problem-statement-text">${renderMarkdownSafe(state.rm.dataAnalysisPlan)}</div>
-            </div>
+            ` : ''}
         `;
     } else {
-        // Guards against an unrecognised checkpoint id silently rendering an
-        // empty review panel with nothing but an approve button.
-        dom.rmHitlTitle.textContent = 'Checkpoint Review Required';
+        dom.rmHitlTitle.textContent = 'Quality Gate Review Required';
         dom.rmHitlBadge.textContent = 'Review';
         dom.rmHitlBody.innerHTML = `
             <p class="rm-hint">The pipeline is paused at <code>${escapeHtml(checkpoint)}</code>.
-            Approve to continue, or describe the changes you want first.</p>
+            Approve to continue, or specify feedback adjustments.</p>
         `;
     }
 
@@ -2634,6 +2602,116 @@ function processRMSEEvent(data) {
         saveRMSession();
     }
     return data.event;
+}
+
+const SOURCE_BADGE_MAP = {
+    openalex: { src: 'assets/openalex.png', label: 'OpenAlex', cls: 'badge-openalex' },
+    semantic_scholar: { src: 'assets/semantic-scholar.png', label: 'Semantic Scholar', cls: 'badge-semantic' },
+    semantic: { src: 'assets/semantic-scholar.png', label: 'Semantic Scholar', cls: 'badge-semantic' },
+    arxiv: { src: 'assets/arxiv.png', label: 'arXiv', cls: 'badge-arxiv' },
+    crossref: { src: 'assets/crossref.svg', label: 'Crossref', cls: 'badge-crossref' },
+    pubmed: { src: 'assets/pubmed.svg', label: 'PubMed', cls: 'badge-pubmed' },
+    opencitations: { src: 'assets/opencitations.svg', label: 'OpenCitations', cls: 'badge-opencitations' },
+    tavily_web_fallback: { src: 'assets/openalex.png', label: 'Web Fallback', cls: 'badge-generic' }
+};
+
+function getPaperSource(p) {
+    if (!p) return 'unknown';
+    const src = String(p.retrieval_source || p.retrievalSource || p.source || '').toLowerCase().trim();
+    if (src.includes('openalex')) return 'openalex';
+    if (src.includes('semantic') || src === 's2') return 'semantic_scholar';
+    if (src.includes('arxiv')) return 'arxiv';
+    if (src.includes('crossref')) return 'crossref';
+    if (src.includes('pubmed') || src.includes('ncbi') || src.includes('pmc')) return 'pubmed';
+    if (src.includes('opencitations') || src.includes('coci')) return 'opencitations';
+    if (src.includes('tavily')) return 'tavily_web_fallback';
+
+    // Inference fallback if retrieval_source field was omitted
+    if (p.arxiv_id || (p.doi && p.doi.toLowerCase().includes('arxiv'))) return 'arxiv';
+    if (p.pmid || (p.doi && p.doi.toLowerCase().includes('pubmed'))) return 'pubmed';
+    return 'unknown';
+}
+
+// Unknown sources get a neutral "Academic" pill rather than impersonating OpenAlex.
+function sourceBadgeHtml(input) {
+    const srcKey = typeof input === 'object' ? getPaperSource(input) : getPaperSource({ retrieval_source: input });
+    const entry = SOURCE_BADGE_MAP[srcKey];
+    if (!entry) {
+        return `<span class="source-badge-pill badge-generic"><span>Academic</span></span>`;
+    }
+    return `<span class="source-badge-pill ${entry.cls}"><img src="${entry.src}" alt="${entry.label}" width="12" height="12" loading="lazy"><span>${entry.label}</span></span>`;
+}
+
+function renderRMSourcesPanel() {
+    const panel = dom.rmSourcesPanel || document.getElementById('rm-sources-panel');
+    const grid = dom.rmSourcesGrid || document.getElementById('rm-sources-grid');
+    const countTag = dom.rmSourcesCountTag || document.getElementById('rm-sources-count-tag');
+    if (!panel || !grid) return;
+
+    const papers = getScreenedPapers();
+    if (papers.length === 0) {
+        panel.style.display = 'none';
+        return;
+    }
+
+    panel.style.display = 'flex';
+    const filter = (state.rm.activeSourceFilter || 'all').toLowerCase();
+
+    const filtered = filter === 'all'
+        ? papers
+        : papers.filter(p => {
+            const src = getPaperSource(p);
+            if (filter === 'semantic' || filter === 'semantic_scholar') {
+                return src === 'semantic_scholar' || src === 'semantic';
+            }
+            return src.includes(filter);
+        });
+
+    if (countTag) {
+        countTag.textContent = `${filtered.length} paper${filtered.length === 1 ? '' : 's'}`;
+    }
+
+    if (filtered.length === 0) {
+        grid.innerHTML = `
+            <div class="sources-empty-state">
+                <p style="color: var(--text-muted); font-size: 0.8rem; text-align: center;">No papers from ${escapeHtml(filter)} in current corpus.</p>
+            </div>
+        `;
+        return;
+    }
+
+    grid.innerHTML = filtered.map((p) => {
+        const title = escapeHtml(p.title || 'Untitled Paper');
+        const rawAuthors = p.authors || [];
+        const authors = Array.isArray(rawAuthors)
+            ? rawAuthors.slice(0, 2).map(escapeHtml).join(', ') + (rawAuthors.length > 2 ? ' et al.' : '')
+            : escapeHtml(String(rawAuthors || 'Unknown'));
+        const year = escapeHtml(String(p.year || 'n.d.'));
+        const badge = sourceBadgeHtml(p);
+        const doi = p.doi ? `DOI: ${escapeHtml(p.doi)}` : (p.pmid ? `PMID: ${escapeHtml(p.pmid)}` : '');
+        const realIdx = papers.indexOf(p);
+
+        return `
+            <div class="rm-source-item" data-paper-index="${realIdx}">
+                <div class="source-item-top">
+                    ${badge}
+                    <span class="source-item-year">${year}</span>
+                </div>
+                <h4 class="source-item-title">${title}</h4>
+                <div class="source-item-meta">
+                    <span class="source-item-authors">${authors}</span>
+                    ${doi ? `<span class="source-item-doi">${doi}</span>` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    grid.querySelectorAll('.rm-source-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const idx = parseInt(item.dataset.paperIndex, 10);
+            if (papers[idx]) openPaperInspector(papers[idx]);
+        });
+    });
 }
 
 // Best-effort only: matches "(Lastname, YYYY)" and "(Lastname et al., YYYY)"

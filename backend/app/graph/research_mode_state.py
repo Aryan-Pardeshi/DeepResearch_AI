@@ -1,18 +1,36 @@
 from typing import List, Dict, Any, Optional, TypedDict
 
 class ResearchModeState(TypedDict, total=False):
-    """State schema for Autonomous Research Mode pipeline."""
+    """State schema for Autonomous Research Mode pipeline.
+    
+    Contains typed evidence store collections alongside legacy fields for
+    backward compatibility during document compilation and UI updates.
+    """
     thread_id: str
     mode: str  # "research"
     problem_statement: str
     research_objectives: List[str]
     research_questions: List[str]
     keywords: List[str]
-    raw_papers: List[Dict[str, Any]]  # title, abstract, authors, year, doi, url, source
+    
+    # --- Structured Evidence Store (Source of Truth) ---
+    paper_records: List[Dict[str, Any]]       # Serialized PaperRecord objects
+    evidence_records: List[Dict[str, Any]]    # Serialized EvidenceRecord objects
+    review_claims: List[Dict[str, Any]]       # Serialized ReviewClaim objects
+    prisma_tracker: Dict[str, Any]            # Serialized PRISMATracker
+    search_protocol: Dict[str, Any]           # Serialized SearchProtocol
+    taxonomy: Dict[str, Any]                  # Serialized Taxonomy themes
+    validation_report: Dict[str, Any]         # Serialized ValidationReport
+    research_gaps_structured: List[Dict[str, Any]]
+    synthesis_comparisons: List[Dict[str, Any]]
+
+    # --- Legacy Raw Dictionaries (retained for backward compatibility) ---
+    raw_papers: List[Dict[str, Any]]
     screened_papers: List[Dict[str, Any]]
-    literature_review: str
     unverified_citations: List[str]
 
+    # --- Paper Prose Sections (Rendered from Evidence Store) ---
+    literature_review: str
     research_gap: str
     conceptual_framework: str
     hypotheses: List[str]
@@ -30,7 +48,9 @@ class ResearchModeState(TypedDict, total=False):
     introduction: str
     abstract: str
     title: str
-    hitl_checkpoint: str  # "checkpoint_1", "checkpoint_2", "checkpoint_3", "checkpoint_4", "completed"
+
+    # --- LangGraph & HITL Execution Control ---
+    hitl_checkpoint: str  # "checkpoint_1", "checkpoint_1_revising", "checkpoint_1_approved", "checkpoint_2", "checkpoint_2_revising", "checkpoint_2_approved", "checkpoint_3", "checkpoint_3_revising", "checkpoint_3_approved", "completed"
     user_feedback: Optional[str]
     status: str  # "initializing", "awaiting_approval", "fetching_papers", "synthesizing", "completed", "error"
     error: Optional[str]
@@ -38,4 +58,3 @@ class ResearchModeState(TypedDict, total=False):
     corpus_stats: Dict[str, int]
     figures: Dict[str, str]     # figure name -> absolute image path
     model_overrides: Dict[str, str]     # role -> model name
-

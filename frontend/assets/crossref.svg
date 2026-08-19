@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="cr-grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F26522"/>
+      <stop offset="100%" stop-color="#E23E28"/>
+    </linearGradient>
+    <linearGradient id="cr-grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4B5B68"/>
+      <stop offset="100%" stop-color="#232C33"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="6" fill="#1C2127"/>
+  <!-- Crossref intersecting graphic -->
+  <path d="M7 11.5L13.5 18L10 21.5L3.5 15L7 11.5Z" fill="url(#cr-grad1)"/>
+  <path d="M25 11.5L28.5 15L22 21.5L18.5 18L25 11.5Z" fill="url(#cr-grad1)"/>
+  <path d="M16 8L20 12L12 20L8 16L16 8Z" fill="#FFFFFF" opacity="0.95"/>
+  <path d="M16 24L12 20L20 12L24 16L16 24Z" fill="url(#cr-grad2)"/>
+  <circle cx="16" cy="16" r="3.2" fill="#E23E28"/>
+</svg>
