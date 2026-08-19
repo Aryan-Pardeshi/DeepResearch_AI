@@ -140,7 +140,7 @@
     <header role="banner" class="app-header">
         <div class="logo-container">
             <a href="/" style="text-decoration: none; display: flex; align-items: center; gap: 0.75rem; color: inherit;">
-                <img class="logo-img" src="https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011" alt="DeepResearch AI Assistant Logo" width="32" height="32">
+                <img src="/assets/logo.png" alt="DeepResearch Logo" width="30" height="30" style="border-radius: 7px; overflow: hidden; object-fit: cover; box-shadow: 0 1px 3px rgba(0,0,0,0.25);">
                 <div class="brand-text-group">
                     <span class="logo-text">DEEPRESEARCH</span>
                     <span class="logo-tag">ACADEMIC LAB</span>
@@ -705,8 +705,19 @@
     <footer class="app-footer" role="contentinfo">
         <div class="footer-container">
             <div class="footer-col footer-brand-col">
-                <div class="footer-logo">
-                    <img src="https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011" alt="DeepResearch Logo" width="22" height="22" loading="lazy">
+                <div class="footer-logo" style="display: flex; align-items: center; gap: 0.6rem;">
+                    <svg class="logo-icon-svg" viewBox="0 0 36 36" fill="none" width="26" height="26" xmlns="http://www.w3.org/2000/svg" style="border-radius: 6px;">
+                        <rect width="36" height="36" rx="8" fill="url(#appFooterGrad)"/>
+                        <path d="M10 18L18 10L26 18L18 26L10 18Z" stroke="#ffffff" stroke-width="2" stroke-linejoin="round"/>
+                        <circle cx="18" cy="18" r="3.5" fill="#38bdf8"/>
+                        <path d="M18 6V10M18 26V30M6 18H10M26 18H30" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>
+                        <defs>
+                            <linearGradient id="appFooterGrad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#0284c7"/>
+                                <stop offset="1" stop-color="#2563eb"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
                     <span class="footer-brand-title">DEEPRESEARCH</span>
                     <span class="footer-brand-tag">ACADEMIC LAB</span>
                 </div>

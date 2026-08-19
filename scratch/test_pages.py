@@ -7,11 +7,12 @@ def fetch(url):
 
 # 1. Test Landing Page
 landing_html = fetch('http://127.0.0.1:8000/')
-assert 'From research question to' in landing_html, 'Hero title missing'
+assert 'Turn a research question into a' in landing_html, 'Hero title missing'
 assert 'gh-star-count-badge' in landing_html, 'GitHub star badge missing'
-assert 'inspector-tabs' in landing_html, 'Inspector tabs missing'
-assert 'The 5-Stage Academic Research Pipeline' in landing_html, 'Pipeline section missing'
-assert 'AI does the research.' in landing_html, 'HITL section missing'
+assert 'example-paper' in landing_html, 'Example paper section missing'
+assert 'Research shouldn\'t be a black box' in landing_html, 'Why different section missing'
+assert 'Everything you need to write literature reviews' in landing_html, 'Workflow section missing'
+assert 'AI does the heavy research.' in landing_html, 'HITL section missing'
 assert 'Two Ways to Research' in landing_html, 'Modes section missing'
 assert 'Built as a real research system' in landing_html, 'Tech section missing'
 assert 'href="/app"' in landing_html, 'CTA to /app missing'

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   DEEPRESEARCH MARKETING LANDING PAGE LOGIC
+   DEEPRESEARCH MARKETING LANDING PAGE LOGIC (APPLE MOTION & INTERACTION)
    ========================================================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -8,6 +8,10 @@ document.addEventListener('DOMContentLoaded', () => {
     initInspectorTabs();
     initSmoothScroll();
     initMobileNav();
+    initScrollAnimations();
+    initNavbarScroll();
+    initCardSpecularLighting();
+
     if (window.lucide && typeof window.lucide.createIcons === 'function') {
         window.lucide.createIcons();
     }
@@ -17,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
    1. LIVE GITHUB STARS FETCHER & CACHE
    ========================================================================== */
 const GITHUB_REPO_API = 'https://api.github.com/repos/Aryan-Pardeshi/DeepResearch_AI';
-const GITHUB_STARS_CACHE_KEY = 'deepresearch_github_stars';
+const GITHUB_STARS_CACHE_KEY = 'deepresearch_github_stars_v3';
 const GITHUB_STARS_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 async function initGitHubStars() {
@@ -27,8 +31,8 @@ async function initGitHubStars() {
     function renderStarCount(count) {
         const formatted = count >= 1000 ? `${(count / 1000).toFixed(1)}k` : String(count);
         starBadges.forEach(badge => {
-            badge.textContent = `★ ${formatted}`;
-            badge.style.display = 'inline-block';
+            badge.textContent = formatted;
+            badge.style.display = 'inline-flex';
         });
     }
 
@@ -126,7 +130,7 @@ function initInspectorTabs() {
 }
 
 /* ==========================================================================
-   4. SMOOTH SCROLL FOR IN-PAGE ANCHORS
+   4. APPLE SMOOTH SCROLL FOR IN-PAGE ANCHORS
    ========================================================================== */
 function initSmoothScroll() {
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -136,7 +140,7 @@ function initSmoothScroll() {
             const targetEl = document.querySelector(targetId);
             if (targetEl) {
                 e.preventDefault();
-                const headerOffset = 80;
+                const headerOffset = 64;
                 const elementPosition = targetEl.getBoundingClientRect().top;
                 const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
 
@@ -167,4 +171,70 @@ function initMobileNav() {
             }
         });
     }
+}
+
+/* ==========================================================================
+   6. APPLE INTERSECTION OBSERVER SCROLL REVEAL
+   ========================================================================== */
+function initScrollAnimations() {
+    const revealElements = document.querySelectorAll('.apple-scroll-reveal');
+    if (!revealElements.length) return;
+
+    if (!('IntersectionObserver' in window)) {
+        revealElements.forEach(el => el.classList.add('in-view'));
+        return;
+    }
+
+    const observer = new IntersectionObserver((entries, obs) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('in-view');
+                obs.unobserve(entry.target);
+            }
+        });
+    }, {
+        threshold: 0.12,
+        rootMargin: '0px 0px -40px 0px'
+    });
+
+    revealElements.forEach(el => observer.observe(el));
+}
+
+/* ==========================================================================
+   7. APPLE DYNAMIC NAVBAR SCROLL BEHAVIOR
+   ========================================================================== */
+function initNavbarScroll() {
+    const header = document.querySelector('.landing-header');
+    if (!header) return;
+
+    let ticking = false;
+    window.addEventListener('scroll', () => {
+        if (!ticking) {
+            window.requestAnimationFrame(() => {
+                if (window.scrollY > 24) {
+                    header.classList.add('scrolled');
+                } else {
+                    header.classList.remove('scrolled');
+                }
+                ticking = false;
+            });
+            ticking = true;
+        }
+    }, { passive: true });
+}
+
+/* ==========================================================================
+   8. SPECULAR LIGHTING POINTER TRACKING
+   ========================================================================== */
+function initCardSpecularLighting() {
+    const cards = document.querySelectorAll('.card-specular-glow');
+    cards.forEach(card => {
+        card.addEventListener('mousemove', (e) => {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            card.style.setProperty('--mouse-x', `${x}px`);
+            card.style.setProperty('--mouse-y', `${y}px`);
+        });
+    });
 }
