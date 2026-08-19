@@ -286,11 +286,11 @@ main {
 }
 
 .hero-title {
-    font-family: var(--font-outfit);
-    font-size: 3rem;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Plus Jakarta Sans", "Inter", sans-serif;
+    font-size: clamp(2.2rem, 4.4vw, 3.4rem);
     font-weight: 700;
-    letter-spacing: -0.03em;
-    line-height: 1.18;
+    letter-spacing: -0.04em;
+    line-height: 1.12;
     margin-bottom: 0.85rem;
     color: #ffffff;
     text-wrap: balance;
@@ -299,11 +299,23 @@ main {
     margin-right: auto;
 }
 
-.hero-accent {
-    background: linear-gradient(135deg, #a78bfa 0%, #60a5fa 50%, #38bdf8 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
+.hero-accent,
+.text-gradient {
+    background: linear-gradient(180deg, #ffffff 0%, #a1a1a6 100%) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    color: transparent !important;
+    display: inline-block;
+}
+
+:root.light-mode .hero-accent,
+:root.light-mode .text-gradient {
+    background: linear-gradient(180deg, #1d1d1f 0%, #515154 100%) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    color: transparent !important;
 }
 
 .canvas-text-target {
