@@ -4,777 +4,910 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    
+
     <!-- Primary SEO Meta Tags -->
-    <title>DeepResearch — AI Multi-Agent Research Assistant & Academic Lab</title>
-    <meta name="title" content="DeepResearch — AI Multi-Agent Research Assistant & Academic Lab">
-    <meta name="description" content="Autonomous multi-agent research workspace powered by LangGraph, DeepSeek, OpenAlex, Semantic Scholar, and arXiv. Synthesizes cited academic papers with Human-in-the-Loop review and real-time streaming.">
-    <meta name="keywords" content="AI research assistant, DeepResearch, multi-agent AI, academic paper synthesis, LangGraph research, literature review, PRISMA framework, OpenAlex, Semantic Scholar, arXiv, autonomous research agents, DeepSeek AI">
+    <title>DeepResearch — AI-Powered Academic Research</title>
+    <meta name="title" content="DeepResearch — AI-Powered Academic Research">
+    <meta name="description" content="Turn research questions into structured literature reviews with academic sources, evidence synthesis, citation verification, PRISMA-style reporting, and human review.">
+    <meta name="keywords" content="academic research AI, DeepResearch, literature review AI, multi-agent academic research, PRISMA flow diagram, OpenAlex, Semantic Scholar, arXiv, citation verification, LangGraph research">
     <meta name="author" content="Aryan Pardeshi">
     <meta name="creator" content="Aryan Pardeshi">
     <meta name="publisher" content="DeepResearch Academic Lab">
     <meta name="application-name" content="DeepResearch">
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
-    <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
-    <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
-    <meta name="format-detection" content="telephone=no">
     <link rel="canonical" href="https://deepresearch.dev/">
 
     <!-- PWA, Theme & Mobile Optimization -->
-    <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#06080d" media="(prefers-color-scheme: dark)">
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
     <meta name="color-scheme" content="dark light">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="DeepResearch">
     <link rel="manifest" href="site.webmanifest">
 
-    <!-- Icons -->
-    <link rel="icon" type="image/png" sizes="256x256" href="https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011">
-    <link rel="apple-touch-icon" href="https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011">
-
-    <!-- Resource Preconnects & Hints for Core Web Vitals -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
-    <link rel="dns-prefetch" href="https://cdn-1.webcatalog.io">
-
-    <!-- Open Graph / Facebook / LinkedIn / Discord -->
+    <!-- Open Graph / Facebook / LinkedIn -->
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="DeepResearch">
-    <meta property="og:title" content="DeepResearch — AI Multi-Agent Research Assistant & Academic Lab">
-    <meta property="og:description" content="Autonomous multi-agent research workspace. Transforms research queries into cited academic papers and synthesized reports with Human-in-the-Loop review and real-time streaming.">
+    <meta property="og:title" content="DeepResearch — AI-Powered Academic Research">
+    <meta property="og:description" content="Turn research questions into structured literature reviews with academic sources, evidence synthesis, citation verification, PRISMA reporting, and human review.">
     <meta property="og:url" content="https://deepresearch.dev/">
-    <meta property="og:image" content="https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011">
-    <meta property="og:image:alt" content="DeepResearch AI Multi-Agent Platform">
-    <meta property="og:image:width" content="256">
-    <meta property="og:image:height" content="256">
+    <meta property="og:image" content="https://deepresearch.dev/assets/og-cover.png">
     <meta property="og:locale" content="en_US">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:site" content="@AryanPardeshi">
     <meta name="twitter:creator" content="@AryanPardeshi">
-    <meta name="twitter:title" content="DeepResearch — AI Multi-Agent Research Assistant">
-    <meta name="twitter:description" content="Autonomous multi-agent research workspace powered by LangGraph, OpenAlex, Semantic Scholar, and arXiv with Human-in-the-Loop approval.">
-    <meta name="twitter:image" content="https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011">
-    <meta name="twitter:image:alt" content="DeepResearch AI Multi-Agent Platform">
+    <meta name="twitter:title" content="DeepResearch — AI-Powered Academic Research">
+    <meta name="twitter:description" content="Turn research questions into structured literature reviews with academic sources, evidence synthesis, citation verification, PRISMA reporting, and human review.">
 
-    <!-- Schema.org JSON-LD Structured Data for Google Knowledge Graph & Rich Results -->
+    <!-- Schema.org JSON-LD Structured Data -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@graph": [
         {
-          "@type": "WebApplication",
-          "@id": "https://deepresearch.dev/#webapp",
+          "@type": "SoftwareApplication",
+          "@id": "https://deepresearch.dev/#software",
           "name": "DeepResearch",
-          "alternateName": ["DeepResearch AI", "DeepResearch Academic Lab"],
-          "description": "An AI-powered multi-agent research assistant that turns research queries into structured, cited reports and academic papers with human-in-the-loop plan approval and real-time streaming.",
-          "applicationCategory": "EducationalApplication, BusinessApplication, ResearchApplication",
+          "alternateName": "DeepResearch Academic Lab",
+          "applicationCategory": "ResearchApplication, EducationalApplication",
           "operatingSystem": "All",
-          "browserRequirements": "Requires JavaScript. Requires HTML5.",
           "url": "https://deepresearch.dev/",
+          "description": "An open-source multi-agent academic research assistant that synthesizes literature reviews, verifies citations, builds PRISMA flowcharts, and generates complete papers with human-in-the-loop checkpoints.",
           "author": {
             "@type": "Person",
             "name": "Aryan Pardeshi",
-            "url": "https://github.com/Aryan-Pardeshi",
-            "sameAs": [
-              "https://linkedin.com/in/aryan-pardeshi-dev",
-              "https://github.com/Aryan-Pardeshi"
-            ]
+            "url": "https://github.com/Aryan-Pardeshi"
           },
           "offers": {
             "@type": "Offer",
             "price": "0",
             "priceCurrency": "USD"
-          },
-          "featureList": [
-            "Autonomous Multi-Agent Graph with LangGraph",
-            "Human-in-the-Loop (HITL) Checkpoints & Review",
-            "Academic Literature Synthesis from OpenAlex, Semantic Scholar, and arXiv",
-            "Real-time Server-Sent Events (SSE) Progress Streaming",
-            "Automated PRISMA Flowchart & Evidence Matrix Generation",
-            "Export to Markdown (.md), PDF (.pdf), and Word (.docx)"
-          ],
-          "screenshot": "https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011"
-        },
-        {
-          "@type": "WebSite",
-          "@id": "https://deepresearch.dev/#website",
-          "url": "https://deepresearch.dev/",
-          "name": "DeepResearch",
-          "description": "Multi-agent autonomous research workspace powered by LangGraph, DeepSeek, and academic APIs.",
-          "publisher": {
-            "@type": "Person",
-            "name": "Aryan Pardeshi",
-            "url": "https://github.com/Aryan-Pardeshi"
           }
         }
       ]
     }
     </script>
 
-    <link rel="stylesheet" href="style.css?v=2.8.9">
-    <!-- Marked.js for markdown parsing -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- DOMPurify for XSS sanitization -->
-    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js" integrity="sha384-+VfUPEb0PdtChMwmBcBmykRMDd+v6D/oFmB3rZM/puCMDYcIvF968OimRh4KQY9a" crossorigin="anonymous"></script>
-    <!-- Lucide icons -->
+    <!-- Stylesheets & Icons -->
+    <link rel="stylesheet" href="landing.css">
+    <!-- Lucide Icons -->
     <script src="https://cdn.jsdelivr.net/npm/lucide/dist/umd/lucide.min.js"></script>
 </head>
 <body>
-    <!-- Skip Link for Accessibility & Keyboard Navigation -->
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
-
-    <!-- Backend Offline Banner. The styles for this existed but the element did
-         not, so a backend that was down or still cold-starting gave no signal. -->
-    <div class="backend-offline-banner" id="backend-offline-banner" style="display:none;">
-        <i data-lucide="wifi-off" style="width: 18px; height: 18px; flex-shrink: 0;"></i>
-        <span><strong>Backend unreachable.</strong> Waiting for the research service to respond — a sleeping host can take up to a minute to wake.<span id="backend-offline-reason" class="backend-offline-reason"></span></span>
-    </div>
-
-    <!-- Header -->
-    <header role="banner" class="app-header">
-        <div class="logo-container">
-            <img class="logo-img" src="https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011" alt="DeepResearch AI Assistant Logo" width="32" height="32">
-            <div class="brand-text-group">
-                <span class="logo-text">DEEPRESEARCH</span>
-                <span class="logo-tag">ACADEMIC LAB</span>
-            </div>
-        </div>
-
-        <!-- Mode Switcher + Estimated Time Hint -->
-        <div class="mode-switcher-wrapper">
-            <nav class="mode-toggle-container" id="mode-toggle-container" aria-label="Research Workspace Modes">
-                <button class="mode-tab" id="tab-deepsearch" data-mode="deepsearch" aria-label="Switch to DeepSearch Web Research mode">
-                    <i data-lucide="globe" style="width: 15px; height: 15px;"></i>
-                    <span>DeepSearch</span>
-                </button>
-                <button class="mode-tab active" id="tab-researchmode" data-mode="researchmode" aria-label="Switch to Academic Research Paper mode">
-                    <i data-lucide="book-open-check" style="width: 15px; height: 15px;"></i>
-                    <span>Research Mode</span>
-                </button>
-            </nav>
-            <!-- Both runtimes are shown at once, each under its own tab, so the
-                 two modes can be compared without switching between them. -->
-            <div class="mode-time-row" id="mode-time-row">
-                <span class="mode-time-estimate" id="mode-time-deepsearch">~5–10 min</span>
-                <span class="mode-time-estimate is-active" id="mode-time-researchmode">~15–30 min</span>
-            </div>
-        </div>
-
-        <div class="header-actions">
-            <a href="https://github.com/Aryan-Pardeshi/DeepResearch_AI" target="_blank" rel="noopener noreferrer" class="btn-secondary btn-github" id="github-star-btn" title="View DeepResearch on GitHub" aria-label="View DeepResearch on GitHub repository">
-                <!-- Drawn inline rather than via data-lucide: lucide carries no brand
-                     marks, so a "github" icon name silently renders nothing. -->
-                <svg class="brand-mark" viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
-                <span class="github-star-wrapper" id="github-star-wrapper">
-                    <i data-lucide="star" class="github-star-icon" id="github-star-icon" style="width: 12px; height: 12px; display: none;"></i>
-                    <span class="github-star-count" id="github-star-count" style="display: none;"></span>
-                </span>
+    <!-- Navigation Header -->
+    <header class="landing-header" role="banner">
+        <div class="container header-container">
+            <a href="/" class="logo-brand" aria-label="DeepResearch Homepage">
+                <svg class="logo-icon-svg" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="36" height="36" rx="8" fill="url(#brandGrad)"/>
+                    <path d="M10 18L18 10L26 18L18 26L10 18Z" stroke="#ffffff" stroke-width="2" stroke-linejoin="round"/>
+                    <circle cx="18" cy="18" r="3.5" fill="#38bdf8"/>
+                    <path d="M18 6V10M18 26V30M6 18H10M26 18H30" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>
+                    <defs>
+                        <linearGradient id="brandGrad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#0284c7"/>
+                            <stop offset="1" stop-color="#2563eb"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <div class="brand-text-col">
+                    <span class="brand-name">DEEPRERESEARCH</span>
+                    <span class="brand-sub">Academic Lab</span>
+                </div>
             </a>
-            <button class="btn-icon theme-toggle" id="theme-toggle-btn" title="Toggle theme" aria-label="Toggle dark and light color theme">
-                <i data-lucide="moon" style="width: 18px; height: 18px;"></i>
-            </button>
-            <button class="btn-secondary btn-new-research" id="new-research-btn" style="display:none;" aria-label="Start new research run">
-                <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
-                <span>New Run</span>
-            </button>
+
+            <nav class="nav-menu" id="nav-menu" role="navigation" aria-label="Main Navigation">
+                <a href="#how-it-works" class="nav-link">How It Works</a>
+                <a href="#pipeline" class="nav-link">Pipeline &amp; HITL</a>
+                <a href="#outputs" class="nav-link">Outputs</a>
+                <a href="#modes" class="nav-link">Modes</a>
+                <a href="#architecture" class="nav-link">Architecture</a>
+            </nav>
+
+            <div class="nav-actions">
+                <a href="https://github.com/Aryan-Pardeshi/DeepResearch_AI" target="_blank" rel="noopener noreferrer" class="btn-gh-stars" title="View repository on GitHub">
+                    <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+                    <span>Star</span>
+                    <span class="gh-star-count-badge">★ ...</span>
+                </a>
+
+                <button class="btn-theme" id="theme-toggle-btn" aria-label="Toggle color theme" title="Toggle dark/light theme">
+                    <i data-lucide="moon" style="width: 17px; height: 17px;"></i>
+                </button>
+
+                <a href="/app" class="btn-primary">
+                    <span>Start Research</span>
+                    <i data-lucide="arrow-right" style="width: 15px; height: 15px;"></i>
+                </a>
+
+                <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Toggle mobile menu">
+                    <i data-lucide="menu" style="width: 20px; height: 20px;"></i>
+                </button>
+            </div>
         </div>
     </header>
 
-    <!-- Env Setup Gate / Mandatory Configuration Modal -->
-    <div class="modal-overlay setup-gate-modal" id="setup-gate-modal" style="display:none;">
-        <div class="modal modal-lg">
-            <div class="modal-header">
-                <div class="modal-title-group">
-                    <h2 class="modal-title">System Environment Setup</h2>
-                    <span class="modal-subtitle">Configure OpenAI-Compatible Provider & Academic Search Keys</span>
-                </div>
-            </div>
-
-            <!-- Prominent Privacy Notice -->
-            <div class="local-privacy-banner">
-                <i data-lucide="shield-check" style="width: 24px; height: 24px; flex-shrink: 0;"></i>
-                <div class="privacy-notice-text">
-                    <strong>PRIVACY GUARANTEE:</strong> All keys and configuration values are saved <u>locally on your machine only</u> in your local <code>.env</code> file. Nothing is uploaded, collected, or transmitted to external servers.
-                </div>
-            </div>
-
-            <div class="modal-body">
-                <form id="setup-gate-form">
-                    <div class="form-section-title">LLM Configuration (OpenAI Compatible)</div>
-                    <div class="form-grid">
-                        <div class="form-group full-width">
-                            <label class="form-label" for="gate-llm-base-url">LLM Base URL</label>
-                            <input type="text" class="form-input" id="gate-llm-base-url" placeholder="https://api.deepseek.com or http://localhost:11434/v1">
-                        </div>
-                        <div class="form-group full-width">
-                            <label class="form-label" for="gate-llm-api-key">LLM API Key</label>
-                            <input type="password" class="form-input" id="gate-llm-api-key" placeholder="sk-...">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="gate-llm-model-planner">Planner Model</label>
-                            <input type="text" class="form-input" id="gate-llm-model-planner" placeholder="deepseek-chat">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="gate-llm-model-researcher">Researcher Model</label>
-                            <input type="text" class="form-input" id="gate-llm-model-researcher" placeholder="deepseek-chat">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="gate-llm-model-aggregator">Aggregator Model</label>
-                            <input type="text" class="form-input" id="gate-llm-model-aggregator" placeholder="deepseek-chat">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="gate-tavily-key">Tavily Web Search Key</label>
-                            <input type="password" class="form-input" id="gate-tavily-key" placeholder="tvly-...">
-                        </div>
-                    </div>
-
-                    <div class="form-section-title" style="margin-top: 1.5rem;">Academic Search (Optional / Free)</div>
-                    <div class="form-grid">
-                        <div class="form-group full-width">
-                            <label class="form-label" for="gate-openalex-email">OpenAlex Email (Polite Pool - Faster Response)</label>
-                            <input type="email" class="form-input" id="gate-openalex-email" placeholder="researcher@university.edu">
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <span class="save-status" id="gate-save-status"></span>
-                <button class="btn-primary" id="gate-submit-btn">
-                    <i data-lucide="lock" style="width: 16px; height: 16px;"></i>
-                    <span>Save & Initialize Workspace</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- Main Container -->
     <main id="main-content" role="main">
-        
-        <!-- DEEPSEARCH MODE PANELS -->
-        
-        <!-- View 1: Landing Panel -->
-        <section id="landing-panel" class="panel" aria-label="DeepSearch Web Research">
-            <h1 class="hero-title">Ask anything. We will <span class="canvas-text-target hero-accent" data-text="plan, research, and synthesize.">plan, research, and synthesize.</span></h1>
-            <p class="hero-subtitle">Multi-agent web research workspace driven by autonomous agent loops.</p>
 
-            <div class="search-box-container">
-                <textarea class="search-input" id="query-input" placeholder="What would you like to research today?" aria-label="Research query input prompt"></textarea>
-                <div class="search-box-meta">
-                    <span class="input-char-counter" id="query-char-counter">0 words</span>
-                    <span class="input-shortcut-hint"><kbd class="kbd-hint">Ctrl</kbd> + <kbd class="kbd-hint">Enter</kbd> to plan</span>
-                </div>
-                <div class="search-controls">
-                    <div class="filter-group">
-                        <span class="filter-label">Tavily Filters:</span>
-                        <div class="chips-container" id="filter-chips" role="group" aria-label="Topic search filters">
-                            <button type="button" class="chip active" data-topic="all">All</button>
-                            <button type="button" class="chip" data-topic="news">News</button>
-                            <button type="button" class="chip" data-topic="academic">Academic</button>
-                            <button type="button" class="chip" data-topic="finance">Finance</button>
-                            <button type="button" class="chip" data-topic="patent">Patent</button>
-                        </div>
+        <!-- ==========================================================================
+             HERO SECTION
+             ========================================================================== -->
+        <section class="hero-section">
+            <div class="container">
+                <div class="hero-content">
+                    <div class="hero-pill-badge">
+                        <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i>
+                        <span>Autonomous Multi-Agent Academic Pipeline · Powered by LangGraph</span>
                     </div>
-                    <button class="btn-primary" id="plan-research-btn" aria-label="Plan and execute multi-agent research">
-                        <span>Plan Research</span>
-                        <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
-                    </button>
-                </div>
-            </div>
 
-        </section>
+                    <h1 class="hero-title">
+                        From research question to <span class="text-gradient">evidence-backed paper.</span>
+                    </h1>
 
-        <!-- View 2: Approval Panel -->
-        <section id="approval-panel" class="panel" aria-label="Plan Approval and Review Console">
-            <div class="approval-header">
-                <h2 class="section-title">Research Design Console</h2>
-                <button class="btn-secondary btn-new-research" id="approval-new-research-btn" aria-label="Start new session">
-                    <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
-                    <span>New Session</span>
-                </button>
-            </div>
-            
-            <div class="original-query-banner">
-                <span>Research Query: </span><strong id="approval-query-display">"..."</strong>
-            </div>
-
-            <div class="approval-grid">
-                <div class="card">
-                    <div class="card-header">
-                        <i class="card-icon" data-lucide="book-open" style="width: 20px; height: 20px;"></i>
-                        <h2 class="card-title">Problem Statement</h2>
-                    </div>
-                    <p class="problem-statement-text" id="approval-ps-text">Generating problem statement…</p>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">
-                        <i class="card-icon" data-lucide="list-todo" style="width: 20px; height: 20px;"></i>
-                        <h2 class="card-title">Proposed Research Plan</h2>
-                    </div>
-                    <div class="subtasks-list" id="approval-subtasks-container"></div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">
-                        <i class="card-icon" data-lucide="edit-3" style="width: 20px; height: 20px;"></i>
-                        <h2 class="card-title">Revisions Console</h2>
-                    </div>
-                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
-                        Need changes? Type instructions below or click Approve to execute.
+                    <p class="hero-subtitle">
+                        DeepResearch searches global academic indexes, screens evidence, synthesizes findings, verifies citations, and assembles structured research papers — with human review at every major decision.
                     </p>
-                    <textarea class="feedback-textarea" id="feedback-input" placeholder="Type instructions to modify the plan..."></textarea>
-                    <div class="input-meta-bar">
-                        <span class="input-char-counter" id="feedback-char-counter">0 words</span>
-                        <span class="input-shortcut-hint"><kbd class="kbd-hint">Ctrl</kbd> + <kbd class="kbd-hint">Enter</kbd> to submit</span>
-                    </div>
-                    
-                    <div class="feedback-controls">
-                        <button class="btn-secondary" id="submit-feedback-btn" style="display: none;">
-                            <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i>
-                            <span>Request Revision</span>
-                        </button>
-                        <button class="btn-primary" id="approve-plan-btn">
-                            <i data-lucide="play" style="width: 16px; height: 16px;"></i>
-                            <span>Approve & Run Research</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </section>
 
-        <!-- View 3: Execution Workspace Panel -->
-        <section id="workspace-panel" class="panel">
-            <aside class="workers-sidebar">
-                <h2 class="sidebar-title">
-                    <i data-lucide="cpu" style="width: 20px; height: 20px; color: var(--accent-purple);"></i>
-                    <span>Parallel Researchers</span>
-                </h2>
-                <div class="sidebar-timer-container" id="sidebar-timer-container">
-                    <i data-lucide="clock" style="width: 16px; height: 16px; color: var(--accent-purple);"></i>
-                    <span class="timer-label">Research Time:</span>
-                    <span id="research-timer" class="timer-value">00:00</span>
-                </div>
-                <div class="workers-list" id="workers-list-container"></div>
-            </aside>
-
-            <article class="report-workspace">
-                <div class="report-workspace-header">
-                    <h2 class="section-title" style="margin: 0;">Research Report</h2>
-                    <div class="report-actions" style="display: flex; gap: 0.5rem;">
-                        <button class="btn-secondary" id="copy-md-btn" style="display:none; gap: 0.35rem; align-items: center;">
-                            <i data-lucide="copy" style="width: 16px; height: 16px;"></i>
-                            <span>Copy Report</span>
-                        </button>
-                        <button class="btn-secondary btn-download" id="download-md-btn" style="display:none; gap: 0.35rem; align-items: center;">
-                            <i data-lucide="download" style="width: 16px; height: 16px;"></i>
-                            <span>Download .md</span>
-                        </button>
-                        <button class="btn-primary" id="workspace-new-research-btn" style="display:none; gap: 0.35rem; align-items: center;">
-                            <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
-                            <span>New Session</span>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="aggregator-progress-bar" id="workspace-progress-bar">
-                    <div class="aggregator-progress-fill"></div>
-                </div>
-
-                <div class="report-container">
-                    <div class="report-content" id="report-output"></div>
-                    <div class="streaming-loader" id="report-streaming-indicator" style="display: none;">
-                        <div class="streaming-dots"><span></span><span></span><span></span></div>
-                        <span>Synthesizing final research report...</span>
-                    </div>
-                    <div class="sources-section" id="workspace-sources-section" style="display: none;">
-                        <div class="sources-header">
-                            <h2 class="sources-title">
-                                <i data-lucide="link" style="width: 18px; height: 18px; color: var(--accent-purple);"></i>
-                                <span>Retrieved Sources</span>
-                            </h2>
-                        </div>
-                        <div class="sources-grid" id="workspace-sources-container"></div>
-                    </div>
-                </div>
-            </article>
-        </section>
-
-
-        <!-- RESEARCH MODE PANELS -->
-
-        <!-- Research Mode View 1: Input Panel -->
-        <section id="rm-input-panel" class="panel active">
-            <div class="rm-hero-header">
-                <h1 class="hero-title">Academic Research <span class="canvas-text-target hero-accent" data-text="Paper Synthesis">Paper Synthesis</span></h1>
-            </div>
-
-            <!-- Social Proof & Scale Metric Bento Showcase -->
-            <div class="rm-metrics-showcase">
-                <div class="rm-metric-card">
-                    <div class="metric-giant-val" id="rm-total-papers">33</div>
-                    <div class="metric-label">Papers Synthesized</div>
-                    <div class="metric-subtext">Peer-structured with methodology &amp; references</div>
-                </div>
-                <div class="rm-metric-card">
-                    <div class="metric-giant-val">250M+</div>
-                    <div class="metric-label">Indexed Sources</div>
-                    <div class="metric-subtext">OpenAlex, Semantic Scholar &amp; arXiv</div>
-                </div>
-                <div class="rm-metric-card">
-                    <div class="metric-giant-val">20</div>
-                    <div class="metric-label">Specialist Agents</div>
-                    <div class="metric-subtext">Autonomous multi-agent academic pipeline</div>
-                </div>
-            </div>
-
-            <div class="rm-input-card card">
-                <div class="form-group">
-                    <label class="form-label" for="rm-ps-input">Core Problem Statement *</label>
-                    <textarea class="form-input rm-textarea" id="rm-ps-input" placeholder="State the core research gap, problem, or empirical challenge to investigate..."></textarea>
-                    <div class="input-meta-bar">
-                        <span class="input-char-counter" id="rm-ps-char-counter">0 words</span>
-                        <span class="input-shortcut-hint"><kbd class="kbd-hint">Ctrl</kbd> + <kbd class="kbd-hint">Enter</kbd> to launch</span>
-                    </div>
-                    <p class="rm-hint">Research Objectives and Research Questions are drafted automatically from this statement. You review and re-prompt them at Checkpoint 1.</p>
-                </div>
-
-                <details class="rm-advanced" id="rm-advanced-panel">
-                    <summary class="rm-advanced-summary">
-                        <i data-lucide="sliders-horizontal" style="width: 15px; height: 15px;"></i>
-                        <span>Advanced — define scope manually (optional)</span>
-                    </summary>
-                    <div class="rm-advanced-body">
-                        <p class="rm-hint">Anything you fill in here is kept verbatim; anything left blank is auto-defined by the agents.</p>
-                        <div class="form-group">
-                            <label class="form-label" for="rm-objs-input">Research Objectives (One per line)</label>
-                            <textarea class="form-input rm-textarea-sm" id="rm-objs-input" placeholder="e.g. Examine theoretical mechanisms&#10;Evaluate empirical replication studies"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="rm-rqs-input">Research Questions (One per line)</label>
-                            <textarea class="form-input rm-textarea-sm" id="rm-rqs-input" placeholder="e.g. What factors predict outcome Y?&#10;How does condition X impact system performance?"></textarea>
-                        </div>
-                    </div>
-                </details>
-
-                <button class="btn-primary btn-lg" id="rm-start-btn" style="width: 100%; justify-content: center;">
-                    <i data-lucide="atom" style="width: 18px; height: 18px;"></i>
-                    <span>Launch Autonomous Academic Pipeline</span>
-                </button>
-
-                <!-- The three indexes actually queried by academic_search.py. -->
-                <div class="index-strip">
-                    <span class="index-strip-label">Indexed sources</span>
-                    <div class="index-list">
-                        <a class="index-chip" href="https://openalex.org" target="_blank" rel="noopener noreferrer" title="OpenAlex — open catalogue of scholarly works">
-                            <img class="index-mark index-mark-openalex" src="assets/openalex.png" alt="OpenAlex scholarly catalog logo" width="22" height="22" loading="lazy">
-                            <span class="index-name">OpenAlex</span>
+                    <div class="hero-btn-group">
+                        <a href="/app" class="btn-primary btn-lg">
+                            <span>Start Research</span>
+                            <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
                         </a>
-                        <a class="index-chip" href="https://www.semanticscholar.org" target="_blank" rel="noopener noreferrer" title="Semantic Scholar — AI-powered research corpus">
-                            <img class="index-mark" src="assets/semantic-scholar.png" alt="Semantic Scholar research corpus logo" width="22" height="22" loading="lazy">
-                            <span class="index-name">Semantic Scholar</span>
-                        </a>
-                        <a class="index-chip" href="https://arxiv.org" target="_blank" rel="noopener noreferrer" title="arXiv — open-access preprint archive">
-                            <img class="index-mark" src="assets/arxiv.png" alt="arXiv open preprint archive logo" width="22" height="22" loading="lazy">
-                            <span class="index-name">arXiv</span>
+                        <a href="#how-it-works" class="btn-secondary btn-lg">
+                            <i data-lucide="compass" style="width: 18px; height: 18px;"></i>
+                            <span>See How It Works</span>
                         </a>
                     </div>
+
+                    <div class="hero-trust-bar">
+                        <div class="trust-item">
+                            <i data-lucide="check" style="width: 15px; height: 15px;"></i>
+                            <span>100% Open Source (MIT)</span>
+                        </div>
+                        <div class="trust-item">
+                            <i data-lucide="check" style="width: 15px; height: 15px;"></i>
+                            <span>25 Specialized Agents</span>
+                        </div>
+                        <div class="trust-item">
+                            <i data-lucide="check" style="width: 15px; height: 15px;"></i>
+                            <span>4 Human Checkpoints</span>
+                        </div>
+                        <div class="trust-item">
+                            <i data-lucide="check" style="width: 15px; height: 15px;"></i>
+                            <span>PRISMA 2020 Flow Reporting</span>
+                        </div>
+                    </div>
                 </div>
 
-                <p class="index-footnote">
-                    Open-access full text resolved through Unpaywall, Europe PMC and CORE.
-                </p>
-            </div>
-        </section>
-
-        <!-- Research Mode View 2: Pipeline Execution & HITL Workspace -->
-        <section id="rm-workspace-panel" class="panel" style="position: relative;">
-            <div class="rm-ambient-aura"></div>
-            
-            <!-- Autonomous Academic Pipeline Tracker -->
-            <div class="pipeline-tracker-card card" id="rm-tracker-card">
-                <div class="tracker-top-bar">
-                    <div class="tracker-title-wrap">
-                        <div class="stepper-icon-ring">
-                            <i data-lucide="git-merge" style="width: 16px; height: 16px; color: var(--academic-blue);"></i>
-                        </div>
-                        <div>
-                            <h3 class="stepper-headline">Autonomous Academic Pipeline</h3>
-                            <div class="stepper-live-sub">
-                                <span class="stepper-pulse-dot"></span>
-                                <span id="rm-active-task-label">Phase 1: Inception &amp; Scoping</span>
+                <!-- Hero Visual: Workflow & Live Output Inspector -->
+                <div class="hero-visual-wrapper" id="outputs">
+                    <div class="workflow-inspector-card">
+                        <div class="inspector-header-bar">
+                            <div class="inspector-window-controls">
+                                <span class="win-dot red"></span>
+                                <span class="win-dot yellow"></span>
+                                <span class="win-dot green"></span>
                             </div>
-                        </div>
-                    </div>
 
-                    <div class="tracker-meta-group">
-                        <span class="stepper-status-pill" id="rm-pipeline-status-tag" aria-live="polite">Waiting for your review — Checkpoint 1</span>
-                        <div class="rm-mini-timer" id="rm-timer-container" title="Elapsed Research Time">
-                            <i data-lucide="clock" style="width: 12px; height: 12px;"></i>
-                            <span id="rm-research-timer">00:00</span>
-                        </div>
-                        <button class="tracker-collapse-btn" id="rm-tracker-collapse-toggle" type="button">
-                            <span id="tracker-toggle-lbl">Collapse</span>
-                            <i data-lucide="chevron-up" id="tracker-toggle-icon" style="width: 13px; height: 13px;"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="tracker-expandable-content" id="rm-tracker-expandable-content">
-                    <!-- 5 Corpus Stats Cards (Prominently visible during run) -->
-                    <div class="rm-corpus-stats" id="rm-corpus-stats-bar">
-                        <div class="stat-card"><span class="stat-num" id="stat-retrieved">0</span> <span class="stat-lbl">Retrieved</span></div>
-                        <div class="stat-card"><span class="stat-num" id="stat-dedup">0</span> <span class="stat-lbl">Deduplicated</span></div>
-                        <div class="stat-card"><span class="stat-num" id="stat-screened">0</span> <span class="stat-lbl">Screened</span></div>
-                        <div class="stat-card"><span class="stat-num" id="stat-included">0</span> <span class="stat-lbl">Included</span></div>
-                        <div class="stat-card"><span class="stat-num" id="stat-fulltext">0</span> <span class="stat-lbl">Full-Text</span></div>
-                    </div>
-
-                    <!-- Complete 20-Stage Real-Time Pipeline Matrix -->
-                    <div class="pipeline-stages-container" id="rm-stages-container">
-                        <div class="pipeline-stages-matrix" id="rm-stages-matrix">
-                            <!-- Populated dynamically: 4 phases, 20 stage pills with real-time state badges -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Main Content Area: HITL Review vs Live Paper Stream -->
-            <div class="rm-workspace-body">
-
-                <div class="rm-workspace-grid">
-                <div class="rm-main-column">
-
-                <!-- PRISMA & Evidence Section (Materializes during run) -->
-                <div class="rm-evidence-card card" id="rm-evidence-card" style="display: none; margin-bottom: 1.5rem;">
-                    <div class="card-header border-bottom">
-                        <div class="title-group" style="display: flex; align-items: center; gap: 8px;">
-                            <i data-lucide="bar-chart-3" style="width: 20px; height: 20px; color: var(--academic-blue);"></i>
-                            <h3 class="card-title" style="margin: 0; font-size: 1.05rem;">Study Selection (PRISMA) & Hypothesis Evidence Matrix</h3>
-                        </div>
-                    </div>
-                    <div class="card-body" style="padding: 1rem;">
-                        <div id="rm-prisma-view" style="margin-bottom: 1rem; text-align: center;"></div>
-                        <div id="rm-evidence-matrix-view" style="overflow-x: auto;"></div>
-                    </div>
-                </div>
-
-                <!-- HITL Review Panel -->
-                <div class="rm-hitl-panel card" id="rm-hitl-panel" style="display: none;">
-                    <div class="card-header border-bottom">
-                        <div class="hitl-title-group">
-                            <i data-lucide="shield-alert" style="width: 22px; height: 22px; color: var(--amber-review);"></i>
-                            <h2 class="card-title" id="rm-hitl-title">Checkpoint Review Required</h2>
-                        </div>
-                        <span class="hitl-badge" id="rm-hitl-checkpoint-badge">Checkpoint 1 of 4</span>
-                    </div>
-
-                    <div class="hitl-content-body" id="rm-hitl-body">
-                        <!-- Dynamic Checkpoint Inputs -->
-                    </div>
-
-                    <div class="hitl-actions">
-                        <div class="form-group" style="width: 100%;">
-                            <label class="form-label" for="rm-hitl-feedback-input">Revision Request (Optional)</label>
-                            <textarea class="form-input rm-textarea-sm" id="rm-hitl-feedback-input" placeholder="Specify any edits or revisions for this phase..."></textarea>
-                            <div class="input-meta-bar" style="margin-top: 0.35rem;">
-                                <span class="input-char-counter" id="rm-hitl-char-counter">0 words</span>
-                                <span class="input-shortcut-hint"><kbd class="kbd-hint">Ctrl</kbd> + <kbd class="kbd-hint">Enter</kbd> to approve</span>
-                            </div>
-                        </div>
-                        <div class="hitl-btn-row">
-                            <button class="btn-secondary" id="rm-hitl-revise-btn">
-                                <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i>
-                                <span>Request Revisions</span>
-                            </button>
-                            <button class="btn-primary btn-emerald" id="rm-hitl-approve-btn">
-                                <i data-lucide="check-circle-2" style="width: 16px; height: 16px;"></i>
-                                <span>Approve & Continue Pipeline</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Final Paper View Card -->
-                <div class="rm-paper-card card" id="rm-paper-card">
-                    <div class="paper-header">
-                        <div class="paper-title-group">
-                            <i data-lucide="file-text" style="width: 22px; height: 22px; color: var(--academic-blue);"></i>
-                            <h2 class="paper-heading" id="rm-paper-title">Academic Paper Workspace</h2>
-                            <div class="paper-stats-badges" id="paper-stats-badges" style="display: none;">
-                                <span class="paper-meta-chip" id="paper-read-time" title="Estimated Reading Time"><i data-lucide="clock" style="width: 12px; height: 12px;"></i> <span id="paper-read-time-val">0 min read</span></span>
-                                <span class="paper-meta-chip" id="paper-word-count" title="Total Word Count"><i data-lucide="file-type-2" style="width: 12px; height: 12px;"></i> <span id="paper-word-count-val">0 words</span></span>
-                            </div>
-                        </div>
-                        <div class="paper-actions">
-                            <button class="btn-secondary" id="toggle-paper-outline-btn" style="display: none;" title="Toggle Document Table of Contents Outline" aria-label="Toggle Document Outline Navigation">
-                                <i data-lucide="list-tree" style="width: 15px; height: 15px;"></i>
-                                <span>Outline</span>
-                            </button>
-                            <button class="btn-secondary" id="rm-copy-paper-btn" style="display: none;">
-                                <i data-lucide="copy" style="width: 16px; height: 16px;"></i>
-                                <span>Copy Text</span>
-                            </button>
-                            <div class="export-dropdown" id="rm-export-dropdown" style="display: none;">
-                                <button class="btn-primary btn-pdf" id="rm-export-main-btn" onclick="toggleExportMenu(event)">
-                                    <i data-lucide="file-down" style="width: 16px; height: 16px;"></i>
-                                    <span>Export Report</span>
-                                    <span class="caret" style="margin-left: 4px;">▼</span>
+                            <div class="inspector-tabs" role="tablist">
+                                <button class="inspector-tab-btn active" data-tab="flow" role="tab" aria-selected="true">
+                                    <i data-lucide="git-merge" style="width: 14px; height: 14px;"></i>
+                                    <span>Execution Graph</span>
                                 </button>
-                                <div class="dropdown-menu" id="rm-export-menu">
-                                    <button class="dropdown-item" onclick="exportReport('pdf')">📄 Export as PDF (.pdf)</button>
-                                    <button class="dropdown-item" onclick="exportReport('docx')">📝 Export as Word (.docx)</button>
-                                </div>
+                                <button class="inspector-tab-btn" data-tab="prisma" role="tab" aria-selected="false">
+                                    <i data-lucide="bar-chart-3" style="width: 14px; height: 14px;"></i>
+                                    <span>PRISMA Flow</span>
+                                </button>
+                                <button class="inspector-tab-btn" data-tab="matrix" role="tab" aria-selected="false">
+                                    <i data-lucide="table" style="width: 14px; height: 14px;"></i>
+                                    <span>Evidence Matrix</span>
+                                </button>
+                                <button class="inspector-tab-btn" data-tab="paper" role="tab" aria-selected="false">
+                                    <i data-lucide="file-text" style="width: 14px; height: 14px;"></i>
+                                    <span>Cited Paper Output</span>
+                                </button>
                             </div>
 
+                            <div class="inspector-status-badge">
+                                <span class="status-pulse"></span>
+                                <span>Human-in-the-Loop Active</span>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="paper-layout-wrapper">
-                        <nav class="paper-outline-rail" id="paper-outline-rail" style="display: none;" aria-label="Document Table of Contents">
-                            <div class="outline-header">
-                                <i data-lucide="compass" style="width: 14px; height: 14px; color: var(--academic-blue);"></i>
-                                <span>Contents</span>
-                            </div>
-                            <ul class="outline-list" id="paper-outline-list">
-                                <!-- Dynamically populated -->
-                            </ul>
-                        </nav>
-
-                        <div class="paper-render-container" id="rm-paper-output">
-                            <div class="paper-placeholder-state" id="rm-paper-placeholder">
-                                <div class="paper-idle-icon" style="margin-bottom: 0.5rem;">
-                                    <i data-lucide="file-clock" style="width: 36px; height: 36px; color: var(--academic-blue); opacity: 0.7;"></i>
+                        <div class="inspector-content-panel">
+                            <!-- Tab 1: Execution Graph -->
+                            <div class="tab-pane active" id="tab-pane-flow">
+                                <div class="execution-flow-grid">
+                                    <div class="flow-node-card">
+                                        <div class="flow-node-header">
+                                            <div class="flow-node-icon">01</div>
+                                            <div class="flow-node-title">Scope &amp; Keywords</div>
+                                        </div>
+                                        <p class="flow-node-desc">Formulates research objectives and boolean query keywords.</p>
+                                    </div>
+                                    <div class="flow-node-card">
+                                        <div class="flow-node-header">
+                                            <div class="flow-node-icon checkpoint">🧑</div>
+                                            <div class="flow-node-title">Checkpoint 1</div>
+                                        </div>
+                                        <p class="flow-node-desc">Human approves problem statement &amp; search filters before querying.</p>
+                                    </div>
+                                    <div class="flow-node-card">
+                                        <div class="flow-node-header">
+                                            <div class="flow-node-icon">02</div>
+                                            <div class="flow-node-title">Corpus Retrieval</div>
+                                        </div>
+                                        <p class="flow-node-desc">Fetches OpenAlex, Semantic Scholar &amp; arXiv papers in parallel.</p>
+                                    </div>
+                                    <div class="flow-node-card">
+                                        <div class="flow-node-header">
+                                            <div class="flow-node-icon">03</div>
+                                            <div class="flow-node-title">Screening &amp; Dedup</div>
+                                        </div>
+                                        <p class="flow-node-desc">Deduplicates by DOI and evaluates relevance (scored 0-10).</p>
+                                    </div>
+                                    <div class="flow-node-card">
+                                        <div class="flow-node-header">
+                                            <div class="flow-node-icon checkpoint">🧑</div>
+                                            <div class="flow-node-title">Checkpoint 2</div>
+                                        </div>
+                                        <p class="flow-node-desc">Human inspects literature synthesis, gaps, and evidence strip.</p>
+                                    </div>
+                                    <div class="flow-node-card">
+                                        <div class="flow-node-header">
+                                            <div class="flow-node-icon">04</div>
+                                            <div class="flow-node-title">Hypotheses &amp; Method</div>
+                                        </div>
+                                        <p class="flow-node-desc">Derives grounded hypotheses and methodological design.</p>
+                                    </div>
+                                    <div class="flow-node-card">
+                                        <div class="flow-node-header">
+                                            <div class="flow-node-icon">05</div>
+                                            <div class="flow-node-title">Paper Assembly</div>
+                                        </div>
+                                        <p class="flow-node-desc">Compiles 14 sections with citation verification and exports.</p>
+                                    </div>
                                 </div>
-                                <p style="color: var(--text-secondary); font-weight: 600; font-size: 0.95rem;">
-                                    Paper Synthesis In Progress
-                                </p>
-                                <p style="margin-top: 0.35rem; color: var(--text-muted); font-size: 0.82rem; max-width: 440px; line-height: 1.5; text-align: center;">
-                                    The pipeline is retrieving and screening papers. Sections will appear here as each stage completes.
-                                </p>
-                                <div class="paper-skeleton-outline">
-                                    <div class="skeleton-pill" style="width: 140px;"></div>
-                                    <div class="skeleton-bar" style="width: 88%;"></div>
-                                    <div class="skeleton-bar" style="width: 76%;"></div>
-                                    <div class="skeleton-bar" style="width: 65%;"></div>
+                            </div>
+
+                            <!-- Tab 2: PRISMA Diagram -->
+                            <div class="tab-pane" id="tab-pane-prisma">
+                                <div class="prisma-diagram-preview">
+                                    <div class="prisma-step-row">
+                                        <div class="prisma-box">
+                                            <div class="prisma-box-title">1. Identification</div>
+                                            <div class="prisma-box-stat">142 Records</div>
+                                            <div class="prisma-box-sub">OpenAlex (82) · S2 (36) · arXiv (24)</div>
+                                        </div>
+                                        <div class="prisma-box prisma-box-excluded">
+                                            <div class="prisma-box-title">Deduplication</div>
+                                            <div class="prisma-box-stat">24 Excluded</div>
+                                            <div class="prisma-box-sub">Duplicate DOIs / normalized titles</div>
+                                        </div>
+                                    </div>
+                                    <div class="prisma-step-row">
+                                        <div class="prisma-box">
+                                            <div class="prisma-box-title">2. Screening</div>
+                                            <div class="prisma-box-stat">118 Records Screened</div>
+                                            <div class="prisma-box-sub">LLM batched relevance evaluation</div>
+                                        </div>
+                                        <div class="prisma-box prisma-box-excluded">
+                                            <div class="prisma-box-title">Irrelevant</div>
+                                            <div class="prisma-box-stat">74 Excluded</div>
+                                            <div class="prisma-box-sub">Score &lt; 6.0 against scope criteria</div>
+                                        </div>
+                                    </div>
+                                    <div class="prisma-step-row">
+                                        <div class="prisma-box">
+                                            <div class="prisma-box-title">3. Included Corpus</div>
+                                            <div class="prisma-box-stat">26 Studies Included</div>
+                                            <div class="prisma-box-sub">Full text resolved via Unpaywall &amp; PMC</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Tab 3: Evidence Matrix -->
+                            <div class="tab-pane" id="tab-pane-matrix">
+                                <div class="table-preview-wrapper">
+                                    <table class="evidence-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Study &amp; Year</th>
+                                                <th>Primary Focus</th>
+                                                <th>Methodology</th>
+                                                <th>Key Findings</th>
+                                                <th>Evidence Level</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><strong>Vaswani et al. (2017)</strong></td>
+                                                <td>Self-Attention Mechanisms</td>
+                                                <td>Transformer Architecture</td>
+                                                <td>Replaces recurrent layers; enables massive parallelization.</td>
+                                                <td><span class="evidence-tag">High (Pivotal)</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Radford et al. (2019)</strong></td>
+                                                <td>Unsupervised Multitask</td>
+                                                <td>Autoregressive Pre-training</td>
+                                                <td>Demonstrates zero-shot transfer across diverse NLP benchmarks.</td>
+                                                <td><span class="evidence-tag">High</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Brown et al. (2020)</strong></td>
+                                                <td>Few-Shot In-Context Learning</td>
+                                                <td>Empirical Scaling Laws</td>
+                                                <td>Scale improves sample efficiency without fine-tuning weights.</td>
+                                                <td><span class="evidence-tag">High</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Touvron et al. (2023)</strong></td>
+                                                <td>Open Foundation Models</td>
+                                                <td>Public Data Training</td>
+                                                <td>Optimized token efficiency outperforms proprietary counterparts.</td>
+                                                <td><span class="evidence-tag">High (Empirical)</span></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Tab 4: Cited Paper Preview -->
+                            <div class="tab-pane" id="tab-pane-paper">
+                                <div class="paper-mockup-sheet">
+                                    <div class="paper-mock-title">Comparative Analysis of Multi-Agent Architectures in Systematic Academic Synthesis</div>
+                                    <div class="paper-mock-meta">
+                                        <span>DeepResearch Academic Lab</span> • <span>Verified Corpus: 26 Papers</span> • <span>PRISMA 2020 Compliant</span>
+                                    </div>
+                                    <div class="paper-mock-abstract">
+                                        <strong>Abstract:</strong> This systematic review investigates autonomous orchestration models for academic literature discovery. Leveraging state-gated execution graphs and multi-database retrieval, we analyze how human-in-the-loop checkpoints eliminate hallucination in automated literature reviews.
+                                    </div>
+                                    <div class="paper-mock-body">
+                                        <p>Recent advancements in generative foundation models <span class="citation-pill">(Brown et al., 2020)</span> have catalyzed automated scientific synthesis. However, without grounded retrieval from indexed catalogs such as OpenAlex and arXiv, generative systems remain susceptible to non-existent citations. By enforcing strict DAG verification <span class="citation-pill">(Vaswani et al., 2017)</span>, DeepResearch guarantees verifiable evidence provenance...</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
+            </div>
+        </section>
+
+
+        <!-- ==========================================================================
+             IMMEDIATE PRODUCT PROOF ("WHAT YOU GET")
+             ========================================================================== -->
+        <section class="section section-alt" id="how-it-works">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-tag">Core Capabilities</span>
+                    <h2 class="section-title">One research question. A complete research workflow.</h2>
+                    <p class="section-desc">
+                        DeepResearch eliminates manual literature hunting and disconnected note-taking with a cohesive, evidence-grounded research pipeline.
+                    </p>
                 </div>
 
-                <!-- Sources Library: all screened papers, browsable throughout the run -->
-                <aside class="rm-sources-sidebar card" id="rm-sources-panel" style="display: none;">
-                    <div class="rm-sources-header">
-                        <div class="tracker-title-group">
-                            <i data-lucide="library" style="width: 18px; height: 18px; color: var(--academic-blue);"></i>
-                            <h2 class="tracker-title">Sources</h2>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon-wrapper">
+                            <i data-lucide="search" style="width: 24px; height: 24px;"></i>
                         </div>
-                        <span class="tracker-status-tag" id="rm-sources-count-tag">0 papers</span>
+                        <h3 class="feature-card-title">Literature Discovery</h3>
+                        <p class="feature-card-desc">
+                            Queries 250M+ scholarly works across OpenAlex, Semantic Scholar, and arXiv simultaneously to assemble a comprehensive seed corpus.
+                        </p>
+                        <div class="feature-card-footer">Indexed Global Catalogs</div>
                     </div>
-                    <div class="sources-filter-bar" id="sources-filter-bar" role="group" aria-label="Filter sources by database">
-                        <button type="button" class="source-filter-chip active" data-source-filter="all">All</button>
-                        <button type="button" class="source-filter-chip" data-source-filter="openalex">OpenAlex</button>
-                        <button type="button" class="source-filter-chip" data-source-filter="semantic_scholar">Semantic</button>
-                        <button type="button" class="source-filter-chip" data-source-filter="arxiv">arXiv</button>
+
+                    <div class="feature-card">
+                        <div class="feature-icon-wrapper indigo">
+                            <i data-lucide="filter" style="width: 24px; height: 24px;"></i>
+                        </div>
+                        <h3 class="feature-card-title">Evidence Screening &amp; Dedup</h3>
+                        <p class="feature-card-desc">
+                            Deduplicates records across databases by DOI and normalized title, scoring every paper's abstract on a 0–10 relevance threshold against your scope.
+                        </p>
+                        <div class="feature-card-footer">Automated Relevance Filter</div>
                     </div>
-                    <div class="rm-sources-grid" id="rm-sources-grid"></div>
-                </aside>
+
+                    <div class="feature-card">
+                        <div class="feature-icon-wrapper emerald">
+                            <i data-lucide="user-check" style="width: 24px; height: 24px;"></i>
+                        </div>
+                        <h3 class="feature-card-title">Human-in-the-Loop Review</h3>
+                        <p class="feature-card-desc">
+                            The LangGraph state machine genuinely pauses at 4 strategic checkpoints. Review, refine, or steer research direction before committing tokens.
+                        </p>
+                        <div class="feature-card-footer">Steerable Decision Gates</div>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon-wrapper amber">
+                            <i data-lucide="shield-check" style="width: 24px; height: 24px;"></i>
+                        </div>
+                        <h3 class="feature-card-title">Citation Verification</h3>
+                        <p class="feature-card-desc">
+                            A dedicated verification agent compares synthesized claims back to retrieved full-text excerpts to prevent phantom citations and hallucination.
+                        </p>
+                        <div class="feature-card-footer">Strict Source Provenance</div>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon-wrapper">
+                            <i data-lucide="git-commit" style="width: 24px; height: 24px;"></i>
+                        </div>
+                        <h3 class="feature-card-title">PRISMA Flow Reporting</h3>
+                        <p class="feature-card-desc">
+                            Automatically tracks counts across identification, deduplication, screening, and inclusion to render standard PRISMA systematic-review figures.
+                        </p>
+                        <div class="feature-card-footer">Academic Standard Figures</div>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon-wrapper emerald">
+                            <i data-lucide="file-down" style="width: 24px; height: 24px;"></i>
+                        </div>
+                        <h3 class="feature-card-title">Multi-Format Paper Export</h3>
+                        <p class="feature-card-desc">
+                            Assembles complete 14-section papers with structured headings, formatted bibliographies, and figures, exporting directly to PDF (.pdf) and Word (.docx).
+                        </p>
+                        <div class="feature-card-footer">PDF &amp; DOCX Downloads</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ==========================================================================
+             5-STAGE ACADEMIC PIPELINE (RESEARCH MODE)
+             ========================================================================== -->
+        <section class="section" id="pipeline">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-tag">25-Agent Architecture</span>
+                    <h2 class="section-title">The 5-Stage Academic Research Pipeline</h2>
+                    <p class="section-desc">
+                        AI handles the heavy literature retrieval and synthesis while you retain complete editorial control at every major checkpoint.
+                    </p>
                 </div>
 
+                <div class="pipeline-stages-stack">
+                    <!-- Stage 1 -->
+                    <div class="stage-block-card">
+                        <div class="stage-card-header">
+                            <div class="stage-num-title">
+                                <span class="stage-badge-pill">Phase 01</span>
+                                <h3 class="stage-headline">Scope Definition &amp; Keyword Generation</h3>
+                            </div>
+                            <span class="inspector-status-badge">Checkpoint 1</span>
+                        </div>
+                        <div class="stage-columns-grid">
+                            <div class="stage-col-item">
+                                <h4>What DeepResearch Does</h4>
+                                <p>Extracts core research objectives, drafts research questions, and maps Boolean search terms.</p>
+                            </div>
+                            <div class="stage-col-item">
+                                <h4>What You Review</h4>
+                                <p>Approve or edit the problem scope, objectives, and academic keywords in plain English.</p>
+                            </div>
+                            <div class="stage-col-item">
+                                <h4>What Is Produced</h4>
+                                <p>Structured scoping parameters ready for multi-database querying.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stage 2 -->
+                    <div class="stage-block-card">
+                        <div class="stage-card-header">
+                            <div class="stage-num-title">
+                                <span class="stage-badge-pill">Phase 02</span>
+                                <h3 class="stage-headline">Literature Retrieval, Screening &amp; Framework</h3>
+                            </div>
+                            <span class="inspector-status-badge">Checkpoint 2</span>
+                        </div>
+                        <div class="stage-columns-grid">
+                            <div class="stage-col-item">
+                                <h4>What DeepResearch Does</h4>
+                                <p>Queries OpenAlex, S2, and arXiv; deduplicates, screens relevance, and resolves open-access PDFs.</p>
+                            </div>
+                            <div class="stage-col-item">
+                                <h4>What You Review</h4>
+                                <p>Inspect the synthesized literature review, identified research gap, and live paper evidence strip.</p>
+                            </div>
+                            <div class="stage-col-item">
+                                <h4>What Is Produced</h4>
+                                <p>Screened literature corpus, PRISMA counts, and conceptual framework.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stage 3 -->
+                    <div class="stage-block-card">
+                        <div class="stage-card-header">
+                            <div class="stage-num-title">
+                                <span class="stage-badge-pill">Phase 03</span>
+                                <h3 class="stage-headline">Theoretical &amp; Empirical Hypotheses</h3>
+                            </div>
+                            <span class="inspector-status-badge">Checkpoint 3</span>
+                        </div>
+                        <div class="stage-columns-grid">
+                            <div class="stage-col-item">
+                                <h4>What DeepResearch Does</h4>
+                                <p>Formulates grounded theoretical and empirical hypotheses directly from literature findings.</p>
+                            </div>
+                            <div class="stage-col-item">
+                                <h4>What You Review</h4>
+                                <p>Validate, refine, or adjust proposed hypotheses before experimental design begins.</p>
+                            </div>
+                            <div class="stage-col-item">
+                                <h4>What Is Produced</h4>
+                                <p>Explicit testable hypotheses with theoretical rationales.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stage 4 -->
+                    <div class="stage-block-card">
+                        <div class="stage-card-header">
+                            <div class="stage-num-title">
+                                <span class="stage-badge-pill">Phase 04</span>
+                                <h3 class="stage-headline">Methodology &amp; Research Design</h3>
+                            </div>
+                            <span class="inspector-status-badge">Checkpoint 4</span>
+                        </div>
+                        <div class="stage-columns-grid">
+                            <div class="stage-col-item">
+                                <h4>What DeepResearch Does</h4>
+                                <p>Designs research methodology, data collection protocols, and statistical analysis plans.</p>
+                            </div>
+                            <div class="stage-col-item">
+                                <h4>What You Review</h4>
+                                <p>Approve experimental rigor, sample definitions, and analytical criteria.</p>
+                            </div>
+                            <div class="stage-col-item">
+                                <h4>What Is Produced</h4>
+                                <p>Formal research design and analysis specification.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stage 5 -->
+                    <div class="stage-block-card">
+                        <div class="stage-card-header">
+                            <div class="stage-num-title">
+                                <span class="stage-badge-pill">Phase 05</span>
+                                <h3 class="stage-headline">Full Paper Assembly &amp; Verification</h3>
+                            </div>
+                            <span class="inspector-status-badge">Final Output</span>
+                        </div>
+                        <div class="stage-columns-grid">
+                            <div class="stage-col-item">
+                                <h4>What DeepResearch Does</h4>
+                                <p>Synthesizes 14 complete sections, verifies citations, builds figures, and formats output.</p>
+                            </div>
+                            <div class="stage-col-item">
+                                <h4>What You Review</h4>
+                                <p>Interactive paper inspector, inline citation links, and document outline navigation.</p>
+                            </div>
+                            <div class="stage-col-item">
+                                <h4>What Is Produced</h4>
+                                <p>Cited academic paper ready for PDF and Word (.docx) export.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ==========================================================================
+             HUMAN-IN-THE-LOOP SECTION
+             ========================================================================== -->
+        <section class="section section-alt hitl-section">
+            <div class="container">
+                <div class="hitl-container-grid">
+                    <div class="hitl-text-pane">
+                        <span class="section-tag">Human-In-The-Loop</span>
+                        <h2>AI does the research.<br>You stay in control.</h2>
+                        <p>
+                            Most AI tools attempt to write entire papers in a single ungrounded pass. DeepResearch uses LangGraph <code style="font-family: var(--font-mono); color: var(--brand-primary); background: var(--bg-surface); padding: 2px 6px; border-radius: 4px;">interrupt()</code> calls to pause the graph at four critical decision gates.
+                        </p>
+                        <p>
+                            Provide feedback in natural language, request revisions, or approve with one click. The state machine never commits to downstream research without your explicit consent.
+                        </p>
+                        <a href="/app" class="btn-primary">
+                            <span>Experience HITL Workflow</span>
+                            <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
+                        </a>
+                    </div>
+
+                    <div class="checkpoints-timeline">
+                        <div class="cp-timeline-item">
+                            <div class="cp-icon-ring">1</div>
+                            <div class="cp-item-content">
+                                <h4>Checkpoint 1 · Scope &amp; Keywords</h4>
+                                <p>Review problem statement and search terms before querying hundreds of papers.</p>
+                            </div>
+                        </div>
+                        <div class="cp-timeline-item">
+                            <div class="cp-icon-ring">2</div>
+                            <div class="cp-item-content">
+                                <h4>Checkpoint 2 · Literature &amp; Framework</h4>
+                                <p>Examine synthesized findings, research gaps, and screened evidence cards.</p>
+                            </div>
+                        </div>
+                        <div class="cp-timeline-item">
+                            <div class="cp-icon-ring">3</div>
+                            <div class="cp-item-content">
+                                <h4>Checkpoint 3 · Theoretical Hypotheses</h4>
+                                <p>Validate proposed hypotheses before formulating methodology.</p>
+                            </div>
+                        </div>
+                        <div class="cp-timeline-item">
+                            <div class="cp-icon-ring">4</div>
+                            <div class="cp-item-content">
+                                <h4>Checkpoint 4 · Methodology &amp; Analysis</h4>
+                                <p>Approve research design and statistical strategy before writing the paper.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ==========================================================================
+             TWO WAYS TO RESEARCH (COMPARISON)
+             ========================================================================== -->
+        <section class="section" id="modes">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-tag">Flexible Research Modes</span>
+                    <h2 class="section-title">Two Ways to Research</h2>
+                    <p class="section-desc">
+                        Choose between fast, cited web reports or comprehensive, peer-structured academic paper synthesis.
+                    </p>
+                </div>
+
+                <div class="modes-comparison-grid">
+                    <!-- DeepSearch Mode Card -->
+                    <div class="mode-card">
+                        <div class="mode-header">
+                            <div class="mode-title">DeepSearch</div>
+                            <div class="mode-tagline">Fast web research &amp; cited synthesis</div>
+                        </div>
+                        <ul class="mode-specs-list">
+                            <li class="mode-spec-item">
+                                <i data-lucide="clock" style="width: 18px; height: 18px;"></i>
+                                <span><strong>Runtime:</strong> ~1–2 minutes</span>
+                            </li>
+                            <li class="mode-spec-item">
+                                <i data-lucide="users" style="width: 18px; height: 18px;"></i>
+                                <span><strong>Agents:</strong> 5 parallel researchers (fan-out)</span>
+                            </li>
+                            <li class="mode-spec-item">
+                                <i data-lucide="globe" style="width: 18px; height: 18px;"></i>
+                                <span><strong>Sources:</strong> Tavily Web Search (News, Finance, Academic)</span>
+                            </li>
+                            <li class="mode-spec-item">
+                                <i data-lucide="shield" style="width: 18px; height: 18px;"></i>
+                                <span><strong>Checkpoints:</strong> 1 (Plan approval &amp; revisions)</span>
+                            </li>
+                            <li class="mode-spec-item">
+                                <i data-lucide="file-text" style="width: 18px; height: 18px;"></i>
+                                <span><strong>Output:</strong> Cited Markdown report with web links</span>
+                            </li>
+                        </ul>
+                        <a href="/app?mode=deepsearch" class="btn-secondary" style="width: 100%; justify-content: center;">
+                            <span>Try DeepSearch</span>
+                            <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
+                        </a>
+                    </div>
+
+                    <!-- Research Mode Card -->
+                    <div class="mode-card featured">
+                        <span class="mode-badge-top">Recommended for Academics</span>
+                        <div class="mode-header">
+                            <div class="mode-title">Research Mode</div>
+                            <div class="mode-tagline">Full academic paper &amp; systematic review</div>
+                        </div>
+                        <ul class="mode-specs-list">
+                            <li class="mode-spec-item">
+                                <i data-lucide="clock" style="width: 18px; height: 18px;"></i>
+                                <span><strong>Runtime:</strong> ~15–25 minutes</span>
+                            </li>
+                            <li class="mode-spec-item">
+                                <i data-lucide="cpu" style="width: 18px; height: 18px;"></i>
+                                <span><strong>Agents:</strong> 25 specialized agents across 5 phases</span>
+                            </li>
+                            <li class="mode-spec-item">
+                                <i data-lucide="book-open" style="width: 18px; height: 18px;"></i>
+                                <span><strong>Sources:</strong> OpenAlex, Semantic Scholar, arXiv, Europe PMC, CORE</span>
+                            </li>
+                            <li class="mode-spec-item">
+                                <i data-lucide="user-check" style="width: 18px; height: 18px;"></i>
+                                <span><strong>Checkpoints:</strong> 4 Human-in-the-Loop decision gates</span>
+                            </li>
+                            <li class="mode-spec-item">
+                                <i data-lucide="file-check" style="width: 18px; height: 18px;"></i>
+                                <span><strong>Output:</strong> 14-section paper, PRISMA diagram, Matrix, PDF/DOCX</span>
+                            </li>
+                        </ul>
+                        <a href="/app?mode=researchmode" class="btn-primary" style="width: 100%; justify-content: center;">
+                            <span>Start Research Mode</span>
+                            <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ==========================================================================
+             TECHNICAL CREDIBILITY SECTION
+             ========================================================================== -->
+        <section class="section section-alt" id="architecture">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-tag">Technical Architecture</span>
+                    <h2 class="section-title">Built as a real research system.</h2>
+                    <p class="section-desc">
+                        Engineered for reproducibility, state persistence, and zero vendor lock-in.
+                    </p>
+                </div>
+
+                <div class="tech-grid">
+                    <div class="tech-item-card">
+                        <div class="tech-item-title">LangGraph State Machine</div>
+                        <div class="tech-item-desc">Resumable DAG execution with native <code style="font-family: var(--font-mono);">interrupt()</code> HITL and <code style="font-family: var(--font-mono);">Send()</code> parallelization.</div>
+                    </div>
+                    <div class="tech-item-card">
+                        <div class="tech-item-title">Global Scholarly APIs</div>
+                        <div class="tech-item-desc">Direct querying against OpenAlex, Semantic Scholar, arXiv, Unpaywall, Europe PMC, and CORE.</div>
+                    </div>
+                    <div class="tech-item-card">
+                        <div class="tech-item-title">FastAPI + SSE Streaming</div>
+                        <div class="tech-item-desc">High-throughput asynchronous backend streaming live token-by-token progress and agent states.</div>
+                    </div>
+                    <div class="tech-item-card">
+                        <div class="tech-item-title">SQLite Checkpointing</div>
+                        <div class="tech-item-desc">Persistent graph state surviving backend restarts and browser refreshes with zero data loss.</div>
+                    </div>
+                    <div class="tech-item-card">
+                        <div class="tech-item-title">Bring Your Own Key (BYOK)</div>
+                        <div class="tech-item-desc">Compatible with any OpenAI-style gateway: DeepSeek, OpenAI, Ollama, vLLM, and LiteLLM.</div>
+                    </div>
+                    <div class="tech-item-card">
+                        <div class="tech-item-title">Zero Data Leakage</div>
+                        <div class="tech-item-desc">All API keys and research sessions stay strictly on your local machine in your local <code style="font-family: var(--font-mono);">.env</code> file.</div>
+                    </div>
+                </div>
+
+                <div class="github-open-source-banner">
+                    <div class="gh-banner-left">
+                        <h3>Open Source &amp; Community Driven</h3>
+                        <p>DeepResearch is 100% open source under the permissive MIT License. Inspect the graph code, extend agents, or self-host.</p>
+                    </div>
+                    <a href="https://github.com/Aryan-Pardeshi/DeepResearch_AI" target="_blank" rel="noopener noreferrer" class="btn-primary">
+                        <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+                        <span>View Source on GitHub</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ==========================================================================
+             FINAL CONVERSION CTA SECTION
+             ========================================================================== -->
+        <section class="cta-section">
+            <div class="container">
+                <div class="cta-box-card">
+                    <h2 class="cta-title">Start your next research project with DeepResearch.</h2>
+                    <p class="cta-subtitle">
+                        Open-source academic research tooling with human-in-the-loop control. Turn a research question into evidence-backed papers in minutes.
+                    </p>
+                    <div class="hero-btn-group" style="margin-bottom: 0;">
+                        <a href="/app" class="btn-primary btn-lg">
+                            <span>Launch DeepResearch Workspace</span>
+                            <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
+                        </a>
+                        <a href="https://github.com/Aryan-Pardeshi/DeepResearch_AI" target="_blank" rel="noopener noreferrer" class="btn-secondary btn-lg">
+                            <i data-lucide="github" style="width: 18px; height: 18px;"></i>
+                            <span>View on GitHub</span>
+                        </a>
+                    </div>
+                </div>
             </div>
         </section>
 
     </main>
 
-    <!-- Semantic & SEO Footer -->
-    <footer class="app-footer" role="contentinfo">
-        <div class="footer-container">
-            <div class="footer-col footer-brand-col">
-                <div class="footer-logo">
-                    <img src="https://cdn-1.webcatalog.io/catalog/dolphin-ai/dolphin-ai-icon-filled-256.png?v=1734075877011" alt="DeepResearch Logo" width="22" height="22" loading="lazy">
-                    <span class="footer-brand-title">DEEPRESEARCH</span>
-                    <span class="footer-brand-tag">ACADEMIC LAB</span>
+    <!-- ==========================================================================
+         ACADEMIC FOOTER
+         ========================================================================== -->
+    <footer class="landing-footer" role="contentinfo">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand-col">
+                    <div class="logo-brand">
+                        <svg class="logo-icon-svg" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect width="36" height="36" rx="8" fill="url(#footerBrandGrad)"/>
+                            <path d="M10 18L18 10L26 18L18 26L10 18Z" stroke="#ffffff" stroke-width="2" stroke-linejoin="round"/>
+                            <circle cx="18" cy="18" r="3.5" fill="#38bdf8"/>
+                            <path d="M18 6V10M18 26V30M6 18H10M26 18H30" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>
+                            <defs>
+                                <linearGradient id="footerBrandGrad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+                                    <stop stop-color="#0284c7"/>
+                                    <stop offset="1" stop-color="#2563eb"/>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <div class="brand-text-col">
+                            <span class="brand-name">DEEPRERESEARCH</span>
+                            <span class="brand-sub">Academic Lab</span>
+                        </div>
+                    </div>
+                    <p>
+                        An autonomous, multi-agent AI research workspace with Human-in-the-Loop plan approval, PRISMA study selection, and literature synthesis across global academic databases.
+                    </p>
+                    <div class="footer-tech-tags">
+                        <span class="f-tag">LangGraph</span>
+                        <span class="f-tag">FastAPI</span>
+                        <span class="f-tag">OpenAlex</span>
+                        <span class="f-tag">Semantic Scholar</span>
+                        <span class="f-tag">arXiv</span>
+                        <span class="f-tag">Europe PMC</span>
+                    </div>
                 </div>
-                <p class="footer-desc">
-                    An autonomous, multi-agent AI research workspace with Human-in-the-Loop plan approval, PRISMA study selection, and literature synthesis across global academic databases.
-                </p>
-                <div class="footer-tech-stack" aria-label="Built with technologies">
-                    <span class="tech-tag">LangGraph</span>
-                    <span class="tech-tag">DeepSeek</span>
-                    <span class="tech-tag">OpenAlex</span>
-                    <span class="tech-tag">Semantic Scholar</span>
-                    <span class="tech-tag">arXiv</span>
-                    <span class="tech-tag">Tavily</span>
+
+                <div class="footer-col">
+                    <h3 class="footer-heading">Capabilities</h3>
+                    <ul class="footer-links">
+                        <li><a href="/app?mode=deepsearch">Autonomous Web Research</a></li>
+                        <li><a href="/app?mode=researchmode">Academic Literature Synthesis</a></li>
+                        <li><a href="#pipeline">Human-in-the-Loop Review</a></li>
+                        <li><a href="#outputs">PRISMA &amp; Evidence Matrix</a></li>
+                        <li><a href="/app">PDF &amp; Word (.docx) Export</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-col">
+                    <h3 class="footer-heading">Academic Indexes</h3>
+                    <ul class="footer-links">
+                        <li><a href="https://openalex.org" target="_blank" rel="noopener noreferrer">OpenAlex Catalog</a></li>
+                        <li><a href="https://www.semanticscholar.org" target="_blank" rel="noopener noreferrer">Semantic Scholar</a></li>
+                        <li><a href="https://arxiv.org" target="_blank" rel="noopener noreferrer">arXiv Preprints</a></li>
+                        <li><a href="https://unpaywall.org" target="_blank" rel="noopener noreferrer">Unpaywall Open Access</a></li>
+                        <li><a href="https://europepmc.org" target="_blank" rel="noopener noreferrer">Europe PMC</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-col">
+                    <h3 class="footer-heading">Author &amp; Project</h3>
+                    <ul class="footer-links">
+                        <li><a href="https://github.com/Aryan-Pardeshi" target="_blank" rel="noopener noreferrer">GitHub · Aryan Pardeshi</a></li>
+                        <li><a href="https://linkedin.com/in/aryan-pardeshi-dev" target="_blank" rel="noopener noreferrer">LinkedIn Connect</a></li>
+                        <li><a href="https://github.com/Aryan-Pardeshi/DeepResearch_AI" target="_blank" rel="noopener noreferrer">DeepResearch Repository</a></li>
+                        <li><span>MIT License (Open Source)</span></li>
+                    </ul>
                 </div>
             </div>
 
-            <div class="footer-col">
-                <h3 class="footer-heading">Capabilities</h3>
-                <ul class="footer-links">
-                    <li><span>Autonomous Multi-Agent Web Research</span></li>
-                    <li><span>Academic Paper &amp; Literature Synthesis</span></li>
-                    <li><span>Checkpoints You Review &amp; Approve</span></li>
-                    <li><span>PRISMA Selection &amp; Evidence Matrix</span></li>
-                    <li><span>PDF &amp; Word (.docx) Report Export</span></li>
-                </ul>
-            </div>
-
-            <div class="footer-col">
-                <h3 class="footer-heading">Academic Indexes</h3>
-                <ul class="footer-links">
-                    <li><a href="https://openalex.org" target="_blank" rel="noopener noreferrer">OpenAlex Scholarly Catalog</a></li>
-                    <li><a href="https://www.semanticscholar.org" target="_blank" rel="noopener noreferrer">Semantic Scholar Corpus</a></li>
-                    <li><a href="https://arxiv.org" target="_blank" rel="noopener noreferrer">arXiv Preprint Server</a></li>
-                    <li><a href="https://unpaywall.org" target="_blank" rel="noopener noreferrer">Unpaywall Open Access</a></li>
-                    <li><a href="https://europepmc.org" target="_blank" rel="noopener noreferrer">Europe PMC</a></li>
-                </ul>
-            </div>
-
-            <div class="footer-col">
-                <h3 class="footer-heading">Author &amp; Project</h3>
-                <ul class="footer-links">
-                    <li><a href="https://github.com/Aryan-Pardeshi" target="_blank" rel="noopener noreferrer"><svg class="brand-mark footer-brand-mark" viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg> GitHub Profile</a></li>
-                    <li><a href="https://linkedin.com/in/aryan-pardeshi-dev" target="_blank" rel="noopener noreferrer"><svg class="brand-mark footer-brand-mark" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true" focusable="false"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.225 0z"/></svg> LinkedIn Connect</a></li>
-                    <li><span class="footer-author-note">Created by Aryan Pardeshi</span></li>
-                    <li><span class="footer-open-note">Open-source AI/ML Research Platform</span></li>
-                </ul>
-            </div>
-        </div>
-
-        <div class="footer-bottom">
-            <div class="footer-bottom-inner">
-                <p>&copy; 2026 DeepResearch Academic Lab. Released under MIT License.</p>
-                <p class="footer-security-note">Zero data leakage guarantee: API keys stored locally in .env.</p>
+            <div class="footer-bottom-bar">
+                <div>&copy; 2026 DeepResearch Academic Lab. Released under MIT License.</div>
+                <div>Zero data leakage guarantee: API keys stored locally in .env.</div>
             </div>
         </div>
     </footer>
 
-    <!-- Paper Deep-Dive Inspector Modal -->
-    <div class="paper-modal-overlay" id="paper-detail-modal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; padding: 1.5rem;">
-        <div class="paper-modal-card" style="background: var(--bg-card); border-radius: 12px; max-width: 800px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); border: 1px solid var(--border-color); overflow: hidden;">
-            <div class="paper-modal-header" style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface);">
-                <h3 id="modal-paper-title" style="margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--text-primary); max-width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Paper Deep-Dive Details</h3>
-                <button id="modal-close-btn" style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted); padding: 0 0.5rem;">&times;</button>
-            </div>
-            <div class="paper-modal-body" id="modal-paper-body" style="padding: 1.25rem; overflow-y: auto; line-height: 1.5; font-size: 0.9rem;">
-                <!-- Filled dynamically by JavaScript -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Floating Toasts for Errors -->
-    <div class="toast-container" id="toast-container"></div>
-
-    <!-- Application Script -->
-    <script src="app.js?v=2.8.9"></script>
+    <!-- Landing Page Logic -->
+    <script src="landing.js"></script>
 </body>
 </html>

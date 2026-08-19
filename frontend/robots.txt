@@ -1,6 +1,7 @@
 # robots.txt for DeepResearch AI Research Assistant & Academic Lab
 User-agent: *
 Allow: /
+Allow: /app
 Allow: /assets/
 Allow: /static/
 Disallow: /config/

@@ -218,6 +218,17 @@ def serve_manifest():
         return FileResponse(manifest_file, media_type="application/manifest+json")
     raise HTTPException(status_code=404, detail="site.webmanifest not found")
 
+# Dedicated Research Workspace Application Handlers
+@app.get("/app", include_in_schema=False)
+@app.get("/app/", include_in_schema=False)
+@app.get("/workspace", include_in_schema=False)
+@app.get("/research", include_in_schema=False)
+def serve_workspace_app():
+    app_file = frontend_path / "app.html"
+    if app_file.exists():
+        return FileResponse(app_file, media_type="text/html", headers={"Cache-Control": "no-cache, must-revalidate"})
+    raise HTTPException(status_code=404, detail="Research workspace app.html not found")
+
 class UIStaticFiles(StaticFiles):
     """StaticFiles that forces revalidation of HTML.
 
