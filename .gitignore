@@ -242,12 +242,11 @@ data/
 data/*.db
 
 # Stray PDFs / test artifacts from local test runs
-research-bot/test_*.pdf
-research-bot/scratch/
-research-bot/test_*.docx
+test_*.pdf
+test_*.docx
 e2e_*.pdf
 e2e_*.docx
-research-bot/backend/app/static/exports/
+backend/app/static/exports/
 
 # Machine-specific dev tooling and agents
 .claude/
@@ -256,5 +255,6 @@ research-bot/backend/app/static/exports/
 # Superpowers SDD scratch workspaces (plan artifacts; git history is the record)
 .superpowers/
 
-# PDFs
+# Generated documents
 *.pdf
+*.docx
