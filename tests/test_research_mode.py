@@ -5,10 +5,11 @@ import asyncio
 import uuid
 from pathlib import Path
 
-# Add research-bot directory to sys.path so 'backend' module is importable
+# Add the repo root to sys.path so 'backend' module is importable
 root_dir = Path(__file__).resolve().parent
-if str(root_dir) not in sys.path:
-    sys.path.insert(0, str(root_dir))
+repo_root = root_dir.parent
+if str(repo_root) not in sys.path:
+    sys.path.insert(0, str(repo_root))
 
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.types import Command

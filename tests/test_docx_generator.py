@@ -3,8 +3,9 @@ import sys
 from pathlib import Path
 
 root_dir = Path(__file__).resolve().parent
-if str(root_dir) not in sys.path:
-    sys.path.insert(0, str(root_dir))
+repo_root = root_dir.parent
+if str(repo_root) not in sys.path:
+    sys.path.insert(0, str(repo_root))
 
 from backend.app.tools.docx_generator import generate_paper_docx
 

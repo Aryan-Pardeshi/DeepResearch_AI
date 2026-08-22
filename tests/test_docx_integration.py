@@ -4,12 +4,16 @@ import os
 import sys
 from pathlib import Path
 
+import pytest
+
 root_dir = Path(__file__).resolve().parent
-if str(root_dir) not in sys.path:
-    sys.path.insert(0, str(root_dir))
+repo_root = root_dir.parent
+if str(repo_root) not in sys.path:
+    sys.path.insert(0, str(repo_root))
 
 from backend.app.graph.research_mode_builder import get_research_mode_graph
 
+@pytest.mark.skip(reason="live integration test: runs the real graph against configured LLM/API keys, run manually with `python tests/test_docx_integration.py`")
 async def test_integration():
     graph = get_research_mode_graph()
     thread_id = "test_docx_integration_thread"
