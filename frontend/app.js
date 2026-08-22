@@ -589,9 +589,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const requestedMode = (urlParams.get('mode') || '').toLowerCase();
         if (requestedMode === 'deepsearch' || requestedMode === 'literaturereview' || requestedMode === 'researchmode') {
             switchMode(requestedMode);
+        } else {
+            switchMode(state.mode);
         }
     } catch (e) {
         console.warn('URL mode param error:', e);
+        switchMode(state.mode);
     }
 
     rmPlaceholderCycle = initCyclingPlaceholder(dom.rmPsInput, RM_PLACEHOLDER_EXAMPLES);
@@ -876,9 +879,11 @@ function initHeaderOffset() {
 // figures are always comparable rather than one replacing the other.
 function updateModeTimeEstimate(mode) {
     const ds = dom.modeTimeDeepSearch || document.getElementById('mode-time-deepsearch');
+    const lr = dom.modeTimeLiteratureReview || document.getElementById('mode-time-literaturereview');
     const rm = dom.modeTimeResearchMode || document.getElementById('mode-time-researchmode');
     if (ds) ds.classList.toggle('is-active', mode === 'deepsearch');
-    if (rm) rm.classList.toggle('is-active', mode !== 'deepsearch');
+    if (lr) lr.classList.toggle('is-active', mode === 'literaturereview');
+    if (rm) rm.classList.toggle('is-active', mode === 'researchmode');
 }
 
 // GitHub repository live star count fetcher with 1-hour cache and safe fallback

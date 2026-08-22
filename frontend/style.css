@@ -2711,15 +2711,14 @@ main {
     font-weight: 700;
 }
 
-/* The travelling pill. Both tabs are forced to equal width so a flat 100%
-   translate always lands exactly on the second one. */
+/* The travelling pill for 3 tabs. Each tab is 1/3 of the container width. */
 .mode-toggle-container::before {
     content: "";
     position: absolute;
     top: 4px;
     bottom: 4px;
     left: 4px;
-    width: calc(50% - 4px);
+    width: calc(33.333% - 2.66px);
     border-radius: 50px;
     background: linear-gradient(135deg, #3b82f6, #1d4ed8);
     box-shadow:
@@ -2729,8 +2728,16 @@ main {
     z-index: 0;
 }
 
-.mode-toggle-container:has(#tab-researchmode.active)::before {
+.mode-toggle-container:has(#tab-deepsearch.active)::before {
+    transform: translateX(0%);
+}
+
+.mode-toggle-container:has(#tab-literaturereview.active)::before {
     transform: translateX(100%);
+}
+
+.mode-toggle-container:has(#tab-researchmode.active)::before {
+    transform: translateX(200%);
 }
 
 /* Specular sheen sweeping across the glass on hover. */
@@ -2762,7 +2769,8 @@ main {
     position: relative;
     z-index: 1;
     flex: 1 1 0;
-    min-width: 152px;
+    min-width: 140px;
+    white-space: nowrap;
     justify-content: center;
     background: transparent;
     border: none;
