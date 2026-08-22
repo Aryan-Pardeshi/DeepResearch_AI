@@ -154,11 +154,11 @@
                     <span>DeepSearch</span>
                 </button>
                 <button class="mode-tab" id="tab-literaturereview" data-mode="literaturereview" aria-label="Switch to Literature Review Mode">
-                    <i data-lucide="book-open" style="width: 15px; height: 15px;"></i>
+                    <i data-lucide="book-open" style="width: 15px; height: 15px; flex-shrink: 0; display: inline-block;"></i>
                     <span>Literature Review</span>
                 </button>
                 <button class="mode-tab active" id="tab-researchmode" data-mode="researchmode" aria-label="Switch to Academic Research Paper mode">
-                    <i data-lucide="book-open-check" style="width: 15px; height: 15px;"></i>
+                    <i data-lucide="book-open-check" style="width: 15px; height: 15px; flex-shrink: 0; display: inline-block;"></i>
                     <span>Research Mode</span>
                 </button>
             </nav>
@@ -430,16 +430,42 @@
                         <span>Search Literature</span>
                     </button>
                 </div>
-                <div class="lr-provider-pills" id="lr-provider-pills">
-                    <span class="pill-label">Active Provider Pipeline:</span>
-                    <span class="provider-tag badge-openalex">OpenAlex</span>
-                    <span class="provider-tag badge-semanticscholar">Semantic Scholar</span>
-                    <span class="provider-tag badge-crossref">Crossref</span>
-                    <span class="provider-tag badge-openaire">OpenAIRE Graph v3</span>
-                    <span class="provider-tag badge-doaj">DOAJ</span>
-                    <span class="provider-tag badge-pubmed">PubMed</span>
-                    <span class="provider-tag badge-arxiv">arXiv</span>
-                    <span class="provider-tag badge-datacite">DataCite</span>
+                <div class="index-strip lr-provider-strip" id="lr-provider-pills">
+                    <span class="index-strip-label">Active Provider Pipeline:</span>
+                    <div class="index-list">
+                        <a class="index-chip" href="https://openalex.org" target="_blank" rel="noopener noreferrer" title="OpenAlex — open catalogue of 250M+ scholarly works">
+                            <img class="index-mark index-mark-openalex" src="assets/openalex.png" alt="OpenAlex Logo" width="20" height="20" loading="lazy">
+                            <span class="index-name">OpenAlex</span>
+                        </a>
+                        <a class="index-chip" href="https://www.semanticscholar.org" target="_blank" rel="noopener noreferrer" title="Semantic Scholar — AI-powered research corpus">
+                            <img class="index-mark" src="assets/semantic-scholar.png" alt="Semantic Scholar Logo" width="20" height="20" loading="lazy">
+                            <span class="index-name">Semantic Scholar</span>
+                        </a>
+                        <a class="index-chip" href="https://www.crossref.org" target="_blank" rel="noopener noreferrer" title="Crossref — Official DOI Registration Agency">
+                            <img class="index-mark" src="assets/crossref.svg" alt="Crossref Logo" width="20" height="20" loading="lazy">
+                            <span class="index-name">Crossref</span>
+                        </a>
+                        <a class="index-chip" href="https://graph.openaire.eu" target="_blank" rel="noopener noreferrer" title="OpenAIRE Graph v3 — European Open Science Catalog">
+                            <svg class="index-mark" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                            <span class="index-name">OpenAIRE Graph v3</span>
+                        </a>
+                        <a class="index-chip" href="https://doaj.org" target="_blank" rel="noopener noreferrer" title="DOAJ — Directory of Open Access Journals">
+                            <svg class="index-mark" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
+                            <span class="index-name">DOAJ</span>
+                        </a>
+                        <a class="index-chip" href="https://pubmed.ncbi.nlm.nih.gov" target="_blank" rel="noopener noreferrer" title="PubMed — NCBI biomedical literature database">
+                            <img class="index-mark" src="assets/pubmed.svg" alt="PubMed Logo" width="20" height="20" loading="lazy">
+                            <span class="index-name">PubMed</span>
+                        </a>
+                        <a class="index-chip" href="https://arxiv.org" target="_blank" rel="noopener noreferrer" title="arXiv — open-access preprint archive">
+                            <img class="index-mark" src="assets/arxiv.png" alt="arXiv Logo" width="20" height="20" loading="lazy">
+                            <span class="index-name">arXiv</span>
+                        </a>
+                        <a class="index-chip" href="https://datacite.org" target="_blank" rel="noopener noreferrer" title="DataCite — Research Data & Software DOIs">
+                            <svg class="index-mark" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2.2"><rect width="18" height="18" x="3" y="3" rx="3"/><path d="M9 8h6"/><path d="M12 8v8"/></svg>
+                            <span class="index-name">DataCite</span>
+                        </a>
+                    </div>
                 </div>
             </div>
 

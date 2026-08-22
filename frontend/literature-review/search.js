@@ -130,10 +130,26 @@ export function renderPaperCards(papers, corpus) {
 
         card.appendChild(header);
 
-        // Title
+        // Title as clickable link
         const titleEl = document.createElement('h3');
         titleEl.className = 'lr-paper-title';
-        titleEl.textContent = p.title || 'Untitled Paper';
+        
+        const paperUrl = (p.source_url && /^https?:\/\//i.test(p.source_url))
+            ? p.source_url
+            : (p.doi ? `https://doi.org/${p.doi}` : null);
+
+        if (paperUrl) {
+            const titleLink = document.createElement('a');
+            titleLink.className = 'lr-paper-title-link';
+            titleLink.href = paperUrl;
+            titleLink.target = '_blank';
+            titleLink.rel = 'noopener noreferrer';
+            titleLink.textContent = p.title || 'Untitled Paper';
+            titleLink.title = 'Open paper source in new tab';
+            titleEl.appendChild(titleLink);
+        } else {
+            titleEl.textContent = p.title || 'Untitled Paper';
+        }
         card.appendChild(titleEl);
 
         // Authors
@@ -143,10 +159,20 @@ export function renderPaperCards(papers, corpus) {
         authorsEl.textContent = authorsList || 'Unknown Authors';
         card.appendChild(authorsEl);
 
-        // Venue & DOI
+        // Venue & DOI (clickable DOI link if present)
         const venueEl = document.createElement('div');
         venueEl.className = 'lr-paper-venue';
-        venueEl.textContent = `${p.venue || 'Academic Output'} ${p.doi ? `• DOI: ${p.doi}` : ''}`;
+        venueEl.appendChild(document.createTextNode((p.venue || 'Academic Output') + ' '));
+
+        if (p.doi) {
+            const doiLink = document.createElement('a');
+            doiLink.className = 'lr-doi-link';
+            doiLink.href = `https://doi.org/${p.doi}`;
+            doiLink.target = '_blank';
+            doiLink.rel = 'noopener noreferrer';
+            doiLink.textContent = `• DOI: ${p.doi}`;
+            venueEl.appendChild(doiLink);
+        }
         card.appendChild(venueEl);
 
         // Abstract
@@ -155,32 +181,21 @@ export function renderPaperCards(papers, corpus) {
         abstractEl.textContent = (p.abstract || 'No abstract available.').substring(0, 300) + '...';
         card.appendChild(abstractEl);
 
-        // Actions
+        // Actions (Include / Exclude toggle pills with spring feedback)
         const actionsEl = document.createElement('div');
         actionsEl.className = 'lr-paper-actions';
 
         const includeBtn = document.createElement('button');
         includeBtn.className = `btn-secondary btn-sm btn-include ${isIncluded ? 'active' : ''}`;
-        includeBtn.textContent = 'Include';
+        includeBtn.innerHTML = `<i data-lucide="check" style="width:13px;height:13px;margin-right:4px;"></i>${isIncluded ? 'Included' : 'Include'}`;
         includeBtn.addEventListener('click', () => window.screenPaperAction(corpus.corpus_id, p.paper_id, 'included'));
         actionsEl.appendChild(includeBtn);
 
         const excludeBtn = document.createElement('button');
         excludeBtn.className = `btn-secondary btn-sm btn-exclude ${isExcluded ? 'active' : ''}`;
-        excludeBtn.textContent = 'Exclude';
+        excludeBtn.innerHTML = `<i data-lucide="x" style="width:13px;height:13px;margin-right:4px;"></i>${isExcluded ? 'Excluded' : 'Exclude'}`;
         excludeBtn.addEventListener('click', () => window.screenPaperAction(corpus.corpus_id, p.paper_id, 'excluded'));
         actionsEl.appendChild(excludeBtn);
-
-        if (p.source_url && /^https?:\/\//i.test(p.source_url)) {
-            const linkBtn = document.createElement('a');
-            linkBtn.href = p.source_url;
-            linkBtn.target = '_blank';
-            linkBtn.rel = 'noopener noreferrer';
-            linkBtn.className = 'btn-secondary btn-sm';
-            linkBtn.style.textDecoration = 'none';
-            linkBtn.textContent = 'Link';
-            actionsEl.appendChild(linkBtn);
-        }
 
         card.appendChild(actionsEl);
         grid.appendChild(card);
