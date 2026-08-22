@@ -6158,6 +6158,26 @@ body {
     transform: scale(0.96);
 }
 
+.provider-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 9px;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.badge-openalex { background: rgba(59, 130, 246, 0.18); color: #93c5fd; border-color: rgba(59, 130, 246, 0.35); }
+.badge-semanticscholar { background: rgba(168, 85, 247, 0.18); color: #d8b4fe; border-color: rgba(168, 85, 247, 0.35); }
+.badge-crossref { background: rgba(236, 72, 153, 0.18); color: #f472b6; border-color: rgba(236, 72, 153, 0.35); }
+.badge-openaire { background: rgba(34, 197, 94, 0.18); color: #86efac; border-color: rgba(34, 197, 94, 0.35); }
+.badge-doaj { background: rgba(234, 179, 8, 0.18); color: #fde047; border-color: rgba(234, 179, 8, 0.35); }
+.badge-pubmed { background: rgba(20, 184, 166, 0.18); color: #5eead4; border-color: rgba(20, 184, 166, 0.35); }
+.badge-arxiv { background: rgba(249, 115, 22, 0.18); color: #fdba74; border-color: rgba(249, 115, 22, 0.35); }
+.badge-datacite { background: rgba(99, 102, 241, 0.18); color: #a5b4fc; border-color: rgba(99, 102, 241, 0.35); }
+
 .lr-tabs-nav {
     display: flex;
     gap: 0.5rem;
@@ -6197,17 +6217,58 @@ body {
 .lr-tab-content { display: none; }
 .lr-tab-content.active { display: block; }
 
+.lr-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 0.85rem 1.25rem;
+    background: rgba(13, 17, 26, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: var(--radius-md);
+    margin-bottom: 1.25rem;
+    backdrop-filter: blur(16px);
+}
+.lr-stats-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+}
+.lr-stat-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.85rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 50px;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+.lr-stat-badge strong {
+    color: #ffffff;
+    font-weight: 700;
+}
+.lr-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
 .lr-papers-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
     gap: 1.25rem;
-    margin-top: 1.25rem;
+    margin-top: 1rem;
 }
 .lr-paper-card {
     padding: 1.35rem;
     border: 1px solid rgba(255, 255, 255, 0.09);
     border-radius: var(--radius-lg);
-    background: rgba(13, 17, 26, 0.82);
+    background: rgba(13, 17, 26, 0.85);
     backdrop-filter: blur(20px) saturate(170%);
     -webkit-backdrop-filter: blur(20px) saturate(170%);
     box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
@@ -6226,7 +6287,7 @@ body {
 .lr-paper-title { font-size: 1.05rem; font-weight: 600; line-height: 1.38; margin: 0; color: var(--text-primary); }
 
 .lr-paper-title-link {
-    color: var(--text-primary);
+    color: #ffffff;
     text-decoration: none;
     transition: color 0.15s ease;
 }
@@ -6246,25 +6307,60 @@ body {
     text-decoration: underline;
 }
 
-.lr-paper-authors { font-size: 0.82rem; color: var(--text-muted); }
-.lr-paper-venue { font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; }
-.lr-paper-abstract { font-size: 0.84rem; color: var(--text-secondary); line-height: 1.5; margin: 0; }
-.lr-paper-actions { display: flex; gap: 0.5rem; margin-top: auto; padding-top: 0.65rem; }
+.lr-paper-authors { font-size: 0.83rem; color: #cbd5e1; line-height: 1.4; font-weight: 400; }
+.lr-paper-venue { font-size: 0.81rem; color: var(--text-secondary); font-weight: 500; }
+.lr-paper-abstract { font-size: 0.84rem; color: #94a3b8; line-height: 1.55; margin: 0; }
 
-.btn-include.active {
-    background: rgba(16, 185, 129, 0.2) !important;
-    border-color: rgba(16, 185, 129, 0.5) !important;
-    color: #34d399 !important;
+.lr-paper-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: auto;
+    padding-top: 0.85rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.btn-include,
+.btn-exclude {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.95rem;
+    font-size: 0.8rem;
     font-weight: 600;
+    font-family: var(--font-outfit);
+    border-radius: 50px;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+    transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.btn-include:hover {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.4);
+    color: #34d399;
+}
+.btn-include.active {
+    background: rgba(16, 185, 129, 0.22) !important;
+    border-color: rgba(16, 185, 129, 0.6) !important;
+    color: #34d399 !important;
+    box-shadow: 0 2px 10px rgba(16, 185, 129, 0.2);
+}
+.btn-exclude:hover {
+    background: rgba(244, 63, 94, 0.15);
+    border-color: rgba(244, 63, 94, 0.4);
+    color: #f87171;
 }
 .btn-exclude.active {
-    background: rgba(244, 63, 94, 0.2) !important;
-    border-color: rgba(244, 63, 94, 0.5) !important;
+    background: rgba(244, 63, 94, 0.22) !important;
+    border-color: rgba(244, 63, 94, 0.6) !important;
     color: #f87171 !important;
-    font-weight: 600;
+    box-shadow: 0 2px 10px rgba(244, 63, 94, 0.2);
 }
 .lr-paper-actions button:active {
-    transform: scale(0.95);
+    transform: scale(0.94);
 }
 
 .orcid-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 0.72rem; color: #a6ce39; background: rgba(166,206,57,0.1); padding: 1px 6px; border-radius: 10px; }
