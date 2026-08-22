@@ -843,7 +843,7 @@ async function checkConfigGate() {
 // Remembers the panel each mode was last on. Switching tabs used to hard-reset
 // to the landing/input panel, so flipping to the other mode and back during a
 // live run threw away the workspace view and looked like the run had vanished.
-const lastPanelByMode = { deepsearch: null, researchmode: null };
+const lastPanelByMode = { deepsearch: null, literaturereview: null, researchmode: null };
 
 // The header is fixed, so body reserves its height as padding. That height is
 // not a constant: below 640px the header stacks into two rows, and its content
