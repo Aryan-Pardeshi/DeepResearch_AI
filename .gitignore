@@ -254,6 +254,8 @@ backend/app/static/exports/
 
 # Superpowers SDD scratch workspaces (plan artifacts; git history is the record)
 .superpowers/
+docs/plans/
+docs/superpowers/
 
 # Generated documents
 *.pdf
