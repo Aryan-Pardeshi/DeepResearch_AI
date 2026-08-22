@@ -9,7 +9,6 @@ let paperScreeningMap = {}; // paper_id -> "included" | "excluded"
 export function initLiteratureSearch(apiBase = '') {
     const searchBtn = document.getElementById('lr-search-btn');
     const queryInput = document.getElementById('lr-query-input');
-    const depthSelect = document.getElementById('lr-depth-select');
 
     if (searchBtn && queryInput) {
         searchBtn.addEventListener('click', () => performLiteratureSearch(apiBase));
@@ -27,6 +26,53 @@ export function initLiteratureSearch(apiBase = '') {
     if (bridgeBtn) {
         bridgeBtn.addEventListener('click', () => bridgeToResearchMode(apiBase));
     }
+
+    initCustomDepthSelect();
+}
+
+function initCustomDepthSelect() {
+    const wrapper = document.getElementById('lr-depth-wrapper');
+    const trigger = document.getElementById('lr-depth-trigger');
+    const menu = document.getElementById('lr-depth-menu');
+    const hiddenInput = document.getElementById('lr-depth-select');
+    const label = document.getElementById('lr-depth-label');
+
+    if (!wrapper || !trigger || !menu || !hiddenInput) return;
+
+    trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = menu.style.display === 'block';
+        menu.style.display = isOpen ? 'none' : 'block';
+        wrapper.classList.toggle('open', !isOpen);
+        trigger.classList.toggle('active', !isOpen);
+    });
+
+    const options = menu.querySelectorAll('.custom-select-option');
+    options.forEach(opt => {
+        opt.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const val = opt.getAttribute('data-value');
+            const titleText = opt.querySelector('.opt-title') ? opt.querySelector('.opt-title').textContent : val;
+
+            hiddenInput.value = val;
+            if (label) label.textContent = titleText;
+
+            options.forEach(o => o.classList.remove('selected'));
+            opt.classList.add('selected');
+
+            menu.style.display = 'none';
+            wrapper.classList.remove('open');
+            trigger.classList.remove('active');
+        });
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!wrapper.contains(e.target)) {
+            menu.style.display = 'none';
+            wrapper.classList.remove('open');
+            trigger.classList.remove('active');
+        }
+    });
 }
 
 export async function performLiteratureSearch(apiBase = '') {
@@ -211,10 +257,63 @@ export function renderPaperCards(papers, corpus) {
     if (window.lucide) window.lucide.createIcons();
 }
 
+function openExclusionModal(paperTitle) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('lr-exclusion-modal');
+        const titleEl = document.getElementById('lr-modal-paper-title');
+        const inputEl = document.getElementById('lr-exclusion-reason-input');
+        const confirmBtn = document.getElementById('lr-modal-confirm-btn');
+        const cancelBtn = document.getElementById('lr-modal-cancel-btn');
+        const closeBtn = document.getElementById('lr-modal-close-btn');
+        const chips = modal ? modal.querySelectorAll('.chip-preset') : [];
+
+        if (!modal) {
+            const reason = prompt('Reason for exclusion (optional):', 'Low relevance to research topic');
+            resolve(reason);
+            return;
+        }
+
+        titleEl.textContent = paperTitle || 'Selected Paper';
+        inputEl.value = 'Low relevance to research topic';
+        modal.style.display = 'flex';
+        if (window.lucide) window.lucide.createIcons();
+
+        const cleanup = () => {
+            modal.style.display = 'none';
+            confirmBtn.removeEventListener('click', onConfirm);
+            cancelBtn.removeEventListener('click', onCancel);
+            closeBtn.removeEventListener('click', onCancel);
+            chips.forEach(c => c.removeEventListener('click', onChipClick));
+        };
+
+        const onConfirm = () => {
+            const val = inputEl.value.trim();
+            cleanup();
+            resolve(val || 'Excluded by reviewer');
+        };
+
+        const onCancel = () => {
+            cleanup();
+            resolve(null);
+        };
+
+        const onChipClick = (e) => {
+            inputEl.value = e.target.getAttribute('data-reason') || '';
+        };
+
+        confirmBtn.addEventListener('click', onConfirm);
+        cancelBtn.addEventListener('click', onCancel);
+        closeBtn.addEventListener('click', onCancel);
+        chips.forEach(c => c.addEventListener('click', onChipClick));
+    });
+}
+
 window.screenPaperAction = async function (corpusId, paperId, status) {
     let exclusionReason = null;
     if (status === 'excluded') {
-        exclusionReason = prompt('Reason for exclusion (optional):', 'Low relevance to research topic');
+        const targetPaper = (currentPapers || []).map(p => p).find(p => p.paper_id === paperId);
+        exclusionReason = await openExclusionModal(targetPaper ? targetPaper.title : '');
+        if (exclusionReason === null) return;
     }
     try {
         const resp = await fetch(`${storedApiBase}/api/literature-review/corpus/${corpusId}/screen`, {

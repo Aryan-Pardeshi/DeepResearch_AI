@@ -420,11 +420,28 @@
             <div class="card lr-search-card">
                 <div class="lr-search-input-group">
                     <input type="text" class="form-input lr-search-input" id="lr-query-input" placeholder="Enter research query (e.g. 'RAG for medical QA', 'Transformer attention mechanisms')...">
-                    <select class="form-select lr-mode-select" id="lr-depth-select">
-                        <option value="quick">Quick (50 papers)</option>
-                        <option value="standard" selected>Standard (100 papers)</option>
-                        <option value="deep">Deep (250 papers)</option>
-                    </select>
+                    <!-- Custom Dark Glass Depth Select Component -->
+                    <div class="custom-select-wrapper" id="lr-depth-wrapper">
+                        <input type="hidden" id="lr-depth-select" value="standard">
+                        <button class="custom-select-trigger" type="button" id="lr-depth-trigger">
+                            <span class="custom-select-label" id="lr-depth-label">Standard (100 papers)</span>
+                            <i data-lucide="chevron-down" class="custom-select-icon" style="width: 14px; height: 14px;"></i>
+                        </button>
+                        <div class="custom-select-menu" id="lr-depth-menu" style="display: none;">
+                            <div class="custom-select-option" data-value="quick">
+                                <div class="opt-title">Quick (50 papers)</div>
+                                <div class="opt-desc">Fast initial screening &amp; discovery</div>
+                            </div>
+                            <div class="custom-select-option selected" data-value="standard">
+                                <div class="opt-title">Standard (100 papers)</div>
+                                <div class="opt-desc">Balanced deep academic corpus review</div>
+                            </div>
+                            <div class="custom-select-option" data-value="deep">
+                                <div class="opt-title">Deep (250 papers)</div>
+                                <div class="opt-desc">Comprehensive PRISMA extraction</div>
+                            </div>
+                        </div>
+                    </div>
                     <button class="btn-primary lr-search-btn" id="lr-search-btn">
                         <i data-lucide="search" style="width: 16px; height: 16px;"></i>
                         <span>Search Literature</span>
@@ -520,11 +537,11 @@
                 <!-- Tab 2: Evidence Matrix -->
                 <div class="lr-tab-content" id="lr-tab-matrix">
                     <div class="lr-toolbar">
-                        <h3 class="lr-section-heading">Dynamic Evidence Extraction Matrix</h3>
+                        <h3 class="lr-section-heading">Extracted Evidence Matrix</h3>
                         <div class="lr-toolbar-actions">
-                            <button class="btn-secondary" id="lr-generate-matrix-btn">
-                                <i data-lucide="refresh-cw" style="width: 15px; height: 15px;"></i>
-                                <span>Generate / Refresh Matrix</span>
+                            <button class="btn-secondary" id="lr-synthesize-btn">
+                                <i data-lucide="cpu" style="width: 15px; height: 15px;"></i>
+                                <span>Synthesize Themes</span>
                             </button>
                             <button class="btn-secondary" id="lr-export-matrix-csv">
                                 <i data-lucide="download" style="width: 15px; height: 15px;"></i>
@@ -599,6 +616,41 @@
                     <div class="lr-doc-container" id="lr-doc-container">
                         <div id="lr-audit-badge-container"></div>
                         <div id="lr-doc-prose-container" class="report-content"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom Exclusion Modal Overlay (Replaces browser prompt 2003 UI) -->
+            <div class="lr-modal-overlay" id="lr-exclusion-modal" style="display: none;">
+                <div class="lr-modal-card">
+                    <div class="lr-modal-header">
+                        <div class="lr-modal-title-row">
+                            <i data-lucide="shield-alert" style="width: 20px; height: 20px; color: #f87171;"></i>
+                            <h3>Exclude Paper from Corpus</h3>
+                        </div>
+                        <button class="lr-modal-close" id="lr-modal-close-btn">&times;</button>
+                    </div>
+                    <div class="lr-modal-body">
+                        <div class="lr-modal-paper-preview">
+                            <span class="paper-label">Target Paper:</span>
+                            <h4 id="lr-modal-paper-title">Selected Paper Title</h4>
+                        </div>
+                        <label class="form-label" for="lr-exclusion-reason-input">Reason for exclusion (optional):</label>
+                        <input type="text" id="lr-exclusion-reason-input" class="form-input" placeholder="e.g. Low relevance to research topic">
+                        <div class="lr-modal-chips-label">Quick Suggestions:</div>
+                        <div class="lr-modal-chips">
+                            <button type="button" class="chip-preset" data-reason="Low relevance to research topic">Low relevance</button>
+                            <button type="button" class="chip-preset" data-reason="Out of target scope">Out of scope</button>
+                            <button type="button" class="chip-preset" data-reason="Methodology or data quality issue">Methodology issue</button>
+                            <button type="button" class="chip-preset" data-reason="Duplicate / Non-peer reviewed">Duplicate</button>
+                        </div>
+                    </div>
+                    <div class="lr-modal-footer">
+                        <button type="button" class="btn-secondary" id="lr-modal-cancel-btn">Cancel</button>
+                        <button type="button" class="btn-primary btn-danger" id="lr-modal-confirm-btn">
+                            <i data-lucide="x-circle" style="width: 15px; height: 15px;"></i>
+                            <span>Exclude Paper</span>
+                        </button>
                     </div>
                 </div>
             </div>
