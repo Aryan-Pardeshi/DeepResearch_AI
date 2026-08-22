@@ -15,10 +15,12 @@ if str(root_dir) not in sys.path:
 
 from backend.app.api.agent import router as agent_router
 from backend.app.api.research_mode import router as research_mode_router
+from backend.app.api.literature_review import router as literature_review_router
 from backend.app.llm import lazy_llm, llm_fast, llm_pro
 from backend.app.graph.research_mode_builder import set_checkpointer as set_rm_checkpointer
 from backend.app.graph.builder import set_checkpointer as set_ds_checkpointer
 from backend.app.stats import init_stats_db
+from backend.app.storage.corpus_repository import get_corpus_repository
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -65,9 +67,8 @@ async def lifespan(app: FastAPI):
         await checkpointer.setup()
         set_rm_checkpointer(checkpointer)
         set_ds_checkpointer(checkpointer)
-        # Warm the cumulative paper-counter DB so /research-mode/total-papers is
-        # ready before the first request (and survives restarts on a mounted disk).
         await init_stats_db()
+        await get_corpus_repository(str(db_path)).initialize()
         yield
 
 
@@ -93,6 +94,7 @@ app.add_middleware(
 
 app.include_router(agent_router)
 app.include_router(research_mode_router)
+app.include_router(literature_review_router)
 
 # Mount static directory for serving charts
 static_path = Path(__file__).resolve().parent / "static"

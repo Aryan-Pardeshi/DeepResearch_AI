@@ -153,15 +153,18 @@
                     <i data-lucide="globe" style="width: 15px; height: 15px;"></i>
                     <span>DeepSearch</span>
                 </button>
+                <button class="mode-tab" id="tab-literaturereview" data-mode="literaturereview" aria-label="Switch to Literature Review Mode">
+                    <i data-lucide="book-open" style="width: 15px; height: 15px;"></i>
+                    <span>Literature Review</span>
+                </button>
                 <button class="mode-tab active" id="tab-researchmode" data-mode="researchmode" aria-label="Switch to Academic Research Paper mode">
                     <i data-lucide="book-open-check" style="width: 15px; height: 15px;"></i>
                     <span>Research Mode</span>
                 </button>
             </nav>
-            <!-- Both runtimes are shown at once, each under its own tab, so the
-                 two modes can be compared without switching between them. -->
             <div class="mode-time-row" id="mode-time-row">
                 <span class="mode-time-estimate" id="mode-time-deepsearch">~5–10 min</span>
+                <span class="mode-time-estimate" id="mode-time-literaturereview">~2–5 min</span>
                 <span class="mode-time-estimate is-active" id="mode-time-researchmode">~15–30 min</span>
             </div>
         </div>
@@ -404,6 +407,173 @@
                     </div>
                 </div>
             </article>
+        <!-- LITERATURE REVIEW PANEL -->
+        <section id="literature-review-panel" class="panel">
+            <div class="rm-hero-header">
+                <h1 class="hero-title">Academic <span class="text-gradient">Literature Review</span> Workspace</h1>
+                <p class="hero-subtitle">Multi-provider discovery, dynamic evidence matrix extraction, grounded Q&amp;A, and cross-section synthesis.</p>
+            </div>
+
+            <!-- Literature Review Search Card -->
+            <div class="card lr-search-card">
+                <div class="lr-search-input-group">
+                    <input type="text" class="form-input lr-search-input" id="lr-query-input" placeholder="Enter research query (e.g. 'RAG for medical QA', 'Transformer attention mechanisms')...">
+                    <select class="form-select lr-mode-select" id="lr-depth-select">
+                        <option value="quick">Quick (50 papers)</option>
+                        <option value="standard" selected>Standard (100 papers)</option>
+                        <option value="deep">Deep (250 papers)</option>
+                    </select>
+                    <button class="btn-primary lr-search-btn" id="lr-search-btn">
+                        <i data-lucide="search" style="width: 16px; height: 16px;"></i>
+                        <span>Search Literature</span>
+                    </button>
+                </div>
+                <div class="lr-provider-pills" id="lr-provider-pills">
+                    <span class="pill-label">Active Provider Pipeline:</span>
+                    <span class="provider-tag badge-openalex">OpenAlex</span>
+                    <span class="provider-tag badge-semanticscholar">Semantic Scholar</span>
+                    <span class="provider-tag badge-crossref">Crossref</span>
+                    <span class="provider-tag badge-openaire">OpenAIRE Graph v3</span>
+                    <span class="provider-tag badge-doaj">DOAJ</span>
+                    <span class="provider-tag badge-pubmed">PubMed</span>
+                    <span class="provider-tag badge-arxiv">arXiv</span>
+                    <span class="provider-tag badge-datacite">DataCite</span>
+                </div>
+            </div>
+
+            <!-- Literature Review Workspace Content (Appears after search/corpus init) -->
+            <div id="lr-workspace-container" style="display: none; margin-top: 1.5rem;">
+                <!-- Workspace Nav Tabs -->
+                <nav class="lr-tabs-nav" id="lr-tabs-nav">
+                    <button class="lr-tab active" data-lr-tab="screening">
+                        <i data-lucide="filter" style="width: 15px; height: 15px;"></i>
+                        <span>Screening &amp; Corpus (<span id="lr-count-included">0</span>/<span id="lr-count-total">0</span>)</span>
+                    </button>
+                    <button class="lr-tab" data-lr-tab="matrix">
+                        <i data-lucide="table" style="width: 15px; height: 15px;"></i>
+                        <span>Evidence Matrix</span>
+                    </button>
+                    <button class="lr-tab" data-lr-tab="synthesis">
+                        <i data-lucide="layers" style="width: 15px; height: 15px;"></i>
+                        <span>Thematic &amp; Gaps</span>
+                    </button>
+                    <button class="lr-tab" data-lr-tab="ask">
+                        <i data-lucide="message-square" style="width: 15px; height: 15px;"></i>
+                        <span>Ask Corpus</span>
+                    </button>
+                    <button class="lr-tab" data-lr-tab="compilation">
+                        <i data-lucide="file-text" style="width: 15px; height: 15px;"></i>
+                        <span>Review Document</span>
+                    </button>
+                </nav>
+
+                <!-- Tab 1: Screening & Paper Cards -->
+                <div class="lr-tab-content active" id="lr-tab-screening">
+                    <div class="lr-toolbar">
+                        <div class="lr-stats-row">
+                            <span class="lr-stat-badge">Found: <strong id="lr-stat-found">0</strong></span>
+                            <span class="lr-stat-badge">Included: <strong id="lr-stat-included">0</strong></span>
+                            <span class="lr-stat-badge">Excluded: <strong id="lr-stat-excluded">0</strong></span>
+                        </div>
+                        <div class="lr-toolbar-actions">
+                            <button class="btn-secondary" id="lr-extract-btn">
+                                <i data-lucide="sparkles" style="width: 15px; height: 15px;"></i>
+                                <span>Extract Evidence</span>
+                            </button>
+                            <button class="btn-primary" id="lr-bridge-btn">
+                                <i data-lucide="arrow-right" style="width: 15px; height: 15px;"></i>
+                                <span>Bridge to Research Mode</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="lr-papers-grid" id="lr-papers-grid"></div>
+                </div>
+
+                <!-- Tab 2: Evidence Matrix -->
+                <div class="lr-tab-content" id="lr-tab-matrix">
+                    <div class="lr-toolbar">
+                        <h3 class="lr-section-heading">Dynamic Evidence Extraction Matrix</h3>
+                        <div class="lr-toolbar-actions">
+                            <button class="btn-secondary" id="lr-generate-matrix-btn">
+                                <i data-lucide="refresh-cw" style="width: 15px; height: 15px;"></i>
+                                <span>Generate / Refresh Matrix</span>
+                            </button>
+                            <button class="btn-secondary" id="lr-export-matrix-csv">
+                                <i data-lucide="download" style="width: 15px; height: 15px;"></i>
+                                <span>Export CSV</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="lr-matrix-scroll-container">
+                        <table class="lr-matrix-table" id="lr-matrix-table">
+                            <thead>
+                                <tr id="lr-matrix-header"></tr>
+                            </thead>
+                            <tbody id="lr-matrix-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tab 3: Thematic & Gaps -->
+                <div class="lr-tab-content" id="lr-tab-synthesis">
+                    <div class="lr-toolbar">
+                        <h3 class="lr-section-heading">Thematic Clusters &amp; Contradictions</h3>
+                        <button class="btn-primary" id="lr-run-synthesis-btn">
+                            <i data-lucide="cpu" style="width: 15px; height: 15px;"></i>
+                            <span>Run Synthesis Engine</span>
+                        </button>
+                    </div>
+                    <div class="lr-synthesis-grid">
+                        <div class="card lr-synthesis-card">
+                            <h4><i data-lucide="grid" style="width: 16px; height: 16px;"></i> Thematic Clusters</h4>
+                            <div id="lr-themes-container"></div>
+                        </div>
+                        <div class="card lr-synthesis-card">
+                            <h4><i data-lucide="git-commit" style="width: 16px; height: 16px;"></i> Contradictions &amp; Moderators</h4>
+                            <div id="lr-contradictions-container"></div>
+                        </div>
+                        <div class="card lr-synthesis-card">
+                            <h4><i data-lucide="alert-circle" style="width: 16px; height: 16px;"></i> Grounded Research Gaps</h4>
+                            <div id="lr-gaps-container"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 4: Ask Corpus Grounded Q&A -->
+                <div class="lr-tab-content" id="lr-tab-ask">
+                    <div class="card lr-qa-card">
+                        <h3 class="lr-section-heading"><i data-lucide="help-circle" style="width: 18px; height: 18px;"></i> Ask the Corpus</h3>
+                        <div class="lr-qa-input-row">
+                            <input type="text" class="form-input" id="lr-qa-input" placeholder="Ask a targeted question about the extracted literature corpus...">
+                            <button class="btn-primary" id="lr-qa-submit-btn">
+                                <i data-lucide="send" style="width: 15px; height: 15px;"></i>
+                                <span>Ask</span>
+                            </button>
+                        </div>
+                        <div class="lr-qa-response-area" id="lr-qa-response-area" style="display: none; margin-top: 1rem;">
+                            <div class="lr-qa-answer" id="lr-qa-answer-text"></div>
+                            <div class="lr-qa-validation-badge" id="lr-qa-validation-badge"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 5: Review Document & Consistency Auditor -->
+                <div class="lr-tab-content" id="lr-tab-compilation">
+                    <div class="lr-toolbar">
+                        <h3 class="lr-section-heading">Compiled Literature Review</h3>
+                        <div class="lr-toolbar-actions">
+                            <button class="btn-primary" id="lr-compile-doc-btn">
+                                <i data-lucide="file-plus" style="width: 15px; height: 15px;"></i>
+                                <span>Compile Review Document</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="lr-doc-container" id="lr-doc-container">
+                        <div id="lr-audit-badge-container"></div>
+                        <div id="lr-doc-prose-container" class="report-content"></div>
+                    </div>
+                </div>
+            </div>
         </section>
 
 

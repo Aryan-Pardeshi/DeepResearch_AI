@@ -13,27 +13,7 @@ from typing import Any, Dict, List, Literal, Optional
 from pydantic import BaseModel, Field
 
 
-def make_paper_id(doi: Optional[str], title: str, year: Optional[str] = None) -> str:
-    """Generate a deterministic 16-character SHA-256 hash paper ID.
-    
-    DOI is canonical; normalized title is used as fallback.
-    """
-    if doi and doi.strip():
-        # Canonicalize DOI
-        doi_clean = doi.strip().lower()
-        if doi_clean.startswith("https://doi.org/"):
-            doi_clean = doi_clean[len("https://doi.org/"):]
-        elif doi_clean.startswith("http://doi.org/"):
-            doi_clean = doi_clean[len("http://doi.org/"):]
-        elif doi_clean.startswith("doi:"):
-            doi_clean = doi_clean[len("doi:"):]
-        key = f"doi:{doi_clean}"
-    else:
-        # Normalize title: collapse whitespace first, then strip disallowed characters
-        cleaned = re.sub(r"\s+", " ", (title or "").lower().strip())
-        normalized = re.sub(r"[^a-z0-9 ]", "", cleaned).strip()
-        key = f"title:{normalized}:{year or 'nd'}"
-    return hashlib.sha256(key.encode("utf-8")).hexdigest()[:16]
+from backend.app.models.paper import PaperRecord, AuthorIdentity, make_paper_id
 
 
 def make_evidence_id(paper_id: str, claim_index: int) -> str:
@@ -46,42 +26,6 @@ def make_claim_id(section: str, claim_index: int) -> str:
     clean_sec = re.sub(r"[^a-z0-9]", "", (section or "sec").lower())[:8]
     return f"{clean_sec}_cl{claim_index:03d}"
 
-
-class PaperRecord(BaseModel):
-    """Structured representation of an academic paper retrieved during search."""
-    
-    paper_id: str = Field(
-        ...,
-        description="Deterministic 16-hex hash of DOI or normalized title"
-    )
-    doi: Optional[str] = None
-    pmid: Optional[str] = None
-    arxiv_id: Optional[str] = None
-    title: str
-    authors: List[str] = Field(default_factory=list)
-    year: str = "n.d."
-    venue: Optional[str] = None
-    abstract: str = ""
-    source_url: str = ""
-    pdf_url: Optional[str] = None
-    fulltext_excerpt: Optional[str] = None
-    retrieval_source: str = "unknown"  # openalex, semantic_scholar, arxiv, crossref, pubmed, tavily
-    citation_count: int = 0
-    relevance_score: Optional[float] = None
-    study_type: Optional[Literal["empirical", "benchmark", "review", "theoretical", "survey", "meta-analysis", "other"]] = "empirical"
-    quality_rating: Optional[Literal["High", "Medium", "Low", "Unclear"]] = "Unclear"
-    quality_rubric: Optional[Dict[str, Any]] = None
-    screening_status: Literal["retrieved", "screened", "included", "excluded"] = "retrieved"
-    exclusion_reason: Optional[str] = None
-    hypothesis_support: Dict[str, str] = Field(default_factory=dict)
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> PaperRecord:
-        """Create a PaperRecord from raw paper dictionary with auto-generated paper_id."""
-        d = dict(data)
-        if "paper_id" not in d or not d["paper_id"]:
-            d["paper_id"] = make_paper_id(d.get("doi"), d.get("title", ""), d.get("year"))
-        return cls(**d)
 
 
 class EvidenceRecord(BaseModel):

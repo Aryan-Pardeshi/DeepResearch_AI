@@ -580,11 +580,14 @@ document.addEventListener('DOMContentLoaded', () => {
     renderRMPipelineTracker();
     restoreRMSessionOnLoad();
     
+    // Initialize Literature Review Mode UI orchestrator
+    import('./modes/literature-review.js').then(m => m.setupLiteratureReviewMode(API_BASE_URL)).catch(e => console.warn('LR mode init:', e));
+
     // Check URL parameters for explicit mode selection
     try {
         const urlParams = new URLSearchParams(window.location.search);
         const requestedMode = (urlParams.get('mode') || '').toLowerCase();
-        if (requestedMode === 'deepsearch' || requestedMode === 'researchmode') {
+        if (requestedMode === 'deepsearch' || requestedMode === 'literaturereview' || requestedMode === 'researchmode') {
             switchMode(requestedMode);
         }
     } catch (e) {
@@ -688,8 +691,10 @@ function cacheDomElements() {
         
         // Mode Tabs & Time Estimate
         tabDeepSearch: document.getElementById('tab-deepsearch'),
+        tabLiteratureReview: document.getElementById('tab-literaturereview'),
         tabResearchMode: document.getElementById('tab-researchmode'),
         modeTimeDeepSearch: document.getElementById('mode-time-deepsearch'),
+        modeTimeLiteratureReview: document.getElementById('mode-time-literaturereview'),
         modeTimeResearchMode: document.getElementById('mode-time-researchmode'),
 
         // Setup Gate Modal
@@ -708,6 +713,7 @@ function cacheDomElements() {
         landingPanel: document.getElementById('landing-panel'),
         approvalPanel: document.getElementById('approval-panel'),
         workspacePanel: document.getElementById('workspace-panel'),
+        lrPanel: document.getElementById('literature-review-panel'),
         rmInputPanel: document.getElementById('rm-input-panel'),
         rmWorkspacePanel: document.getElementById('rm-workspace-panel'),
 
@@ -933,13 +939,15 @@ function switchMode(newMode) {
     if (currentPanel && previous) lastPanelByMode[previous] = currentPanel;
 
     state.mode = newMode;
+    dom.tabDeepSearch?.classList.toggle('active', newMode === 'deepsearch');
+    dom.tabLiteratureReview?.classList.toggle('active', newMode === 'literaturereview');
+    dom.tabResearchMode?.classList.toggle('active', newMode === 'researchmode');
+
     if (newMode === 'deepsearch') {
-        dom.tabDeepSearch.classList.add('active');
-        dom.tabResearchMode.classList.remove('active');
         switchPanel(lastPanelByMode.deepsearch || dom.landingPanel);
+    } else if (newMode === 'literaturereview') {
+        switchPanel(lastPanelByMode.literaturereview || dom.lrPanel);
     } else {
-        dom.tabResearchMode.classList.add('active');
-        dom.tabDeepSearch.classList.remove('active');
         switchPanel(lastPanelByMode.researchmode || dom.rmInputPanel);
         fetchLivePaperCount();
     }
@@ -952,6 +960,7 @@ function switchMode(newMode) {
 function setupEventListeners() {
     // Mode tabs
     dom.tabDeepSearch?.addEventListener('click', () => switchMode('deepsearch'));
+    dom.tabLiteratureReview?.addEventListener('click', () => switchMode('literaturereview'));
     dom.tabResearchMode?.addEventListener('click', () => switchMode('researchmode'));
 
     // Theme toggle
