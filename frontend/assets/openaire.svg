@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="openaire-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#1E293B"/>
+    </linearGradient>
+    <linearGradient id="openaire-orange" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF7A00"/>
+      <stop offset="100%" stop-color="#E05300"/>
+    </linearGradient>
+    <linearGradient id="openaire-blue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0088FF"/>
+      <stop offset="100%" stop-color="#0055CC"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="6" fill="url(#openaire-bg)"/>
+  <!-- OpenAIRE connected node network graph -->
+  <path d="M10 16L16 10M16 10L22 16M16 10L16 22M10 16L22 16M10 16L16 22M22 16L16 22" stroke="#475569" stroke-width="1.2" opacity="0.6"/>
+  <circle cx="16" cy="10" r="3" fill="url(#openaire-orange)"/>
+  <circle cx="10" cy="16" r="2.8" fill="url(#openaire-blue)"/>
+  <circle cx="22" cy="16" r="2.8" fill="url(#openaire-blue)"/>
+  <circle cx="16" cy="22" r="3" fill="url(#openaire-orange)"/>
+  <circle cx="16" cy="16" r="2" fill="#FFFFFF"/>
+</svg>

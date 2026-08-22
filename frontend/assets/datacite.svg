@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="datacite-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#002040"/>
+      <stop offset="100%" stop-color="#001226"/>
+    </linearGradient>
+    <linearGradient id="datacite-cyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00D2FF"/>
+      <stop offset="100%" stop-color="#0088CC"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="6" fill="url(#datacite-bg)"/>
+  <!-- DataCite official chevron data mark -->
+  <rect x="7" y="7" width="18" height="18" rx="3" fill="none" stroke="url(#datacite-cyan)" stroke-width="2"/>
+  <path d="M12.5 11.5L19.5 16L12.5 20.5V11.5Z" fill="url(#datacite-cyan)"/>
+</svg>

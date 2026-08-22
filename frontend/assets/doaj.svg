@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="doaj-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFD000"/>
+      <stop offset="100%" stop-color="#F5B400"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="6" fill="url(#doaj-bg)"/>
+  <!-- DOAJ official open-access lock keyhole emblem -->
+  <path d="M16 6a6 6 0 0 0-6 6v2h2.5v-2a3.5 3.5 0 0 1 7 0v1h2.5v-1a6 6 0 0 0-6-6z" fill="#111827"/>
+  <rect x="8.5" y="13.5" width="15" height="11.5" rx="2.5" fill="#111827"/>
+  <circle cx="16" cy="18" r="1.8" fill="#FFD000"/>
+  <path d="M16 19.8v3" stroke="#FFD000" stroke-width="1.4" stroke-linecap="round"/>
+</svg>
