@@ -76,6 +76,7 @@ const state = {
         searchProtocol: null,
         evidenceRecordsCount: 0,
         evidenceRecords: [],
+        claims: [],
         prismaTracker: null,
         taxonomy: null,
         validationReport: null
@@ -187,6 +188,7 @@ const RM_STATE_KEY_MAP = {
     screened_papers_count: 'screenedPapersCount',
     evidence_records_count: 'evidenceRecordsCount',
     evidence_records: 'evidenceRecords',
+    claims: 'claims',
     prisma_tracker: 'prismaTracker',
     taxonomy: 'taxonomy',
     validation_report: 'validationReport',
@@ -1606,6 +1608,7 @@ function resetResearchModeForm() {
     state.rm.screenedPapersCount = 0;
     state.rm.evidenceRecordsCount = 0;
     state.rm.evidenceRecords = [];
+    state.rm.claims = [];
     state.rm.prismaTracker = null;
     state.rm.taxonomy = null;
     state.rm.validationReport = null;
@@ -2154,16 +2157,30 @@ function renderRMHitlPanel(checkpoint) {
         const topPapers = getScreenedPapers().slice(0, 8);
         const evidenceRecords = (state.rm.evidenceRecords || []).slice(0, 6);
 
-        const evidenceCards = evidenceRecords.map(e => `
+        const evidenceCards = evidenceRecords.map(e => {
+            const sectionLabel = e.section || e.source_section || 'unknown';
+            const pageLabel = e.page != null ? `p. ${e.page}` : 'page n/a';
+            const confidencePct = e.confidence != null ? Math.round(e.confidence * 100) : null;
+            const verified = e.verification_status === 'verified';
+            const confColor = verified ? 'rgba(34,197,94,0.18)' : 'rgba(234,179,8,0.18)';
+            const confTextColor = verified ? '#16a34a' : '#ca8a04';
+            return `
             <div class="evidence-extract-card" style="background: var(--surface-bg-subtle, rgba(255,255,255,0.02)); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.65rem; margin-bottom: 0.5rem; font-size: 0.82rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
                     <span style="font-family: monospace; font-size: 0.75rem; color: var(--academic-blue);">${escapeHtml(e.evidence_id || '')}</span>
-                    <span style="font-size: 0.72rem; padding: 0.1rem 0.4rem; border-radius: 4px; background: rgba(59,130,246,0.15); color: var(--academic-blue); font-weight: 600;">${escapeHtml(e.source_section || 'Abstract')}</span>
+                    <span style="display: flex; gap: 0.35rem; align-items: center;">
+                        ${confidencePct != null ? `<span title="${verified ? 'Verbatim quote anchored to source' : 'Paraphrase or incomplete traceability chain'}" style="font-size: 0.72rem; padding: 0.1rem 0.4rem; border-radius: 4px; background: ${confColor}; color: ${confTextColor}; font-weight: 600;">${verified ? '&#10003;' : '&#9888;'} ${confidencePct}%</span>` : ''}
+                        <span style="font-size: 0.72rem; padding: 0.1rem 0.4rem; border-radius: 4px; background: rgba(59,130,246,0.15); color: var(--academic-blue); font-weight: 600;">${escapeHtml(sectionLabel)}</span>
+                        <span style="font-size: 0.72rem; padding: 0.1rem 0.4rem; border-radius: 4px; background: rgba(148,163,184,0.15); color: var(--text-secondary);">${escapeHtml(pageLabel)}</span>
+                    </span>
                 </div>
                 <p style="margin: 0.25rem 0; font-weight: 500;">${escapeHtml(e.claim_summary || '')}</p>
+                ${e.exact_quote ? `<p style="margin: 0.25rem 0; font-size: 0.75rem; color: var(--text-secondary); font-style: italic;">&ldquo;${escapeHtml(String(e.exact_quote).slice(0, 180))}${String(e.exact_quote).length > 180 ? '&hellip;' : ''}&rdquo;</p>` : ''}
+                ${(e.source_url || e.doi) ? `<div style="margin-top: 0.25rem;"><a href="${e.doi ? `https://doi.org/${escapeHtml(e.doi)}` : escapeHtml(e.source_url)}" target="_blank" rel="noopener noreferrer" style="font-size: 0.72rem; color: var(--academic-blue); text-decoration: none;">Source &rarr;</a></div>` : ''}
                 ${e.reported_value != null ? `<div style="font-size: 0.75rem; color: var(--text-secondary);">Metric: <code>${escapeHtml(e.metric_name || '')} = ${e.reported_value}</code></div>` : ''}
             </div>
-        `).join('');
+        `;
+        }).join('');
 
         dom.rmHitlBody.innerHTML = `
             <div class="form-group">

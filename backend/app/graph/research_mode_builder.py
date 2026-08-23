@@ -66,6 +66,7 @@ from backend.app.agents.research_mode import (
     abstract_agent,
     title_agent,
     figures_node,
+    claims_linker_node,
     # Validation
     citation_validator_node,
     claim_validator_node,
@@ -248,6 +249,7 @@ builder.add_node("claim_validator", claim_validator_node)
 builder.add_node("integrity_auditor", integrity_auditor_node)
 builder.add_node("figures", figures_node)
 builder.add_node("appendices", appendices_agent)
+builder.add_node("claims_linker", claims_linker_node)
 
 # --- Define Edge Routing ---
 
@@ -312,7 +314,8 @@ builder.add_edge("introduction", "abstract")
 builder.add_edge("abstract", "title")
 
 # Validation & Rendering
-builder.add_edge("title", "citation_validator")
+builder.add_edge("title", "claims_linker")
+builder.add_edge("claims_linker", "citation_validator")
 builder.add_edge("citation_validator", "claim_validator")
 builder.add_edge("claim_validator", "integrity_auditor")
 builder.add_edge("integrity_auditor", "figures")

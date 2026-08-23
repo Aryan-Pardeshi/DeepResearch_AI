@@ -20,11 +20,113 @@ from backend.app.agents.research_mode._common import (
     _strip_preamble,
     EVIDENCE_BASIS_NOTE,
 )
-from backend.app.models.evidence import PaperRecord, EvidenceRecord, PRISMATracker
+from backend.app.models.evidence import (
+    PaperRecord,
+    EvidenceRecord,
+    PRISMATracker,
+    ReviewClaim,
+    make_claim_id,
+)
 from backend.app.tools.academic_search import format_apa
 from backend.app.tools.figures import render_prisma_diagram, render_evidence_table
 
 logger = logging.getLogger(__name__)
+
+# Inline structured marker embedded by writers after a sentence grounded in a
+# specific EvidenceRecord: [EV:<evidence_id>]. claims_linker_node converts
+# these into the machine-readable ReviewClaim manifest and strips them from
+# the rendered prose.
+EV_MARKER_RE = re.compile(r"\[\s*ev:\s*([A-Za-z0-9_.\-]+?)\s*\]", re.IGNORECASE)
+
+# Prose sections scanned for evidence markers.
+LINKED_PROSE_SECTIONS = ("introduction", "literature_review", "results", "discussion")
+
+
+def _is_quantitative_sentence(text: str) -> bool:
+    """Mirror of the validator's numeric-claim heuristic, kept dependency-light."""
+    return bool(re.search(
+        r"(?:\b\d+\.?\d*|\d+)\s*(?:%|percent\b|BLEU\b|F1\b|accuracy\b|points\b|ms\b|seconds\b|x\b|fold\b)",
+        text,
+        re.IGNORECASE,
+    ))
+
+
+def _strip_ev_markers(text: str) -> str:
+    """Remove provenance markers before feeding prose into downstream prompts.
+
+    Sections that do not consume the structured evidence base (discussion,
+    abstract, conclusion) would otherwise copy [EV:...] tags verbatim into
+    rendered text that claims_linker_node never parses.
+    """
+    if not text:
+        return text or ""
+    cleaned = EV_MARKER_RE.sub("", text)
+    return re.sub(r"[ \t]{2,}", " ", cleaned)
+
+
+async def claims_linker_node(state: Dict[str, Any]) -> Dict[str, Any]:
+    """Convert inline [EV:<id>] markers into the machine-readable claims manifest.
+
+    Deterministic post-pass over writer output:
+    - Each sentence carrying resolvable markers becomes one ReviewClaim whose
+      supporting_evidence_ids link back to EvidenceRecords.
+    - All markers are stripped from the rendered prose (human-readable text
+      keeps APA author-year citations only).
+    - Markers referencing unknown evidence ids never reach the reader and are
+      reported under unresolved_claims.
+    """
+    evidence_by_id = {
+        e.get("evidence_id"): e
+        for e in (state.get("evidence_records") or [])
+        if e.get("evidence_id")
+    }
+
+    updates: Dict[str, Any] = {}
+    review_claims: List[Dict[str, Any]] = []
+    unresolved_claims: List[Dict[str, Any]] = []
+
+    for section in LINKED_PROSE_SECTIONS:
+        prose = str(state.get(section) or "")
+        if not prose:
+            continue
+
+        sentences = re.split(r"(?<=[.?!])\s+", prose)
+        for sentence in sentences:
+            marker_ids = EV_MARKER_RE.findall(sentence)
+            if not marker_ids:
+                continue
+            resolved_ids: List[str] = []
+            for mid in marker_ids:
+                if mid in evidence_by_id:
+                    if mid not in resolved_ids:
+                        resolved_ids.append(mid)
+                else:
+                    unresolved_claims.append({
+                        "section": section,
+                        "evidence_id": mid,
+                        "reason": "unknown evidence_id",
+                    })
+
+            cleaned = re.sub(r"\s{2,}", " ", EV_MARKER_RE.sub("", sentence)).strip()
+            if resolved_ids:
+                review_claims.append(ReviewClaim(
+                    claim_id=make_claim_id(section, len(review_claims) + 1),
+                    claim_text=cleaned,
+                    target_section=section,
+                    supporting_evidence_ids=resolved_ids,
+                    is_quantitative=_is_quantitative_sentence(cleaned),
+                    validation_status="pending",
+                ).model_dump())
+
+        updates[section] = re.sub(r"[ \t]{2,}", " ", EV_MARKER_RE.sub("", prose)).strip()
+
+    logger.info(
+        f"claims_linker: built {len(review_claims)} review claims, "
+        f"{len(unresolved_claims)} unresolved markers."
+    )
+    updates["review_claims"] = review_claims
+    updates["unresolved_claims"] = unresolved_claims
+    return updates
 
 
 def _format_evidence_context(state: Dict[str, Any], max_items: int = 12) -> str:
@@ -80,6 +182,7 @@ Instructions:
 1. Organize the literature review into 3-4 major thematic sections corresponding to the evidence base.
 2. In-text citations MUST strictly use APA format e.g. (Author et al., Year) or Author (Year).
 3. Critically analyze conflicting methodologies and compare quantitative benchmark results.
+4. TRACEABILITY: immediately after any sentence grounded in a specific evidence record, append its machine tag on the same line, e.g. "...establishes a new state of the art [EV:<Evidence ID>]". Use the exact Evidence ID from the context above.
 {EVIDENCE_BASIS_NOTE}
 """
     raw = await _safe_invoke_llm(llm, [HumanMessage(content=prompt)])
@@ -174,6 +277,7 @@ Provide a detailed Results Section in Markdown:
 - 1. Overview of Included Evidence Base
 - 2. Hypothesis-by-Hypothesis Empirical Synthesis (evaluate whether current literature supports, refutes, or partially confirms H1..H5)
 - 3. Quantitative Benchmark Comparisons (tabulate or summarize reported baseline vs state-of-the-art metrics)
+4. TRACEABILITY: immediately after any sentence grounded in a specific evidence record, append its machine tag on the same line, e.g. "...reaches 94.2% accuracy [EV:<Evidence ID>]". Use the exact Evidence ID from the context above.
 {EVIDENCE_BASIS_NOTE}
 """
     raw = await _safe_invoke_llm(llm, [HumanMessage(content=prompt)])
@@ -183,7 +287,7 @@ Provide a detailed Results Section in Markdown:
 async def discussion_agent(state: Dict[str, Any]) -> Dict[str, Any]:
     """Writer 6: Synthesizes theoretical & practical implications."""
     ps = state.get("problem_statement", "")
-    results = state.get("results", "")
+    results = _strip_ev_markers(state.get("results", ""))
     llm = get_llm_for("aggregator", state, temperature=0.3)
 
     prompt = f"""You are a Senior Academic Scholar and Discussion Lead.
@@ -236,7 +340,7 @@ Address:
 async def conclusion_agent(state: Dict[str, Any]) -> Dict[str, Any]:
     """Writer 8: Formulates authoritative conclusion summarizing research contributions."""
     ps = state.get("problem_statement", "")
-    results = state.get("results", "")
+    results = _strip_ev_markers(state.get("results", ""))
     llm = get_llm_for("aggregator", state, temperature=0.2)
 
     prompt = f"""You are a Lead Research Author.
@@ -289,10 +393,16 @@ async def references_agent(state: Dict[str, Any]) -> Dict[str, Any]:
 
 
 async def appendices_agent(state: Dict[str, Any]) -> Dict[str, Any]:
-    """Writer 11: Compiles search protocols and evidence tables for appendix."""
+    """Writer 11: Compiles search protocol, evidence tables, and claim traceability matrix."""
     protocol = state.get("search_protocol") or {}
     tracker = state.get("prisma_tracker") or {}
-    
+    review_claims = state.get("review_claims") or []
+    evidence_by_id = {
+        e.get("evidence_id"): e
+        for e in (state.get("evidence_records") or [])
+        if e.get("evidence_id")
+    }
+
     inc = protocol.get('inclusion_criteria') or []
     exc = protocol.get('exclusion_criteria') or []
     inc_str = ", ".join(inc) if inc else "Peer-reviewed empirical studies"
@@ -310,6 +420,28 @@ async def appendices_agent(state: Dict[str, Any]) -> Dict[str, Any]:
 - Records Screened: {tracker.get('records_screened', 0)}
 - Studies Included: {tracker.get('studies_included', 0)}
 """
+
+    if review_claims:
+        rows = []
+        for c in review_claims:
+            locations = []
+            for eid in c.get("supporting_evidence_ids") or []:
+                ev = evidence_by_id.get(eid) or {}
+                loc = str(ev.get("section") or "unknown")
+                if ev.get("page") is not None:
+                    loc += f" p. {ev['page']}"
+                locator = ev.get("doi") or ev.get("source_url") or ""
+                target = f"https://doi.org/{locator}" if locator and not str(locator).startswith("http") else locator
+                link = f" [source]({target})" if target else ""
+                locations.append(f"{eid} ({loc}){link}")
+            rows.append(
+                f"- **{c.get('claim_id')}** ({c.get('target_section', '')}): "
+                f"{str(c.get('claim_text') or '')[:140]} -> {'; '.join(locations) if locations else 'unlinked'}"
+            )
+        app_text += "\n## Appendix C: Claim Traceability Matrix\n"
+        app_text += "Machine-readable claim -> evidence -> source chains for every statement in this document.\n"
+        app_text += "\n".join(rows) + "\n"
+
     return {"appendices": app_text}
 
 
@@ -338,8 +470,8 @@ Structure:
 async def abstract_agent(state: Dict[str, Any]) -> Dict[str, Any]:
     """Writer 13: Synthesizes structured abstract."""
     ps = state.get("problem_statement", "")
-    results = state.get("results", "")
-    conclusion = state.get("conclusion", "")
+    results = _strip_ev_markers(state.get("results", ""))
+    conclusion = _strip_ev_markers(state.get("conclusion", ""))
     llm = get_llm_for("aggregator", state, temperature=0.2)
 
     prompt = f"""You are a Lead Academic Author.

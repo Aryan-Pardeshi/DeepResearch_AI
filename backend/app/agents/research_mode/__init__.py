@@ -46,6 +46,7 @@ from backend.app.agents.research_mode.writing import (
     abstract_agent,
     title_agent,
     figures_node,
+    claims_linker_node,
 )
 from backend.app.agents.research_mode.validation import (
     citation_validator_node,
@@ -95,6 +96,7 @@ __all__ = [
     "abstract_agent",
     "title_agent",
     "figures_node",
+    "claims_linker_node",
     # Validation
     "citation_validator_node",
     "claim_validator_node",

@@ -122,12 +122,15 @@ async def _download_and_extract(client: httpx.AsyncClient, url: str, title: str)
             full_text = _extract_xml_text(pdf_bytes)
         else:
             reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
+            # Normalize each page separately but keep page boundaries as
+            # form-feed markers so downstream evidence extraction can attribute
+            # a quoted span to its exact source page.
             pages_text = []
             for page in reader.pages:
                 txt = page.extract_text()
                 if txt:
-                    pages_text.append(txt)
-            full_text = " ".join(" ".join(pages_text).split())
+                    pages_text.append(" ".join(txt.split()))
+            full_text = "\f".join(pages_text)
         if not full_text:
             logger.warning(f"No text extracted from PDF for '{title}'")
             return None

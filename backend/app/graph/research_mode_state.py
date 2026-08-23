@@ -16,6 +16,8 @@ class ResearchModeState(TypedDict, total=False):
     # --- Structured Evidence Store (Source of Truth) ---
     paper_records: List[Dict[str, Any]]       # Serialized PaperRecord objects
     evidence_records: List[Dict[str, Any]]    # Serialized EvidenceRecord objects
+    evidence_spans: List[Dict[str, Any]]      # Serialized EvidenceSpan objects (verbatim anchors)
+    claims: List[Dict[str, Any]]              # Serialized Claim objects with resolved traceability chains
     review_claims: List[Dict[str, Any]]       # Serialized ReviewClaim objects
     prisma_tracker: Dict[str, Any]            # Serialized PRISMATracker
     search_protocol: Dict[str, Any]           # Serialized SearchProtocol

@@ -32,6 +32,66 @@ def extract_numerical_claims(text: str) -> List[str]:
     return [s.strip() for s in sentences if METRIC_KEYWORD_PATTERN.search(s)]
 
 
+def validate_claim_chains(
+    review_claims: List[Dict[str, Any]],
+    evidence_records: List[Dict[str, Any]],
+    paper_records: List[Dict[str, Any]],
+) -> Tuple[int, int, List[str], List[str]]:
+    """Validate structured claim_id -> evidence_id -> paper_id -> source_url/doi chains.
+
+    Every rendered ReviewClaim must carry at least one supporting_evidence_id
+    that resolves to a known EvidenceRecord, whose paper_id resolves to a known
+    PaperRecord carrying a source_url or DOI locator. Returns
+    (total, resolved, unresolved_claim_ids, human-readable failure details).
+    """
+    if not review_claims:
+        return 0, 0, [], []
+
+    evidence_by_id = {
+        e.get("evidence_id"): e for e in evidence_records if e.get("evidence_id")
+    }
+    papers_by_id = {
+        p.get("paper_id"): p for p in paper_records if p.get("paper_id")
+    }
+
+    total = len(review_claims)
+    unresolved: List[str] = []
+    details: List[str] = []
+
+    for c in review_claims:
+        cid = str(c.get("claim_id") or "<unnamed claim>")
+        supporting = c.get("supporting_evidence_ids") or []
+        if not supporting:
+            unresolved.append(cid)
+            details.append(f"{cid}: no supporting evidence (empty supporting_evidence_ids).")
+            continue
+
+        broken = False
+        for eid in supporting:
+            ev = evidence_by_id.get(eid)
+            if ev is None:
+                broken = True
+                details.append(f"{cid}: supporting evidence '{eid}' does not resolve to any EvidenceRecord.")
+                continue
+            pid = ev.get("paper_id")
+            paper = papers_by_id.get(pid)
+            if paper is None:
+                broken = True
+                details.append(f"{cid}: evidence '{eid}' points at unknown paper_id '{pid}'.")
+                continue
+            if not (paper.get("source_url") or paper.get("doi")):
+                broken = True
+                details.append(
+                    f"{cid}: evidence '{eid}' paper '{pid}' lacks a source locator (source_url/doi)."
+                )
+
+        if broken:
+            unresolved.append(cid)
+
+    resolved = total - len(unresolved)
+    return total, resolved, unresolved, details
+
+
 def validate_citations_in_text(
     text: str,
     paper_records: List[Dict[str, Any]]
@@ -98,8 +158,15 @@ def validate_citations_in_text(
 
 
 async def citation_validator_node(state: Dict[str, Any]) -> Dict[str, Any]:
-    """Validator 1: Verifies all inline citations and flags orphan references."""
+    """Validator 1: Verifies inline citations, orphan references, and claim chains.
+
+    Beyond regex-matching rendered author-year text, validates every structured
+    ReviewClaim against the evidence store: each supporting_evidence_id must
+    resolve to an EvidenceRecord whose paper_id resolves to a located paper.
+    Claims are annotated with a machine verdict in the manifest itself.
+    """
     papers = state.get("paper_records") or state.get("screened_papers") or []
+    ev_dicts = state.get("evidence_records") or []
     all_prose = " ".join([
         str(state.get("literature_review") or ""),
         str(state.get("results") or ""),
@@ -108,10 +175,25 @@ async def citation_validator_node(state: Dict[str, Any]) -> Dict[str, Any]:
     ])
 
     total, verified, unverified, orphans = validate_citations_in_text(all_prose, papers)
-    logger.info(f"citation_validator: {verified}/{total} citations verified. {len(unverified)} unverified.")
+
+    review_claims = state.get("review_claims") or []
+    total_rc, resolved_rc, unresolved_claims, _details = validate_claim_chains(
+        review_claims, ev_dicts, papers
+    )
+    unresolved_set = set(unresolved_claims)
+    adjudicated = [
+        dict(c, validation_status="flagged" if str(c.get("claim_id")) in unresolved_set else "verified")
+        for c in review_claims
+    ]
+    logger.info(
+        f"citation_validator: {verified}/{total} citations verified; "
+        f"{resolved_rc}/{total_rc} review claims resolve full provenance chains."
+    )
 
     return {
         "unverified_citations": unverified,
+        "unresolved_claims": unresolved_claims,
+        "review_claims": adjudicated,
     }
 
 
@@ -150,14 +232,18 @@ def _mentions_metric(sentence_lower: str, metric_name: str) -> bool:
 
 
 async def claim_validator_node(state: Dict[str, Any]) -> Dict[str, Any]:
-    """Validator 2: Audits quantitative sentences against EvidenceRecord values."""
+    """Validator 2: Audits quantitative sentences and structured claims against EvidenceRecord values."""
     ev_dicts = state.get("evidence_records") or []
     results_text = str(state.get("results") or "")
 
     # Metric-scoped expectations: a number is only grounded when the sentence
     # names the metric AND the number matches that metric's reported/baseline value.
     metric_expectations: List[Tuple[str, float, str]] = []
+    evidence_by_id: Dict[str, Dict[str, Any]] = {}
     for e in ev_dicts:
+        eid = e.get("evidence_id")
+        if eid:
+            evidence_by_id[eid] = e
         metric_name = str(e.get("metric_name") or "").strip()
         if not metric_name:
             continue
@@ -195,10 +281,53 @@ async def claim_validator_node(state: Dict[str, Any]) -> Dict[str, Any]:
         else:
             unsupported.append(sent.strip())
 
-    logger.info(f"claim_validator: {grounded_count}/{len(numerical_sentences)} numerical claims grounded.")
+    # Structured quantitative ReviewClaims are grounded through their
+    # supporting_evidence_ids, not through free-text sentence matching.
+    review_claims = state.get("review_claims") or []
+    grounded_quant_ids: List[str] = []
+    adjudicated = []
+    for c in review_claims:
+        c = dict(c)
+        if c.get("is_quantitative"):
+            claim_lower = str(c.get("claim_text") or "").lower()
+            nums = []
+            for n in re.findall(r"\b\d+\.?\d*\b", str(c.get("claim_text") or "")):
+                try:
+                    nums.append(float(n))
+                except (ValueError, TypeError):
+                    pass
+            grounded = any(
+                _mentions_metric(claim_lower, str(ev.get("metric_name") or ""))
+                and _number_matches(
+                    n,
+                    float(value),
+                    str(ev.get("unit_or_scale") or ""),
+                )
+                for eid in (c.get("supporting_evidence_ids") or [])
+                for ev in [evidence_by_id.get(eid) or {}]
+                for field in ("reported_value", "baseline_value")
+                for value in [ev.get(field)]
+                if value is not None
+                for n in nums
+            )
+            if grounded:
+                grounded_quant_ids.append(str(c.get("claim_id")))
+                if c.get("validation_status") != "flagged":
+                    c["validation_status"] = "verified"
+            else:
+                unsupported.append(str(c.get("claim_id")))
+                c["validation_status"] = "unsupported"
+        adjudicated.append(c)
+
+    logger.info(
+        f"claim_validator: {grounded_count}/{len(numerical_sentences)} numerical sentences grounded; "
+        f"{len(grounded_quant_ids)} structured quantitative claims grounded."
+    )
     return {
         "unsupported_numerical_claims": unsupported,
-        "grounded_claims_count": grounded_count
+        "grounded_claims_count": grounded_count,
+        "grounded_quantitative_claim_ids": grounded_quant_ids,
+        "review_claims": adjudicated,
     }
 
 
@@ -220,6 +349,17 @@ async def integrity_auditor_node(state: Dict[str, Any]) -> Dict[str, Any]:
 
     total_cites, verified_cites, unverified_cites, orphans = validate_citations_in_text(all_prose, papers)
     unsupported_claims = state.get("unsupported_numerical_claims") or []
+    unresolved_claims = state.get("unresolved_claims") or []
+
+    # Structured provenance gate: every rendered review claim must resolve the
+    # full claim -> evidence -> paper -> locator chain against the live corpus.
+    review_claims = state.get("review_claims") or []
+    total_rc, resolved_rc, chain_unresolved, chain_details = validate_claim_chains(
+        review_claims,
+        state.get("evidence_records") or [],
+        papers,
+    )
+    chain_unresolved = sorted(set(chain_unresolved) | set(str(c) for c in unresolved_claims))
 
     flags: List[str] = []
     if prisma_errors:
@@ -228,6 +368,11 @@ async def integrity_auditor_node(state: Dict[str, Any]) -> Dict[str, Any]:
         flags.append(f"{len(unverified_cites)} unverified inline citations found.")
     if unsupported_claims:
         flags.append(f"{len(unsupported_claims)} unsupported numerical claims flagged.")
+    if chain_unresolved:
+        flags.append(
+            f"{len(chain_unresolved)} review claims lack a resolvable "
+            "claim->evidence->paper->source chain."
+        )
 
     report = ValidationReport(
         total_inline_citations=total_cites,
@@ -235,8 +380,11 @@ async def integrity_auditor_node(state: Dict[str, Any]) -> Dict[str, Any]:
         unverified_citations=unverified_cites,
         unsupported_claims=unsupported_claims,
         orphan_references=orphans[:10],
+        total_review_claims=total_rc,
+        resolved_review_claims=resolved_rc,
+        unresolved_review_claims=chain_unresolved,
+        integrity_flags=flags + chain_details[:10],
         prisma_invariants_valid=len(prisma_errors) == 0,
-        integrity_flags=flags,
         passed_all_gates=len(flags) == 0
     )
 

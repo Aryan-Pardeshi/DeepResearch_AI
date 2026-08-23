@@ -1,11 +1,20 @@
-"""Phase 4 Structured Evidence Extraction Agents for Research Mode."""
+"""Phase 4 Structured Evidence Extraction Agents for Research Mode.
+
+Every extracted claim is forced through the anchored evidence path:
+Claim -> EvidenceSpan -> Paper -> exact location (section+page) -> URL/DOI.
+Free-text claim generation without paper_id + evidence + section is impossible
+by construction: anchor_quote_to_paper deterministically derives the span,
+page, offsets, and confidence from the source text or marks them explicitly
+unknown. Unmatchable quotes are kept as paraphrase-grade low-confidence
+records rather than silently dropped, so downstream consumers can audit them.
+"""
 
 from __future__ import annotations
 
 import json
 import logging
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Tuple
 from langchain_core.messages import HumanMessage
 
 from backend.app.agents.research_mode._common import (
@@ -13,30 +22,149 @@ from backend.app.agents.research_mode._common import (
     _safe_invoke_llm,
 )
 from backend.app.models.evidence import (
+    ConfidenceBasis,
     EvidenceRecord,
-    PaperRecord,
+    EvidenceSpan,
+    MIN_ANCHOR_CHARS,
+    UNKNOWN_SECTION,
+    apply_chain_downgrade,
+    build_claims,
+    locate_quote,
     make_evidence_id,
     make_paper_id,
+    make_span_id,
+    resolve_record_chain,
+    score_confidence,
 )
 
 logger = logging.getLogger(__name__)
 
+# Section names an LLM may legitimately report for a quote's location; anything
+# else degrades to UNKNOWN_SECTION instead of being trusted.
+KNOWN_SECTIONS = (
+    "abstract",
+    "introduction",
+    "background",
+    "related work",
+    "methodology",
+    "methods",
+    "results",
+    "discussion",
+    "conclusion",
+)
+
+
+def _clean_section_label(label: Optional[str]) -> str:
+    """Map a raw LLM section label onto a known section or 'unknown'."""
+    low = (label or "").strip().lower()
+    if not low:
+        return UNKNOWN_SECTION
+    for known in KNOWN_SECTIONS:
+        if known in low:
+            return known.title()
+    return UNKNOWN_SECTION
+
+
+def _normalized_len(text: str) -> int:
+    return len(re.sub(r"\s+", " ", (text or "").lower()).strip())
+
+
+def anchor_quote_to_paper(
+    paper: Dict[str, Any],
+    quote: str,
+    section_label: Optional[str],
+) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """Anchor one claim to its paper via deterministic quote location.
+
+    Returns the record-extras dict (span fields, confidence, provenance).
+    Location fields follow the explicit
+    rule: page only when form-feed markers prove it, section from the label
+    when recognized else 'unknown', offsets only for fulltext anchors, and
+    confidence scored by the documented extraction-method table.
+    """
+    excerpt = paper.get("fulltext_excerpt") or ""
+    abstract = paper.get("abstract") or ""
+    strong_anchor = _normalized_len(quote) >= MIN_ANCHOR_CHARS
+
+    basis = ConfidenceBasis.PARAPHRASE
+    span_text = (quote or "").strip()
+    section = _clean_section_label(section_label)
+    page: Optional[int] = None
+    start_off: Optional[int] = None
+    end_off: Optional[int] = None
+
+    loc_full = locate_quote(excerpt, quote) if strong_anchor else None
+    loc_abs = locate_quote(abstract, quote) if strong_anchor and not loc_full else None
+
+    if loc_full:
+        start_off, end_off, page = loc_full
+        span_text = excerpt[start_off:end_off]
+        basis = ConfidenceBasis.EXACT_QUOTE_FULLTEXT
+    elif loc_abs:
+        abs_start, abs_end, _page = loc_abs
+        span_text = abstract[abs_start:abs_end]
+        section = "Abstract"
+        basis = ConfidenceBasis.EXACT_QUOTE_ABSTRACT
+        # Abstract-only API results carry no meaningful page number.
+        page = None
+
+    chain_complete = bool(paper.get("source_url") or paper.get("doi"))
+    confidence = score_confidence(
+        basis,
+        page_known=page is not None,
+        chain_complete=chain_complete,
+    )
+
+    extras = {
+        "exact_quote": span_text,
+        "source_section": section,
+        "section": section,
+        "page": page,
+        "char_offset_start": start_off,
+        "char_offset_end": end_off,
+        "confidence": confidence,
+        "confidence_basis": basis.value,
+        "verification_status": "verified" if basis != ConfidenceBasis.PARAPHRASE else "unverified",
+        "source_url": paper.get("source_url") or "",
+        "doi": paper.get("doi"),
+    }
+    return extras
+
+
+def build_span(
+    paper_id: str,
+    span_seq: int,
+    extras: Dict[str, Any],
+    span_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Materialize the EvidenceSpan dict for anchored record extras."""
+    return EvidenceSpan(
+        span_id=span_id or make_span_id(paper_id, span_seq),
+        paper_id=paper_id,
+        text=extras["exact_quote"],
+        section=extras.get("section", UNKNOWN_SECTION),
+        page=extras.get("page"),
+        char_offset_start=extras.get("char_offset_start"),
+        char_offset_end=extras.get("char_offset_end"),
+    ).model_dump()
+
 
 async def evidence_extractor_agent(state: Dict[str, Any]) -> Dict[str, Any]:
-    """Agent 11: Extracts structured factual findings and verbatim quotes from included papers."""
+    """Agent 11: Extracts structured factual findings as anchored evidence records."""
     paper_dicts = state.get("paper_records") or state.get("screened_papers") or []
     if not paper_dicts:
-        return {"evidence_records": []}
+        return {"evidence_records": [], "evidence_spans": []}
 
     llm = get_llm_for("researcher", state, temperature=0.1)
     evidence_records: List[Dict[str, Any]] = []
+    evidence_spans: List[Dict[str, Any]] = []
 
     # Process top 10 included papers
     for p_idx, p in enumerate(paper_dicts[:10]):
         paper_id = p.get("paper_id")
         if not paper_id:
-            # Persist a stable identifier back onto the record so provenance_agent
-            # resolves the exact same ID that downstream evidence records carry.
+            # Persist a stable identifier back onto the record so downstream
+            # evidence records and spans all carry the same ID.
             paper_id = make_paper_id(
                 doi=p.get("doi"),
                 title=p.get("title", ""),
@@ -48,11 +176,11 @@ async def evidence_extractor_agent(state: Dict[str, Any]) -> Dict[str, Any]:
         excerpt = p.get("fulltext_excerpt") or ""
 
         text_content = f"Title: {title}\nAbstract: {abstract}\nKey Excerpt: {excerpt[:800]}"
-        norm_text = re.sub(r"\s+", " ", text_content.lower())
 
         prompt = f"""You are an expert Evidence Extraction Specialist.
 Extract 2-3 specific, verifiable empirical or theoretical claims from the paper below.
-For each claim, capture the exact verbatim quote and the source section where possible.
+For each claim you MUST provide the exact verbatim quote copied character-for-character
+from the paper text, plus the section it appears in.
 
 Paper:
 {text_content}
@@ -61,10 +189,8 @@ Return a valid JSON array of objects:
 [
   {{
     "claim_summary": "Concise summary of specific empirical finding or theoretical principle",
-    "exact_quote": "Verbatim quote from the text supporting this finding",
-    "source_section": "Abstract" | "Methodology" | "Results" | "Conclusion",
-    "task_or_domain": "e.g. Natural Language Processing, Protein Folding",
-    "model_or_method": "e.g. AlphaFold2, Transformer, CNN"
+    "exact_quote": "Verbatim quote copied exactly from the paper text supporting this finding",
+    "source_section": "Abstract" | "Introduction" | "Methodology" | "Results" | "Discussion" | "Conclusion" | "unknown"
   }}
 ]
 """
@@ -82,41 +208,53 @@ Return a valid JSON array of objects:
                 if not isinstance(item, dict):
                     continue
                 quote = item.get("exact_quote")
-                norm_quote = re.sub(r"\s+", " ", str(quote or "").lower().strip())
-                # Verify quote is present in available text
-                if norm_quote and (norm_quote in norm_text or (abstract and norm_quote in abstract.lower())):
-                    seq = len(evidence_records) - records_before + 1
-                    ev_id = make_evidence_id(paper_id, seq)
-                    ev = EvidenceRecord(
-                        evidence_id=ev_id,
-                        paper_id=paper_id,
-                        claim_summary=item.get("claim_summary", "Empirical finding"),
-                        exact_quote=quote,
-                        source_section=item.get("source_section", "Abstract"),
-                        task_or_domain=item.get("task_or_domain"),
-                        model_or_method=item.get("model_or_method"),
-                        effect_direction="unclear",
-                    )
-                    evidence_records.append(ev.model_dump())
+                claim_summary = item.get("claim_summary")
+                if not quote or not claim_summary:
+                    continue
+                extras = anchor_quote_to_paper(p, str(quote), item.get("source_section"))
+                seq = sum(1 for s in evidence_spans if s["paper_id"] == paper_id) + 1
+                span = build_span(paper_id, seq, extras)
+                extras["evidence_span_id"] = span["span_id"]
+                ev = EvidenceRecord(
+                    evidence_id=make_evidence_id(paper_id, len(evidence_records) + 1),
+                    paper_id=paper_id,
+                    claim_summary=str(claim_summary),
+                    task_or_domain=item.get("task_or_domain"),
+                    model_or_method=item.get("model_or_method"),
+                    effect_direction="unclear",
+                    **extras,
+                )
+                evidence_records.append(ev.model_dump())
+                evidence_spans.append(span)
 
         except Exception as e:
             logger.warning(f"evidence_extractor failed for paper '{title[:30]}': {e}")
 
         # Fallback only if no records were extracted for this paper AND valid abstract quote exists
         if len(evidence_records) == records_before and abstract and len(abstract.strip()) > 30:
-            ev_id = make_evidence_id(paper_id, 1)
+            fallback_quote = abstract.strip()[:200]
+            extras = anchor_quote_to_paper(p, fallback_quote, "Abstract")
+            span = build_span(paper_id, 1, extras)
+            extras["evidence_span_id"] = span["span_id"]
             ev = EvidenceRecord(
-                evidence_id=ev_id,
+                evidence_id=make_evidence_id(paper_id, len(evidence_records) + 1),
                 paper_id=paper_id,
                 claim_summary=f"Investigates {title[:60]}",
-                exact_quote=abstract.strip()[:200],
-                source_section="Abstract",
-                effect_direction="unclear"
+                effect_direction="unclear",
+                **extras,
             )
             evidence_records.append(ev.model_dump())
+            evidence_spans.append(span)
 
-    logger.info(f"evidence_extractor_agent generated {len(evidence_records)} structured evidence records.")
-    return {"evidence_records": evidence_records, "paper_records": paper_dicts}
+    logger.info(
+        f"evidence_extractor_agent generated {len(evidence_records)} structured evidence records "
+        f"with {len(evidence_spans)} anchored spans."
+    )
+    return {
+        "evidence_records": evidence_records,
+        "evidence_spans": evidence_spans,
+        "paper_records": paper_dicts,
+    }
 
 
 async def quantitative_extractor_agent(state: Dict[str, Any]) -> Dict[str, Any]:
@@ -203,12 +341,22 @@ async def limitation_extractor_agent(state: Dict[str, Any]) -> Dict[str, Any]:
 
 
 async def provenance_agent(state: Dict[str, Any]) -> Dict[str, Any]:
-    """Agent 15: Validates and anchors every evidence record to its source paper."""
+    """Agent 15: Resolves the full traceability chain for every evidence record.
+
+    Chain: Claim -> EvidenceSpan -> Paper -> exact location -> URL/DOI.
+    - Drops records whose paper_id matches nothing in the corpus (ungroundable).
+    - Backfills missing full text via PDF fetch for paraphrase-grade records,
+      re-anchoring them when the verbatim quote is then located.
+    - Downgrades records with incomplete chains to unverified + low confidence
+      instead of surfacing black-box claims.
+    - Emits machine-readable Claim objects for downstream output layers.
+    """
     ev_dicts = state.get("evidence_records") or []
     # Fall back to screened_papers so evidence stays validated when only that
     # corpus key is populated upstream.
     paper_dicts = state.get("paper_records") or state.get("screened_papers") or []
     valid_paper_ids = {p.get("paper_id") for p in paper_dicts if p.get("paper_id")}
+    papers_by_id = {p.get("paper_id"): p for p in paper_dicts if p.get("paper_id")}
 
     validated: List[Dict[str, Any]] = []
     if not valid_paper_ids:
@@ -219,17 +367,87 @@ async def provenance_agent(state: Dict[str, Any]) -> Dict[str, Any]:
                 "provenance_agent found no paper corpus to anchor against; "
                 f"passing {len(ev_dicts)} evidence records through unfiltered."
             )
-        validated = list(ev_dicts)
+        validated = [dict(e) for e in ev_dicts]
     else:
         for e in ev_dicts:
             pid = e.get("paper_id")
             if pid in valid_paper_ids:
-                validated.append(e)
+                validated.append(dict(e))
             else:
                 logger.warning(f"Discarded ungrounded evidence record {e.get('evidence_id')} without paper match.")
 
+    # --- Full-text backfill for paraphrase-grade records missing excerpts ---
+    needs_backfill = {
+        r["paper_id"]
+        for r in validated
+        if r.get("confidence_basis") == ConfidenceBasis.PARAPHRASE.value
+        and papers_by_id.get(r["paper_id"])
+        and not (papers_by_id[r["paper_id"]].get("fulltext_excerpt"))
+    }
+    if needs_backfill:
+        try:
+            from backend.app.tools.fulltext_fetcher import fetch_fulltexts
+
+            to_fetch = [papers_by_id[pid] for pid in needs_backfill]
+            enriched = await fetch_fulltexts([dict(p) for p in to_fetch])
+            for p in enriched:
+                target = papers_by_id.get(p.get("paper_id"))
+                if target is not None and p.get("fulltext_excerpt"):
+                    target["fulltext_excerpt"] = p["fulltext_excerpt"]
+        except Exception as e:
+            logger.warning(f"provenance_agent full-text backfill skipped: {e}")
+
+    # --- Re-anchor paraphrase records once backfilled text is available ---
+    span_seq_by_paper: Dict[str, int] = {}
+    for r in validated:
+        if r.get("confidence_basis") != ConfidenceBasis.PARAPHRASE.value:
+            continue
+        quote = r.get("exact_quote")
+        paper = papers_by_id.get(r["paper_id"])
+        if not quote or not paper or not paper.get("fulltext_excerpt"):
+            continue
+        extras = anchor_quote_to_paper(paper, quote, r.get("section"))
+        if extras["confidence_basis"] == ConfidenceBasis.PARAPHRASE.value:
+            continue  # still unlocatable; keep the honest downgrade
+        seq = span_seq_by_paper.get(r["paper_id"], 0) + 1
+        span_seq_by_paper[r["paper_id"]] = seq
+        sid = r.get("evidence_span_id")
+        r.update(extras)
+        r["evidence_span_id"] = sid or make_span_id(r["paper_id"], seq)
+
+    # --- Resolve the traceability chain; downgrade broken links ---
+    for r in validated:
+        chain = resolve_record_chain(r, paper_dicts)
+        apply_chain_downgrade(r, chain)
+
+    # --- Canonical spans for kept records ---
+    state_spans = {
+        s.get("span_id"): s for s in (state.get("evidence_spans") or []) if s.get("span_id")
+    }
+    final_spans: List[Dict[str, Any]] = []
+    for r in validated:
+        sid = r.get("evidence_span_id")
+        if not sid:
+            continue
+        if sid in state_spans:
+            final_spans.append(state_spans[sid])
+        else:
+            final_spans.append(EvidenceSpan(
+                span_id=sid,
+                paper_id=r["paper_id"],
+                text=r.get("exact_quote") or "",
+                section=r.get("section", UNKNOWN_SECTION),
+                page=r.get("page"),
+                char_offset_start=r.get("char_offset_start"),
+                char_offset_end=r.get("char_offset_end"),
+            ).model_dump())
+
+    claims = [c.model_dump() for c in build_claims(validated, paper_dicts)]
+
     return {
         "evidence_records": validated,
+        "evidence_spans": final_spans,
+        "claims": claims,
         "hitl_checkpoint": "checkpoint_2",
         "status": "awaiting_approval"
     }
