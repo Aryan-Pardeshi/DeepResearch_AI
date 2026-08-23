@@ -43,9 +43,6 @@ CONFIDENCE_PAGE_BONUS = 0.05
 CONFIDENCE_CHAIN_PENALTY = 0.20
 CONFIDENCE_MIN = 0.05
 CONFIDENCE_MAX = 0.95
-# Verbatim anchors shorter than this could trivially match anywhere in a paper
-# and are treated as paraphrase-grade rather than true quote anchors.
-MIN_ANCHOR_CHARS = 30
 
 
 def make_paper_id(doi: Optional[str], title: str, year: Optional[str] = None) -> str:
@@ -136,8 +133,12 @@ def _normalize_with_index_map(document: str) -> Tuple[str, List[int]]:
                 idx_map.append(i)
                 prev_space = True
             continue
-        out.append(ch.lower())
-        idx_map.append(i)
+        # lower() can expand one char into several (e.g. 'İ' -> 'i̇'); every
+        # produced char maps back to the same origin offset so idx_map never
+        # desyncs from the normalized string.
+        for lowered in ch.lower():
+            out.append(lowered)
+            idx_map.append(i)
         prev_space = False
     while out and out[-1] == " ":
         out.pop()
@@ -495,10 +496,14 @@ def resolve_record_chain(
     page = record.get("page")
     section = record.get("section") or UNKNOWN_SECTION
 
+    # The documented -0.20 chain penalty applies specifically to a missing
+    # URL/DOI locator; other missing links downgrade verification_status but
+    # do not silently alter the extraction-method score.
+    locator_missing = "source_locator_missing" in missing_links
     confidence = score_confidence(
         basis,
         page_known=page is not None,
-        chain_complete=not missing_links,
+        chain_complete=not locator_missing,
     )
     if "paper_not_in_corpus" in missing_links:
         # No resolvable source document at all: never trust above paraphrase grade.

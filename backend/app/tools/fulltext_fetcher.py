@@ -20,7 +20,11 @@ TITLE_MATCH_WINDOW = 4000      # characters searched for them; repository deposi
                                # before the paper itself begins
 
 FULLTEXT_TOP_N = 10            # only the N highest-ranked papers get fetched
-FULLTEXT_CHAR_BUDGET = 1500    # extracted characters kept per paper
+FULLTEXT_CHAR_BUDGET = 1500    # prompt-facing excerpt characters kept per paper
+# Whole-document budget kept for quote anchoring. The prompt-sized excerpt above
+# rarely spans past page 1-2, which would make page attribution for quotes from
+# later sections impossible; anchoring uses this larger text instead.
+FULLTEXT_ANCHOR_CHAR_BUDGET = 40000
 FULLTEXT_FETCH_TIMEOUT = 8.0   # seconds, per PDF download
 FULLTEXT_MAX_PDF_BYTES = 16 * 1024 * 1024  # 16MB cap, abort larger downloads
 
@@ -128,10 +132,12 @@ async def _download_and_extract(client: httpx.AsyncClient, url: str, title: str)
             pages_text = []
             for page in reader.pages:
                 txt = page.extract_text()
-                if txt:
-                    pages_text.append(" ".join(txt.split()))
+                # Keep image-only/empty pages as empty entries: dropping one
+                # would also drop its form-feed boundary and shift every later
+                # page number down by one.
+                pages_text.append(" ".join(txt.split()) if txt else "")
             full_text = "\f".join(pages_text)
-        if not full_text:
+        if not full_text or not full_text.replace("\f", "").strip():
             logger.warning(f"No text extracted from PDF for '{title}'")
             return None
 
@@ -142,8 +148,10 @@ async def _download_and_extract(client: httpx.AsyncClient, url: str, title: str)
             )
             return None
 
-        excerpt = _skip_cover_page(title, full_text)[:FULLTEXT_CHAR_BUDGET]
-        return excerpt
+        # Return the whole title-checked document (within the anchor budget)
+        # with page markers intact; callers slice prompt-sized excerpts.
+        anchored_text = _skip_cover_page(title, full_text)
+        return anchored_text[:FULLTEXT_ANCHOR_CHAR_BUDGET]
     except Exception as e:
         logger.warning(f"Failed to fetch/extract fulltext PDF for '{title}' from {url}: {e}")
         return None
@@ -185,7 +193,7 @@ async def _fetch_single_pdf(paper: dict, semaphore: asyncio.Semaphore) -> tuple[
 
 
 async def fetch_fulltext_excerpts(papers: list[dict]) -> dict[str, str]:
-    """Fetches PDF full-text excerpts concurrently for the top FULLTEXT_TOP_N papers."""
+    """Fetches page-marked PDF full texts concurrently for the top FULLTEXT_TOP_N papers."""
     top_selected = papers[:FULLTEXT_TOP_N]
     results: dict[str, str] = {}
     if not top_selected:
@@ -225,14 +233,22 @@ async def fetch_fulltext_excerpts(papers: list[dict]) -> dict[str, str]:
 
 
 async def fetch_fulltexts(papers: list[dict]) -> list[dict]:
-    """Fetches full-text excerpts and attaches them to paper dictionaries under 'fulltext_excerpt' and 'content_excerpt'."""
+    """Fetches full text and attaches it to paper dictionaries.
+
+    'full_text' carries the page-marked anchor text (up to
+    FULLTEXT_ANCHOR_CHAR_BUDGET) for quote attribution; 'fulltext_excerpt' and
+    'content_excerpt' stay prompt-sized (FULLTEXT_CHAR_BUDGET).
+    """
     excerpts_map = await fetch_fulltext_excerpts(papers)
     enriched = []
     for p in papers:
         p_copy = dict(p)
         pid = p_copy.get("paper_id") or p_copy.get("id") or p_copy.get("title", "")
         if pid in excerpts_map:
-            p_copy["fulltext_excerpt"] = excerpts_map[pid]
-            p_copy["content_excerpt"] = excerpts_map[pid]
+            full_text = excerpts_map[pid]
+            excerpt = full_text[:FULLTEXT_CHAR_BUDGET]
+            p_copy["full_text"] = full_text
+            p_copy["fulltext_excerpt"] = excerpt
+            p_copy["content_excerpt"] = excerpt
         enriched.append(p_copy)
     return enriched

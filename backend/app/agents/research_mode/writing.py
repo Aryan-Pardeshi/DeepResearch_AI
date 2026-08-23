@@ -11,7 +11,7 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from langchain_core.messages import HumanMessage
 
 from backend.app.agents.research_mode._common import (
@@ -90,7 +90,14 @@ async def claims_linker_node(state: Dict[str, Any]) -> Dict[str, Any]:
         if not prose:
             continue
 
+        # Pull markers that trail a sentence onto the sentence itself so a
+        # marker-only fragment ("...state of the art. [EV:id]") never becomes
+        # an empty claim while the real sentence loses its link.
+        prose = re.sub(r"([.?!])[ \t]+(?=\[\s*ev:)", r"\1", prose, flags=re.IGNORECASE)
+
         sentences = re.split(r"(?<=[.?!])\s+", prose)
+        pending_ids: List[str] = []
+        last_claim_index: Optional[int] = None
         for sentence in sentences:
             marker_ids = EV_MARKER_RE.findall(sentence)
             if not marker_ids:
@@ -108,15 +115,36 @@ async def claims_linker_node(state: Dict[str, Any]) -> Dict[str, Any]:
                     })
 
             cleaned = re.sub(r"\s{2,}", " ", EV_MARKER_RE.sub("", sentence)).strip()
-            if resolved_ids:
+            if not cleaned:
+                # Marker-only fragment: defer its ids to the adjacent claim
+                # sentence instead of emitting an empty claim_text.
+                pending_ids.extend(i for i in resolved_ids if i not in pending_ids)
+                continue
+
+            supporting = pending_ids + [i for i in resolved_ids if i not in pending_ids]
+            pending_ids = []
+            if supporting:
                 review_claims.append(ReviewClaim(
                     claim_id=make_claim_id(section, len(review_claims) + 1),
                     claim_text=cleaned,
                     target_section=section,
-                    supporting_evidence_ids=resolved_ids,
+                    supporting_evidence_ids=supporting,
                     is_quantitative=_is_quantitative_sentence(cleaned),
                     validation_status="pending",
                 ).model_dump())
+                last_claim_index = len(review_claims) - 1
+
+        if pending_ids:
+            if last_claim_index is not None:
+                target_ids = review_claims[last_claim_index]["supporting_evidence_ids"]
+                target_ids.extend(i for i in pending_ids if i not in target_ids)
+            else:
+                for mid in pending_ids:
+                    unresolved_claims.append({
+                        "section": section,
+                        "evidence_id": mid,
+                        "reason": "marker not adjacent to any claim sentence",
+                    })
 
         updates[section] = re.sub(r"[ \t]{2,}", " ", EV_MARKER_RE.sub("", prose)).strip()
 

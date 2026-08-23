@@ -16,6 +16,7 @@ from langgraph.types import Command
 # Resolved lazily rather than importing the compiled graph: lifespan recompiles it
 # with the SQLite checkpointer, and a module-level binding would keep the old object.
 from backend.app.graph.research_mode_builder import get_research_mode_graph
+from backend.app.agents.research_mode.writing import EV_MARKER_RE
 from backend.app.tools.pdf_generator import generate_paper_pdf
 from backend.app.tools.docx_generator import generate_paper_docx
 from backend.app.stats import increment_paper_count, get_paper_count
@@ -26,6 +27,22 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 THREAD_ID_PATTERN = re.compile(r"[a-zA-Z0-9\-_]{1,64}")
+
+
+def _sanitize_node_output(value: Any) -> Any:
+    """Mask [EV:<id>] provenance tags on the live event path.
+
+    claims_linker strips these markers before final rendering, but writer nodes
+    stream raw output long before that pass runs; without this, unresolved tags
+    are visible to the user during live streaming.
+    """
+    if isinstance(value, str):
+        return re.sub(r"[ \t]{2,}", " ", EV_MARKER_RE.sub("", value))
+    if isinstance(value, dict):
+        return {k: _sanitize_node_output(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_sanitize_node_output(v) for v in value]
+    return value
 
 
 def _validate_thread_id(thread_id: str) -> str:
@@ -192,7 +209,7 @@ async def _execute_research_graph(thread_id: str, message: str):
             elif event_type == "on_chain_end":
                 node_name = event.get("metadata", {}).get("langgraph_node")
                 if node_name and event.get("name") == node_name and not node_name.startswith("__"):
-                    node_output = event["data"].get("output")
+                    node_output = _sanitize_node_output(event["data"].get("output"))
                     payload = {
                         "event": "node_update",
                         "node": node_name,
