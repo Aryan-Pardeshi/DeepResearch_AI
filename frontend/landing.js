@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initTheme();
     initGitHubStars();
     initInspectorTabs();
+    initExampleGallery();
     initSmoothScroll();
     initMobileNav();
     initScrollAnimations();
@@ -127,6 +128,127 @@ function initInspectorTabs() {
             }
         });
     });
+}
+
+/* ==========================================================================
+   3b. EXAMPLE GALLERY (REAL RESEARCH MODE OUTPUT)
+   ========================================================================== */
+let LANDING_EXAMPLES = [];
+
+async function initExampleGallery() {
+    const selectCards = document.querySelectorAll('.example-select-card');
+    if (!selectCards.length) return;
+
+    try {
+        const response = await fetch('/assets/examples.json');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        LANDING_EXAMPLES = await response.json();
+    } catch (e) {
+        console.warn('Could not load landing examples.json, keeping static markup:', e);
+        return;
+    }
+
+    if (!LANDING_EXAMPLES.length) return;
+
+    selectCards.forEach(card => {
+        card.addEventListener('click', () => {
+            const example = LANDING_EXAMPLES.find(e => e.id === card.getAttribute('data-example-id'));
+            if (example) renderExample(example, card);
+        });
+    });
+
+    renderExample(LANDING_EXAMPLES[0], selectCards[0]);
+}
+
+function renderExample(example, activeCard) {
+    document.querySelectorAll('.example-select-card').forEach(c => {
+        const isActive = c === activeCard;
+        c.classList.toggle('active', isActive);
+        c.setAttribute('aria-selected', String(isActive));
+    });
+
+    const questionEl = document.getElementById('example-question-text');
+    if (questionEl) questionEl.textContent = `"${example.question}"`;
+
+    const discoveredEl = document.getElementById('metric-discovered');
+    const screenedEl = document.getElementById('metric-screened');
+    const includedEl = document.getElementById('metric-included');
+    if (discoveredEl) discoveredEl.textContent = example.stats.discovered;
+    if (screenedEl) screenedEl.textContent = example.stats.screened;
+    if (includedEl) includedEl.textContent = example.stats.included;
+
+    const prismaEl = document.getElementById('prisma-diagram-preview');
+    if (prismaEl) {
+        const p = example.prisma;
+        prismaEl.innerHTML = `
+            <div class="prisma-step-row">
+                <div class="prisma-box">
+                    <div class="prisma-box-title">1. Identification</div>
+                    <div class="prisma-box-stat">${p.identification.stat}</div>
+                    <div class="prisma-box-sub">${p.identification.sub}</div>
+                </div>
+                <div class="prisma-box prisma-box-excluded">
+                    <div class="prisma-box-title">Deduplication</div>
+                    <div class="prisma-box-stat">${p.dedup_excluded.stat}</div>
+                    <div class="prisma-box-sub">${p.dedup_excluded.sub}</div>
+                </div>
+            </div>
+            <div class="prisma-step-row">
+                <div class="prisma-box">
+                    <div class="prisma-box-title">2. Screening</div>
+                    <div class="prisma-box-stat">${p.screening.stat}</div>
+                    <div class="prisma-box-sub">${p.screening.sub}</div>
+                </div>
+                <div class="prisma-box prisma-box-excluded">
+                    <div class="prisma-box-title">Irrelevant</div>
+                    <div class="prisma-box-stat">${p.irrelevant_excluded.stat}</div>
+                    <div class="prisma-box-sub">${p.irrelevant_excluded.sub}</div>
+                </div>
+            </div>
+            <div class="prisma-step-row">
+                <div class="prisma-box">
+                    <div class="prisma-box-title">3. Included Corpus</div>
+                    <div class="prisma-box-stat">${p.included.stat}</div>
+                    <div class="prisma-box-sub">${p.included.sub}</div>
+                </div>
+            </div>
+        `;
+    }
+
+    const tbody = document.getElementById('evidence-table-body');
+    if (tbody) {
+        tbody.innerHTML = example.evidence_rows.map(row => `
+            <tr>
+                <td><strong>${row.study}</strong></td>
+                <td>${row.focus}</td>
+                <td>${row.methodology}</td>
+                <td>${row.finding}</td>
+                <td><span class="evidence-tag">${row.level}</span></td>
+            </tr>
+        `).join('');
+    }
+
+    const titleEl = document.getElementById('paper-mock-title');
+    const metaEl = document.getElementById('paper-mock-meta');
+    const abstractEl = document.getElementById('paper-mock-abstract-text');
+    const bodyEl = document.getElementById('paper-mock-body-text');
+    const citationsEl = document.getElementById('paper-mock-citations-list');
+    if (titleEl) titleEl.textContent = example.paper.title;
+    if (metaEl) metaEl.textContent = example.paper.meta;
+    if (abstractEl) abstractEl.textContent = example.paper.abstract;
+    if (bodyEl) bodyEl.textContent = example.paper.body;
+    if (citationsEl) {
+        citationsEl.innerHTML = example.paper.citations.map(c => `<li>${c}</li>`).join('');
+    }
+
+    const runBtn = document.getElementById('run-example-btn');
+    if (runBtn) {
+        runBtn.href = `/app?mode=researchmode&q=${encodeURIComponent(example.question)}`;
+    }
+
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+    }
 }
 
 /* ==========================================================================
