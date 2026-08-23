@@ -741,6 +741,7 @@ function cacheDomElements() {
         // Research Mode Elements
         rmPsInput: document.getElementById('rm-ps-input'),
         rmPsCharCounter: document.getElementById('rm-ps-char-counter'),
+        rmExampleQueriesGrid: document.getElementById('rm-example-queries-grid'),
         rmObjsInput: document.getElementById('rm-objs-input'),
         rmRqsInput: document.getElementById('rm-rqs-input'),
         rmModelPlanner: document.getElementById('rm-model-planner'),
@@ -1056,6 +1057,31 @@ function setupEventListeners() {
     attachInputWordCounter(dom.feedbackInput, dom.feedbackCharCounter);
     attachInputWordCounter(dom.rmPsInput, dom.rmPsCharCounter);
     attachInputWordCounter(dom.rmHitlFeedbackInput, dom.rmHitlCharCounter);
+
+    // Apple-Style Example Research Topic Chips
+    dom.rmExampleQueriesGrid?.addEventListener('click', (e) => {
+        const chip = e.target.closest('.rm-query-chip');
+        if (!chip) return;
+        
+        const query = chip.dataset.query;
+        if (!query || !dom.rmPsInput) return;
+
+        dom.rmExampleQueriesGrid.querySelectorAll('.rm-query-chip').forEach(c => c.classList.remove('selected'));
+        chip.classList.add('selected');
+
+        dom.rmPsInput.value = query;
+        dom.rmPsInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+        dom.rmPsInput.focus();
+        const card = dom.rmPsInput.closest('.rm-input-card');
+        if (card) {
+            card.classList.remove('input-pulse');
+            // Trigger reflow to restart animation smoothly
+            void card.offsetWidth;
+            card.classList.add('input-pulse');
+            setTimeout(() => card.classList.remove('input-pulse'), 600);
+        }
+    });
 
     // Paper inspector modal.
     dom.modalCloseBtn?.addEventListener('click', closePaperInspector);

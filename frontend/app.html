@@ -110,7 +110,7 @@
     }
     </script>
 
-    <link rel="stylesheet" href="style.css?v=3.5.0">
+    <link rel="stylesheet" href="style.css?v=3.5.6">
     <!-- Marked.js for markdown parsing -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- DOMPurify for XSS sanitization -->
@@ -423,9 +423,9 @@
                     <div class="metric-subtext">Peer-structured with methodology &amp; references</div>
                 </div>
                 <div class="rm-metric-card">
-                    <div class="metric-giant-val">250M+</div>
-                    <div class="metric-label">Indexed Sources</div>
-                    <div class="metric-subtext">OpenAlex, Semantic Scholar, Crossref, PubMed &amp; arXiv</div>
+                    <div class="metric-giant-val">320M+</div>
+                    <div class="metric-label">Indexed Works</div>
+                    <div class="metric-subtext">OpenAlex, S2, Crossref, Europe PMC, PubMed, DOAJ, DataCite &amp; arXiv</div>
                 </div>
                 <div class="rm-metric-card">
                     <div class="metric-giant-val">25</div>
@@ -463,6 +463,42 @@
                     </div>
                 </details>
 
+                <!-- Apple-style Example Research Query Prompts -->
+                <div class="rm-example-queries-container">
+                    <div class="rm-example-queries-header">
+                        <span class="rm-example-queries-label">
+                            <i data-lucide="sparkles" style="width: 12px; height: 12px;"></i>
+                            <span>Suggested Topics</span>
+                        </span>
+                    </div>
+                    <div class="rm-example-queries-grid" id="rm-example-queries-grid">
+                        <button type="button" class="rm-query-chip" data-query="Machine learning applications in healthcare">
+                            <i data-lucide="activity" class="rm-query-icon" style="width: 13px; height: 13px;"></i>
+                            <span class="rm-query-text">Machine learning in healthcare</span>
+                        </button>
+                        <button type="button" class="rm-query-chip" data-query="Impact of social media usage on mental health among college students">
+                            <i data-lucide="brain" class="rm-query-icon" style="width: 13px; height: 13px;"></i>
+                            <span class="rm-query-text">Social media &amp; mental health</span>
+                        </button>
+                        <button type="button" class="rm-query-chip" data-query="Remote work and employee productivity">
+                            <i data-lucide="laptop" class="rm-query-icon" style="width: 13px; height: 13px;"></i>
+                            <span class="rm-query-text">Remote work &amp; productivity</span>
+                        </button>
+                        <button type="button" class="rm-query-chip" data-query="Electric vehicles and consumer adoption behavior">
+                            <i data-lucide="zap" class="rm-query-icon" style="width: 13px; height: 13px;"></i>
+                            <span class="rm-query-text">EV consumer adoption</span>
+                        </button>
+                        <button type="button" class="rm-query-chip" data-query="Effectiveness of vaccination programs in preventing seasonal influenza">
+                            <i data-lucide="shield-check" class="rm-query-icon" style="width: 13px; height: 13px;"></i>
+                            <span class="rm-query-text">Vaccination effectiveness</span>
+                        </button>
+                        <button type="button" class="rm-query-chip" data-query="Climate change impacts on agriculture">
+                            <i data-lucide="leaf" class="rm-query-icon" style="width: 13px; height: 13px;"></i>
+                            <span class="rm-query-text">Climate change &amp; agriculture</span>
+                        </button>
+                    </div>
+                </div>
+
                 <button class="btn-primary btn-lg" id="rm-start-btn" style="width: 100%; justify-content: center;">
                     <i data-lucide="atom" style="width: 18px; height: 18px;"></i>
                     <span>Launch Autonomous Academic Pipeline</span>
@@ -472,7 +508,7 @@
                 <div class="index-strip">
                     <span class="index-strip-label">Indexed sources</span>
                     <div class="index-list">
-                        <a class="index-chip" href="https://openalex.org" target="_blank" rel="noopener noreferrer" title="OpenAlex — open catalogue of 250M+ scholarly works">
+                        <a class="index-chip" href="https://openalex.org" target="_blank" rel="noopener noreferrer" title="OpenAlex — open catalogue of 320M+ scholarly works">
                             <img class="index-mark index-mark-openalex" src="assets/openalex.png" alt="OpenAlex scholarly catalog logo" width="22" height="22" loading="lazy">
                             <span class="index-name">OpenAlex</span>
                         </a>
@@ -809,6 +845,6 @@
     <div class="toast-container" id="toast-container"></div>
 
     <!-- Application Script -->
-    <script src="app.js?v=3.5.0"></script>
+    <script src="app.js?v=3.5.2"></script>
 </body>
 </html>
