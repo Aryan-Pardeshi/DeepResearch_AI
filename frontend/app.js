@@ -584,15 +584,24 @@ document.addEventListener('DOMContentLoaded', () => {
     renderRMPipelineTracker();
     restoreRMSessionOnLoad();
     
-    // Check URL parameters for explicit mode selection
+    // Check URL parameters for explicit mode selection and a pre-filled query
     try {
         const urlParams = new URLSearchParams(window.location.search);
         const requestedMode = (urlParams.get('mode') || '').toLowerCase();
         if (requestedMode === 'deepsearch' || requestedMode === 'researchmode') {
             switchMode(requestedMode);
         }
+
+        const qParam = urlParams.get('q');
+        if (qParam) {
+            const targetInput = state.mode === 'researchmode' ? dom.rmPsInput : dom.queryInput;
+            if (targetInput) {
+                targetInput.value = qParam;
+                targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }
     } catch (e) {
-        console.warn('URL mode param error:', e);
+        console.warn('URL mode/query param error:', e);
     }
 
     rmPlaceholderCycle = initCyclingPlaceholder(dom.rmPsInput, RM_PLACEHOLDER_EXAMPLES);
