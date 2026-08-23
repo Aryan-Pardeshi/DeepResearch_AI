@@ -48,8 +48,8 @@ def _strip_preamble(text: str) -> str:
 async def _safe_invoke_llm(
     llm,
     messages: List[Any],
-    max_retries: int = 2,
-    base_backoff: float = 1.5
+    max_retries: int = 4,
+    base_backoff: float = 2.0
 ) -> str:
     """Async invoke LLM with non-blocking exponential backoff on transient errors."""
     last_err = None
@@ -62,6 +62,7 @@ async def _safe_invoke_llm(
             last_err = e
             logger.warning(f"LLM invocation attempt {attempt+1}/{max_retries+1} failed: {e}")
             if attempt < max_retries:
-                await asyncio.sleep(base_backoff ** attempt)
+                await asyncio.sleep(min(base_backoff ** attempt, 10.0))
 
-    raise RuntimeError(f"LLM invocation failed after {max_retries+1} attempts: {last_err}")
+    logger.error(f"LLM invocation failed after {max_retries+1} attempts: {last_err}")
+    return ""
