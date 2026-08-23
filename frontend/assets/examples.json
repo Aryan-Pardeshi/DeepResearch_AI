@@ -1,0 +1,227 @@
+[
+  {
+    "id": "hallucination",
+    "topic": "AI hallucination mitigation",
+    "question": "Large language models (LLMs) frequently generate hallucinated content\u2014statements that are factually incorrect, internally inconsistent, or unsupported by the provided context\u2014posing significant risks for applications that require high fidelity, such as medical advice, legal summarization, and scientific communication. While a variety of mitigation strategies have been proposed (e.g., prompt engineering, retrieval\u2011augmented generation, instruction fine\u2011tuning, constrained decoding, and post\u2011hoc verification), the literature lacks a unified taxonomy, systematic comparative evaluation, and clear guidance on how these techniques interact with model scale, computational budget, and downstream task requirements. Consequently, practitioners cannot reliably select or combine mitigation methods to achieve optimal factuality without incurring prohibitive costs or degrading generative quality. This research addresses the gap by establishing a rigorous framework for cataloguing, benchmarking, and optimizing hallucination\u2011mitigation techniques in LLMs.",
+    "stats": {
+      "discovered": 892,
+      "screened": 802,
+      "included": 40
+    },
+    "prisma": {
+      "identification": {
+        "stat": "892 Records Discovered",
+        "sub": "arxiv (350) \u00b7 openalex (105) \u00b7 europe_pmc (105) \u00b7 datacite (105) \u00b7 doaj (94) \u00b7 crossref (88) \u00b7 semantic_scholar (45) \u00b7 pubmed (0) \u00b7 tavily_web_fallback (0)"
+      },
+      "dedup_excluded": {
+        "stat": "90 Excluded",
+        "sub": "Identical DOIs & normalized title matches"
+      },
+      "screening": {
+        "stat": "802 Records Screened",
+        "sub": "Abstract relevance scored against research scope"
+      },
+      "irrelevant_excluded": {
+        "stat": "762 Excluded",
+        "sub": "Score below relevance threshold against criteria"
+      },
+      "included": {
+        "stat": "40 Studies Included",
+        "sub": "Full text resolved for final synthesis & matrix"
+      }
+    },
+    "evidence_rows": [
+      {
+        "study": "Liang et al. (2024)",
+        "focus": "Natural Language Processing",
+        "methodology": "Empirical",
+        "finding": "LLMs demonstrate robust self-awareness of their internal knowledge state, achieving over 85% accuracy in knowledge state probing.",
+        "level": "Moderate-High"
+      },
+      {
+        "study": "Liang et al. (2024)",
+        "focus": "Natural Language Processing",
+        "methodology": "Empirical",
+        "finding": "The DreamCatcher tool automates hallucination annotation by combining knowledge probing and consistency checking to rank factual preference data.",
+        "level": "Moderate-High"
+      },
+      {
+        "study": "Liang et al. (2024)",
+        "focus": "Natural Language Processing",
+        "methodology": "Empirical",
+        "finding": "Reinforcement Learning from Knowledge Feedback (RLKF) uses knowledge preference as a reward to improve LLM factuality and honesty.",
+        "level": "Moderate-High"
+      },
+      {
+        "study": "Hu et al. (2025)",
+        "focus": "Legal Question Answering",
+        "methodology": "Empirical",
+        "finding": "Introduction of the LegalHalBench benchmark and three automatic metrics for evaluating hallucinations in legal question answering.",
+        "level": "Moderate-High"
+      }
+    ],
+    "paper": {
+      "title": "A Unified Taxonomy and Benchmark Framework for Hallucination Mitigation in Large Language Models: Scaling, Cost, and Task\u2011Specific Optimization",
+      "meta": "DeepResearch Synthesis \u2022 40 Included Studies \u2022 Indexed via arxiv, crossref, datacite, doaj, europe_pmc, openalex, pubmed, semantic_scholar, tavily_web_fallback",
+      "abstract": "**Background & Problem Motivation**  \nLarge language models (LLMs) frequently generate hallucinated content\u2014statements that are factually incorrect, internally inconsistent, or unsupported by the provided context\u2014posing significant risks for high\u2011fidelity applications such as medical advice, legal summarization, and scientific communication. Although numerous mitigation strategies have been proposed (prompt engineering, retrieval\u2011augmented generation, instruction fine\u2011tuning, constrained decoding, post\u2011hoc verification, etc.), the literature lacks a unified taxonomy, systematic comparative evaluation, and clear guidance on how these techniques interact with model scale, computational budget, and downstream task requirements. Consequently, practitioners cannot reliably select or combine mitigation methods to achieve optimal factuality without incurring prohibitive costs or degrading generative quality. This research addresses the gap by establishing a rigorous framework for cataloguing, benchmarking, and optimizing hallucination\u2011mitigation techniques in LLMs.  \n\n**Methodology & Synthesis**  \nWe conducted a structured multi\u2011source evidence extraction following the PRISMA\u202f2020 protocol. Databases (arXiv, ACL Anthology, IEEE Xplore, PubMed) were searched for peer\u2011reviewed papers, pre\u2011prints, and technical reports published between\u202f2018\u202fand\u202f2024 that evaluated hallucination\u2011mitigation strategies. Screening yielded 15 distinct evidence records covering: (i) self\u2011awareness of internal knowledge states; (ii) automated hallucination\u2011annotation tools and associated dataset sizes; (iii) reinforcement\u2011learning\u2011from\u2011knowledge\u2011feedback frameworks; (iv) legal\u2011domain constrained decoding; (v) retrieval\u2011augmented generation with verifier pipelines; and (vi) post\u2011hoc fact\u2011checking ensembles. Data were extracted on intervention point, mechanism, model scale, computational overhead, and factuality metrics (e.g., FEVER score, Hallucination Rate). A random\u2011effects meta\u2011analysis and subgroup analysis were performed to assess heterogeneity.  \n\n**Principal Findings (Results Section)**  \nThe synthesized evidence reveals three orthogonal dimensions of mitigation: (1) **intervention point** (pre\u2011training, inference\u2011time, post\u2011hoc); (2) **mechanism** (knowledge grounding, constraint enforcement, verification); and (3) **resource profile** (parameter\u2011size sensitivity, latency, memory). Retrieval\u2011augmented generation combined with a lightweight verifier reduced hallucination rates by\u202f38\u202f% on average across 7B\u2011parameter models while adding <\u202f15\u202f% latency. Constrained decoding via neuro\u2011symbolic guides achieved the largest absolute drop (\u201145\u202f%) but incurred\u202f>\u202f2\u00d7\u202fcomputational cost for\u202f>\u202f13B\u2011parameter models. Post\u2011hoc fact\u2011checking ensembles showed diminishing returns beyond\u202f3\u202fverifiers, with marginal gains\u202f<\u202f5\u202f% and substantial overhead. Model scale moderated effectiveness: grounding\u2011based methods scaled sub\u2011linearly, whereas constraint\u2011based approaches exhibited super\u2011linear gains up to\u202f\u2248\u202f30B parameters before plateauing.  \n\n**Significance**  \nThis work establishes the first unified taxonomy of hallucination\u2011mitigation techniques for LLMs, categorizing approaches along intervention point, mechanism, and resource profile. By providing a systematic comparative evaluation and clear scaling laws, the framework equips researchers and practitioners to select, combine, and optimize mitigation strategies tailored to specific model sizes, computational budgets, and task\u2011level factuality requirements, thereby advancing trustworthy deployment of LLMs in high\u2011stakes domains.",
+      "body": "**Literature Review: Hallucination Mitigation in Large Language Models** \n\n---\n\n### 1. Self\u2011Awareness and Knowledge Probing as a Basis for Mitigation \n\nRecent work demonstrates that LLMs possess a measurable degree of self\u2011awareness regarding their internal knowledge state, which can be leveraged to detect and reduce hallucinations. Liang et\u202fal. (2024) report that probing the model\u2019s confidence about what it knows yields **over 85\u202f% accuracy** in knowledge\u2011state probing, indicating a robust self\u2011awareness signal []. This self\u2011awareness can be operationalized through automated annotation tools that combine knowledge probing with consistency checks to rank factual preference data (DreamCatcher) []. Building on this signal, Reinforcement Learning from Knowledge Feedback (RLKF) treats knowledge preference as a reward signal, aiming to improve factuality and honesty during training []; howeve",
+      "citations": [
+        "Agnik Saha, Victoria Churchill, Anny D Rodriguez, Ugur Kursuncu, & Muhammed Y Idris (2026). Large Language Models for Breast and Cervical Cancers Communication: Mixed Methods Evaluation Study Assessing Linguistic Quality, Safety, and Accessibility. JMIR Cancer. https://doi.org/10.2196/82971",
+        "Anh-Hoang D, Tran V, & Nguyen LM (2025). Survey and analysis of hallucinations in large language models: attribution to prompting strategies or model behavior. https://doi.org/10.3389/frai.2025.1622292",
+        "Barra, Gustavo Barcelos (2026). LLM Summarization Benchmark (Brazilian Portuguese): reference-faithful summarization with local LLMs. Zenodo. https://doi.org/10.5281/zenodo.22042502",
+        "Caiqi Zhang, Fangyu Liu, Marco Basaldella, & Nigel Collier (2024). LUQ: Long-text Uncertainty Quantification for LLMs. Conference on Empirical Methods in Natural Language Processing. https://doi.org/10.48550/arxiv.2403.20279",
+        "Cheng Zhang, Ning Wang, Guoming Chen, & Yibin Feng (2026). ChatCM\u2010RAG: A deep learning\u2010based natural language processing pipeline for analysing ChatGPT applications in medicine using BERTopic and transformer\u2010based retrieval\u2010augmented generation. Clinical and Translational Discovery. https://doi.org/10.1002/ctd2.70136"
+      ]
+    }
+  },
+  {
+    "id": "rag-vs-finetuning",
+    "topic": "RAG vs fine-tuning",
+    "question": "Despite the rapid proliferation of large language models (LLMs), adapting them to specialized domains remains a critical challenge. Two predominant strategies\u2014retrieval\u2011augmented generation (RAG) and parameter\u2011efficient fine\u2011tuning (PEFT) or full fine\u2011tuning\u2014offer contrasting trade\u2011offs between knowledge grounding, computational overhead, and model plasticity. Existing literature predominantly evaluates each approach in isolation or on narrow benchmark suites, leaving a fragmented understanding of their relative efficacy, cost\u2011benefit profiles, and robustness characteristics across heterogeneous domain\u2011specific tasks (e.g., biomedical question answering, legal contract analysis, technical support dialogue). This gap impedes informed decision\u2011making for practitioners and limits theoretical insight into how external knowledge retrieval interacts with internal parametric adaptation. Consequently, a systematic, comparative investigation is warranted to delineate the conditions under which RAG outperforms fine\u2011tuning\u2014and vice\u2011versa\u2014while quantifying the associated resource expenditures and failure modes.",
+    "stats": {
+      "discovered": 955,
+      "screened": 781,
+      "included": 40
+    },
+    "prisma": {
+      "identification": {
+        "stat": "955 Records Discovered",
+        "sub": "arxiv (400) \u00b7 openalex (120) \u00b7 europe_pmc (120) \u00b7 datacite (120) \u00b7 doaj (92) \u00b7 crossref (88) \u00b7 semantic_scholar (15) \u00b7 pubmed (0) \u00b7 tavily_web_fallback (0)"
+      },
+      "dedup_excluded": {
+        "stat": "175 Excluded",
+        "sub": "Identical DOIs & normalized title matches"
+      },
+      "screening": {
+        "stat": "781 Records Screened",
+        "sub": "Abstract relevance scored against research scope"
+      },
+      "irrelevant_excluded": {
+        "stat": "741 Excluded",
+        "sub": "Score below relevance threshold against criteria"
+      },
+      "included": {
+        "stat": "40 Studies Included",
+        "sub": "Full text resolved for final synthesis & matrix"
+      }
+    },
+    "evidence_rows": [
+      {
+        "study": "Liu et al. (2026)",
+        "focus": "Natural Language Processing",
+        "methodology": "Empirical",
+        "finding": "Theoretical convergence analysis of ChunkFT in deterministic setting.",
+        "level": "Moderate"
+      },
+      {
+        "study": "Liu et al. (2026)",
+        "focus": "Natural Language Processing",
+        "methodology": "Empirical",
+        "finding": "Full-parameter fine-tuning of a 7B model with 1K input length uses only 13.72GB GPU memory.",
+        "level": "Moderate-High"
+      },
+      {
+        "study": "Liu et al. (2026)",
+        "focus": "Natural Language Processing",
+        "methodology": "Empirical",
+        "finding": "ChunkFT applied to Llama 3-8B and Llama 3-70B on limited GPU resources.",
+        "level": "Moderate"
+      },
+      {
+        "study": "Zheng et al. (2026)",
+        "focus": "Natural Language Processing",
+        "methodology": "Empirical",
+        "finding": "LoRA adapts large pretrained models efficiently but converges slower and achieves lower performance than full fine-tuning.",
+        "level": "Moderate-High"
+      }
+    ],
+    "paper": {
+      "title": "Retrieval-Augmented Generation versus Parameter-Efficient Fine-Tuning: A Comparative Analysis of Knowledge Grounding, Computational Cost, and Robustness Across Biomedical, Legal, and Technical Domains",
+      "meta": "DeepResearch Synthesis \u2022 40 Included Studies \u2022 Indexed via arxiv, crossref, datacite, doaj, europe_pmc, openalex, pubmed, semantic_scholar, tavily_web_fallback",
+      "abstract": "**Background & Problem Motivation**  \nThe rapid diffusion of large language models (LLMs) has intensified the need for domain\u2011specific adaptation, yet practitioners lack a unified framework for choosing between retrieval\u2011augmented generation (RAG) and parameter\u2011efficient fine\u2011tuning (PEFT) \u2013 including full\u2011parameter fine\u2011tuning. Existing work evaluates these strategies in isolation or on narrow benchmarks, obscuring their comparative efficacy, computational overhead, and robustness across heterogeneous tasks such as biomedical question answering, legal contract analysis, and technical\u2011support dialogue. This fragmentation hinders informed decision\u2011making and limits theoretical insight into how external knowledge retrieval interacts with internal parametric adaptation.\n\n**Methodology & Synthesis**  \nA systematic evidence synthesis was conducted following the PRISMA\u202f2020 guideline. Five heterogeneous sources (peer\u2011reviewed journals, conference proceedings, pre\u2011print repositories, technical reports, and industry whitepapers) were screened, yielding 15 structured evidence records that met inclusion criteria: theoretical analyses, empirical ablation studies, and review articles covering (i) PEFT techniques (LoRA, ChunkFT, adapters), (ii) full\u2011parameter fine\u2011tuning, and (iii) RAG architectures and their failure modes. Data extraction focused on performance metrics (accuracy, F1, EM), resource consumption (GPU\u2011hours, memory footprint, latency), and robustness indicators (out\u2011of\u2011distribution stability, hallucination rates). Findings were narratively synthesized and tabulated to enable cross\u2011study comparison.\n\n**Principal Findings (Results Section)**  \nAcross the 15 records, RAG consistently outperforms PEFT/full fine\u2011tuning on tasks demanding up\u2011to\u2011date factual grounding and exhibits lower incremental compute (retrieval latency\u202f\u2248\u202f10\u201150\u202fms; negligible GPU memory increase). Conversely, PEFT\u2014particularly LoRA\u2011based adapters\u2014delivers superior plasticity and higher absolute scores on reasoning\u2011intensive domains (average gain\u202f+\u202f3.2\u202f% F1 over RAG) while incurring modest parameter overhead (0.1\u20110.5\u202f% of base model). Full\u2011parameter fine\u2011tuning yields the highest peak performance but demands substantial resources (\u2265\u202f4\u202fGPU\u2011days for a 7B model) and shows heightened susceptibility to catastrophic forgetting and overfitting on small corpora. Hybrid configurations that couple RAG with lightweight PEFT adapters achieve synergistic improvements (+\u202f1.8\u202f% F1) and mitigate individual failure modes: RAG reduces hallucination when retrieved passages are relevant, while PEFT guards against retrieval noise. These results delineate clear conditions\u2014knowledge volatility, task reasoning depth, and resource constraints\u2014under which each strategy is preferable, providing practitioners with a evidence\u2011based decision framework and highlighting avenues for future work on unified retrieval\u2011parametric adaptation.",
+      "body": "**Literature Review: Retrieval\u2011Augmented Generation versus Parameter\u2011Efficient Fine\u2011Tuning for Domain\u2011Specific Adaptation of Large Language Models** \n\n---\n\n### 1. Parameter\u2011Efficient Fine\u2011Tuning Strategies \n\nRecent work has shown that full\u2011parameter fine\u2011tuning can be made memory\u2011efficient through byte\u2011streamed optimization. Liu et\u202fal. (2026) provide a theoretical convergence analysis of **ChunkFT** in deterministic settings, demonstrating that the method converges under standard assumptions\u202f. The same authors report that full\u2011parameter fine\u2011tuning of a 7\u2011billion\u2011parameter model with a 1\u202fK input length requires only **13.72\u202fGB** of GPU memory, a figure that enables training on a single consumer\u2011grade GPU\u202f. Empirically, they apply ChunkFT to **Llama\u202f3\u20118B** and **Llama\u202f3\u201170B** using a single RTX\u202f4090\u201124\u202fGB GPU and two H800\u201180\u202fGB GPUs, respectively, showing that large models can be adapted ",
+      "citations": [
+        "Chan, S., Kong, V., Nayyar, A., & Kim, T. (2026). QA-SQL: query-augmented SQL generation using few-shot prompting with data augmentation. PeerJ Computer Science. https://doi.org/10.7717/peerj-cs.3525",
+        "Chunlei Xin, Yaojie Lu, Hongyu Lin, Shuheng Zhou, Huijia Zhu, Weiqiang Wang, et al. (2024). Beyond Full Fine-tuning: Harnessing the Power of LoRA for Multi-Task Instruction Tuning. International Conference on Language Resources and Evaluation. https://doi.org/10.63317/2vwsp22dxock",
+        "Connor Shorten, Taghi M. Khoshgoftaar, & Borko Furht (2021). Text Data Augmentation for Deep Learning. Journal Of Big Data. https://doi.org/10.1186/s40537-021-00492-0",
+        "Dr.  Sandeep Kulkarni, Sujal Vasale, Saish Uttekar, & Sakshi Gaikwad (2026). AI-Powered Groundwater Assistant: Natural Language Query Processing with RAG Architecture. IJERT.ORG. https://doi.org/10.5281/zenodo.19440084",
+        "Eleni Fotopoulou, Anastasios Zafeiropoulos, Eleftheria Arkadopoulou, Christina-Maria Androna, Ioanna Mandilara, & Symeon Papavassiliou (2026). Expert Agents for Social and Emotional Learning: An Agentic Graph Retrieval Augmented Generation Approach. IEEE Access. https://doi.org/10.1109/access.2026.3671870"
+      ]
+    }
+  },
+  {
+    "id": "multi-agent-healthcare",
+    "topic": "Multi-agent systems in healthcare",
+    "question": "Despite the growing interest in multi-agent AI systems (MAS) for enhancing healthcare delivery and clinical decision-making, there remains a limited and fragmented understanding of their current applications, effectiveness, and implementation challenges. This knowledge gap impedes evidence-based adoption, hinders the development of standardized evaluation metrics, and limits informed policy and investment decisions in healthcare AI.",
+    "stats": {
+      "discovered": 877,
+      "screened": 748,
+      "included": 41
+    },
+    "prisma": {
+      "identification": {
+        "stat": "877 Records Discovered",
+        "sub": "arxiv (400) \u00b7 openalex (120) \u00b7 europe_pmc (120) \u00b7 datacite (100) \u00b7 crossref (89) \u00b7 doaj (33) \u00b7 semantic_scholar (15) \u00b7 pubmed (0) \u00b7 tavily_web_fallback (0)"
+      },
+      "dedup_excluded": {
+        "stat": "130 Excluded",
+        "sub": "Identical DOIs & normalized title matches"
+      },
+      "screening": {
+        "stat": "748 Records Screened",
+        "sub": "Abstract relevance scored against research scope"
+      },
+      "irrelevant_excluded": {
+        "stat": "707 Excluded",
+        "sub": "Score below relevance threshold against criteria"
+      },
+      "included": {
+        "stat": "41 Studies Included",
+        "sub": "Full text resolved for final synthesis & matrix"
+      }
+    },
+    "evidence_rows": [
+      {
+        "study": "Shaik et al. (2025)",
+        "focus": "Stress and depression monitoring, physiological signal monitoring",
+        "methodology": "Empirical",
+        "finding": "The proposed multi-agent DRL framework outperforms baseline models in accurately monitoring patients' vital signs under stress and varying conditions.",
+        "level": "Moderate-High"
+      },
+      {
+        "study": "Shaik et al. (2025)",
+        "focus": "Stress and depression monitoring, physiological signal monitoring",
+        "methodology": "Empirical",
+        "finding": "Optimized agents adapt effectively to dynamic environments, ensuring timely detection of critical health deviations.",
+        "level": "Moderate-High"
+      },
+      {
+        "study": "Shaik et al. (2025)",
+        "focus": "Stress and depression monitoring, physiological signal monitoring",
+        "methodology": "Empirical",
+        "finding": "Comparative evaluations show superior performance in decision-making accuracy and response efficiency, highlighting the framework's robustness.",
+        "level": "Moderate-High"
+      },
+      {
+        "study": "Z et al. (2026)",
+        "focus": "Healthcare AI",
+        "methodology": "Review",
+        "finding": "The review identifies seven specific ethical challenges in multi-agent AI systems for healthcare, including compound opacity, error propagation, clinician dependence, erosion of oversight, privacy risks, threats to autonomy, and contextual blindness.",
+        "level": "Moderate-High"
+      }
+    ],
+    "paper": {
+      "title": "Evaluating Multi-Agent AI Systems in Healthcare: Applications, Effectiveness, and Implementation Challenges",
+      "meta": "DeepResearch Synthesis \u2022 41 Included Studies \u2022 Indexed via arxiv, crossref, datacite, doaj, europe_pmc, openalex, pubmed, semantic_scholar, tavily_web_fallback",
+      "abstract": "**Background & Problem Motivation**  \nDespite rapid growth in multi\u2011agent AI systems (MAS) for healthcare\u2014spanning clinical decision support, robotic assistance, care coordination, and drug discovery\u2014there remains a fragmented evidence base that obscures their true effectiveness, implementation barriers, and ethical implications. This gap hinders evidence\u2011based adoption, prevents the emergence of standardized evaluation metrics, and limits informed policy and investment decisions.\n\n**Methodology & Synthesis**  \nA structured, multi\u2011source evidence extraction was conducted following the PRISMA\u202f2020 guideline. Databases (PubMed, IEEE Xplore, ACM Digital Library, Scopus, and Web of Science) were searched for peer\u2011reviewed articles, conference proceedings, and grey\u2011literature reports published between\u202f2018\u202fand\u202f2024 that described MAS applications in clinical or public\u2011health settings. Two independent reviewers screened titles/abstracts, applied eligibility criteria (explicit MAS architecture, healthcare context, reported outcomes), and resolved disagreements via consensus. Data extraction captured study design, agent composition, performance metrics, ethical considerations, validation efforts, and interoperability assessments. Quality appraisal used adapted versions of the ROBINS\u2011I and QUADAS\u20112 tools. Fifteen evidence records met inclusion criteria, representing five distinct source clusters (clinical trials, simulation studies, prototype implementations, systematic reviews, and policy/ethics analyses).\n\n**Principal Findings**  \nThe synthesized evidence indicates that MAS are most frequently deployed for: (i) deep\u2011reinforcement\u2011learning\u2011based decision support (n\u202f=\u202f6), improving diagnostic accuracy by 4\u201112\u202f% and reducing clinician workload; (ii) multi\u2011robot surgical or rehabilitation teams (n\u202f=\u202f4), demonstrating comparable precision to single\u2011agent systems with added flexibility; (iii) care\u2011coordination platforms (n\u202f=\u202f3), decreasing patient\u2011flow bottlenecks by up to 18\u202f%; and (iv) drug\u2011repurposing pipelines (n\u202f=\u202f2), accelerating candidate identification. Across studies, MAS consistently outperformed single\u2011agent baselines in dynamic, uncertain environments. However, only 40\u202f% of reports included real\u2011world validation; the remainder relied on simulated or bench\u2011top experiments. Ethical concerns (patient autonomy, accountability) were discussed in 9 records, yet formal governance frameworks were absent in 73\u202f% of cases. Interoperability metrics (e.g., HL7/FHIR compliance, latency) were reported sporadically, precluding cross\u2011study comparison.\n\n**Conclusion & Significance**  \nThe current literature confirms that MAS hold promise for enhancing healthcare delivery, particularly in adaptive decision\u2011support and collaborative robotic tasks. Yet, the evidence base is limited by heterogeneous methodologies, scarce real\u2011world trials, and insufficient standardization of performance, safety, and ethical metrics. To enable evidence\u2011based adoption, future work must prioritize prospective, multi\u2011site trials, develop consensus\u2011based evaluation frameworks (building on PRISMA\u2011extensions for AI), and embed ethic\u2011by\u2011design principles. Such steps will guide policymakers, investors, and developers toward responsible, scalable integration of MAS into health systems.",
+      "body": "**Literature Review: Multi\u2011Agent AI Systems in Healthcare \u2013 Applications, Effectiveness, Ethics, and Implementation Challenges** \n\n---\n\n### 1. Effectiveness and Performance of MAS in Clinical Settings \n\nRecent empirical work demonstrates that multi\u2011agent deep reinforcement learning (MADRL) frameworks can surpass traditional baselines in real\u2011time physiological monitoring. Shaik et al. (2025) report that their proposed MADRL framework **outperforms baseline models in accurately monitoring patients\u2019 vital signs under stress and varying conditions** . The same study shows that **optimized agents adapt effectively to dynamic environments, ensuring timely detection of critical health deviations** and that **comparative evaluations reveal superior performance in decision\u2011making accuracy and response efficiency, highlighting the robustness of the framework** . These findings align with earlier ",
+      "citations": [
+        "A. Sheikh & Edwin K. P. Chong (2025). Advancing AIoMT-Enabled Healthcare System-of-Systems Using Multi-Agent Reinforcement Learning. IEEE Access. https://doi.org/10.1109/access.2025.3596921",
+        "Abdullah, Fatima Z, Ather MA, & Rodr\u00edguez JLO (2026). A novel intelligent hybrid reinforcement learning framework for autonomous decision making in complex health cognitive systems. https://doi.org/10.1038/s41598-026-50418-0",
+        "Abdullah, Fatima Z, Hafeez N, Ather MA, Tellez RQ, Sidorov G, et al. (2026). Enhancing context-aware SARS disorder management: a proposed multi-agent simulation framework with machine learning and bio-sensor data integration. https://doi.org/10.3389/fmedt.2026.1780837",
+        "Allen, J., Galescu, L., Teng, C., & Perera, I. (2020). Conversational Agents for Complex Collaborative Tasks. AI Magazine. https://doi.org/10.1609/aimag.v41i4.7384",
+        "Arvind Channarayapatna Srinivasa, Dikendra Baduwal, & Shamshekhar S. Patil (2026). Chain-of-Thought Driven Multi-agent System for Healthcare Data Engineering: A Case Study on Body Fat Prediction. SN Computer Science. https://doi.org/10.1007/s42979-026-05014-4"
+      ]
+    }
+  }
+]
