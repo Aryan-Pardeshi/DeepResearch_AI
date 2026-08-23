@@ -1,7 +1,10 @@
 """Academic search orchestration, multi-index retrieval, deduplication, and screening.
 
-Integrates OpenAlex, Semantic Scholar, ArXiv, Crossref, and PubMed with
-deterministic PRISMA 2020 tracking and structured PaperRecord outputs.
+Integrates OpenAlex, Semantic Scholar, ArXiv, Europe PMC, DOAJ, DataCite,
+Crossref, and PubMed with deterministic PRISMA 2020 tracking and structured
+PaperRecord outputs. Each provider lives in its own adapter module under
+backend/app/tools/ and fails independently: an exception or timeout in any
+single provider never aborts the fan-out.
 """
 
 from __future__ import annotations
@@ -23,6 +26,11 @@ from backend.app.llm import get_llm
 from backend.app.models.evidence import PaperRecord, PRISMATracker, make_paper_id
 from backend.app.tools.crossref_search import search_crossref
 from backend.app.tools.pubmed_search import search_pubmed
+from backend.app.tools.openalex_search import search_openalex
+from backend.app.tools.semantic_scholar_search import search_semantic_scholar
+from backend.app.tools.europe_pmc_search import search_europe_pmc
+from backend.app.tools.doaj_search import search_doaj
+from backend.app.tools.datacite_search import search_datacite
 
 logger = logging.getLogger(__name__)
 
@@ -39,18 +47,6 @@ SCREEN_BATCH_SIZE = 15       # papers per LLM scoring call
 SCREEN_CONCURRENCY = 4       # scoring calls in flight at once
 
 
-def _reconstruct_openalex_abstract(inverted_index: Optional[Dict[str, List[int]]]) -> str:
-    """Reconstruct plain text abstract from OpenAlex inverted index."""
-    if not inverted_index or not isinstance(inverted_index, dict):
-        return ""
-    word_pos = []
-    for word, positions in inverted_index.items():
-        for pos in positions:
-            word_pos.append((pos, word))
-    word_pos.sort(key=lambda x: x[0])
-    return " ".join(wp[1] for wp in word_pos)
-
-
 def _normalize_doi(doi: Optional[str]) -> str:
     """Canonicalize DOI string."""
     if not doi:
@@ -65,118 +61,6 @@ def _normalize_title(title: Optional[str]) -> str:
     if not title:
         return ""
     return re.sub(r"\W+", "", title.lower())
-
-
-async def fetch_openalex_papers(client: httpx.AsyncClient, keyword: str, max_results: int = 50) -> List[PaperRecord]:
-    """Retrieve papers from OpenAlex."""
-    papers = []
-    try:
-        url = "https://api.openalex.org/works"
-        params = {
-            "search": keyword,
-            "sort": "cited_by_count:desc",
-            "per_page": min(max_results, 50)
-        }
-        email = os.getenv("OPENALEX_EMAIL")
-        if email and email != "your_email@example.com":
-            params["mailto"] = email
-
-        resp = await client.get(url, params=params)
-        if resp.status_code == 200:
-            data = resp.json()
-            for item in data.get("results", []):
-                title = item.get("title") or ""
-                if not title:
-                    continue
-                abstract = _reconstruct_openalex_abstract(item.get("abstract_inverted_index"))
-                authors = []
-
-                for auth in item.get("authorships") or []:
-                    if isinstance(auth, dict):
-                        auth_obj = auth.get("author") or {}
-                        name = auth_obj.get("display_name")
-                        if name:
-                            authors.append(name)
-                year = str(item.get("publication_year") or "n.d.")
-                doi = _normalize_doi(item.get("doi"))
-                landing_page = item.get("doi") or (item.get("primary_location") or {}).get("landing_page_url") or ""
-                oa_info = item.get("open_access") or {}
-                best_oa = item.get("best_oa_location") or {}
-                pdf_url = oa_info.get("oa_url") or best_oa.get("pdf_url") or ""
-                citations = int(item.get("cited_by_count", 0) or 0)
-
-                paper_id = make_paper_id(doi=doi, title=title, year=year)
-                papers.append(PaperRecord(
-                    paper_id=paper_id,
-                    doi=doi or None,
-                    title=title.strip(),
-                    abstract=abstract.strip(),
-                    authors=authors,
-                    year=year,
-                    source_url=landing_page,
-                    pdf_url=pdf_url or None,
-                    retrieval_source="openalex",
-                    citation_count=citations,
-                    screening_status="retrieved"
-                ))
-    except Exception as e:
-        logger.warning(f"OpenAlex search skipped for '{keyword}': {e}")
-    return papers
-
-
-async def fetch_semantic_scholar_papers(client: httpx.AsyncClient, keyword: str, max_results: int = 50) -> List[PaperRecord]:
-    """Retrieve papers from Semantic Scholar."""
-    papers = []
-    try:
-        url = "https://api.semanticscholar.org/graph/v1/paper/search"
-        params = {
-            "query": keyword,
-            "limit": min(max_results, 50),
-            "fields": "paperId,title,abstract,authors,year,citationCount,externalIds,openAccessPdf"
-        }
-        headers = {}
-        api_key = os.getenv("SEMANTIC_SCHOLAR_API_KEY")
-        if api_key:
-            headers["x-api-key"] = api_key
-
-        resp = await client.get(url, params=params, headers=headers)
-        if resp.status_code == 429:
-            logger.warning(f"Semantic Scholar 429 rate limit hit for '{keyword}', retrying in 1.0s...")
-            await asyncio.sleep(1.0)
-            resp = await client.get(url, params=params, headers=headers)
-
-        if resp.status_code == 200:
-            data = resp.json()
-            for item in data.get("data", []):
-                title = item.get("title") or ""
-                if not title:
-                    continue
-                abstract = item.get("abstract") or ""
-                authors = [a.get("name", "") for a in item.get("authors", []) if a.get("name")]
-                year = str(item.get("year") or "n.d.")
-                ext_ids = item.get("externalIds") or {}
-                doi = _normalize_doi(ext_ids.get("DOI"))
-                pdf_url = (item.get("openAccessPdf") or {}).get("url")
-                paper_url = pdf_url or (f"https://doi.org/{doi}" if doi else f"https://www.semanticscholar.org/paper/{item.get('paperId')}")
-                citations = int(item.get("citationCount", 0) or 0)
-
-                paper_id = make_paper_id(doi=doi, title=title, year=year)
-                papers.append(PaperRecord(
-                    paper_id=paper_id,
-                    doi=doi or None,
-                    title=title.strip(),
-                    abstract=abstract.strip(),
-                    authors=authors,
-                    year=year,
-                    source_url=paper_url,
-                    pdf_url=pdf_url or None,
-                    retrieval_source="semantic_scholar",
-                    citation_count=citations,
-                    screening_status="retrieved"
-                ))
-    except Exception as e:
-        logger.warning(f"Semantic Scholar search skipped for '{keyword}': {e}")
-    return papers
 
 
 async def fetch_arxiv_papers(client: httpx.AsyncClient, keyword: str, max_results: int = 50) -> List[PaperRecord]:
@@ -270,17 +154,27 @@ async def search_academic_papers_structured(
         "openalex": 0,
         "semantic_scholar": 0,
         "arxiv": 0,
+        "europe_pmc": 0,
+        "doaj": 0,
+        "datacite": 0,
         "crossref": 0,
         "pubmed": 0,
         "tavily_web_fallback": 0,
     }
 
-    async with httpx.AsyncClient(timeout=HTTP_TIMEOUT, follow_redirects=True) as client:
-        tasks = []
+    # Each adapter manages its own HTTP client and timeout (same contract as
+    # search_crossref / search_pubmed) so a slow or hanging provider cannot
+    # stall the others through a shared pool. ArXiv keeps its inline
+    # feedparser-based fetcher and shares one client across keywords.
+    tasks = []
+    async with httpx.AsyncClient(timeout=HTTP_TIMEOUT, follow_redirects=True) as arxiv_client:
         for kw in selected_keywords:
-            tasks.append(fetch_openalex_papers(client, kw))
-            tasks.append(fetch_semantic_scholar_papers(client, kw))
-            tasks.append(fetch_arxiv_papers(client, kw))
+            tasks.append(search_openalex(kw, limit=15))
+            tasks.append(search_semantic_scholar(kw, limit=15))
+            tasks.append(fetch_arxiv_papers(arxiv_client, kw))
+            tasks.append(search_europe_pmc(kw, limit=15))
+            tasks.append(search_doaj(kw, limit=15))
+            tasks.append(search_datacite(kw, limit=15))
             tasks.append(search_crossref(kw, limit=15))
             tasks.append(search_pubmed(kw, limit=15))
 

@@ -5492,6 +5492,10 @@ button:active,
 .badge-pubmed { background: rgba(52, 211, 153, 0.08); border-color: rgba(52, 211, 153, 0.2); color: #34d399; }
 .badge-semantic { background: rgba(168, 85, 247, 0.08); border-color: rgba(168, 85, 247, 0.2); color: #c084fc; }
 .badge-opencitations { background: rgba(129, 140, 248, 0.08); border-color: rgba(129, 140, 248, 0.2); color: #818cf8; }
+.badge-europepmc { background: rgba(79, 209, 197, 0.08); border-color: rgba(79, 209, 197, 0.2); color: #4fd1c5; }
+.badge-doaj { background: rgba(246, 140, 31, 0.1); border-color: rgba(246, 140, 31, 0.22); color: #f69c4a; }
+.badge-datacite { background: rgba(41, 182, 246, 0.09); border-color: rgba(41, 182, 246, 0.22); color: #29b6f6; }
+.badge-orcid { background: rgba(166, 206, 57, 0.09); border-color: rgba(166, 206, 57, 0.22); color: #a6ce39; }
 
 .source-item-year {
     font-size: 0.62rem;

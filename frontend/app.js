@@ -2631,6 +2631,11 @@ const SOURCE_BADGE_MAP = {
     crossref: { src: 'assets/crossref.svg', label: 'Crossref', cls: 'badge-crossref' },
     pubmed: { src: 'assets/pubmed.svg', label: 'PubMed', cls: 'badge-pubmed' },
     opencitations: { src: 'assets/opencitations.svg', label: 'OpenCitations', cls: 'badge-opencitations' },
+    europe_pmc: { src: 'assets/europe-pmc.svg', label: 'Europe PMC', cls: 'badge-europepmc' },
+    europepmc: { src: 'assets/europe-pmc.svg', label: 'Europe PMC', cls: 'badge-europepmc' },
+    doaj: { src: 'assets/doaj.svg', label: 'DOAJ', cls: 'badge-doaj' },
+    datacite: { src: 'assets/datacite.svg', label: 'DataCite', cls: 'badge-datacite' },
+    orcid: { src: 'assets/orcid.svg', label: 'ORCID', cls: 'badge-orcid' },
     tavily_web_fallback: { src: 'assets/openalex.png', label: 'Web Fallback', cls: 'badge-generic' }
 };
 
@@ -2640,9 +2645,15 @@ function getPaperSource(p) {
     if (src.includes('openalex')) return 'openalex';
     if (src.includes('semantic') || src === 's2') return 'semantic_scholar';
     if (src.includes('arxiv')) return 'arxiv';
+    // europe_pmc must be tested BEFORE pubmed: 'europe_pmc' contains the
+    // substring 'pmc', which would otherwise be swallowed by the PubMed match.
+    if (src.includes('europe_pmc') || src.includes('europepmc')) return 'europe_pmc';
     if (src.includes('crossref')) return 'crossref';
-    if (src.includes('pubmed') || src.includes('ncbi') || src.includes('pmc')) return 'pubmed';
+    if (src.includes('pubmed') || src.includes('ncbi') || src === 'pmc') return 'pubmed';
     if (src.includes('opencitations') || src.includes('coci')) return 'opencitations';
+    if (src.includes('doaj')) return 'doaj';
+    if (src.includes('datacite')) return 'datacite';
+    if (src.includes('orcid')) return 'orcid';
     if (src.includes('tavily')) return 'tavily_web_fallback';
 
     // Inference fallback if retrieval_source field was omitted

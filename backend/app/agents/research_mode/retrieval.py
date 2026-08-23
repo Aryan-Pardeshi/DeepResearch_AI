@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any, Dict, List
 import asyncio
 
@@ -103,9 +104,18 @@ async def citation_expander_agent(state: Dict[str, Any]) -> Dict[str, Any]:
 
 
 async def metadata_validator_agent(state: Dict[str, Any]) -> Dict[str, Any]:
-    """Agent 7: Validates publication venues, canonicalizes author lists, and cleans DOIs."""
+    """Agent 7: Validates publication venues, canonicalizes author lists, and cleans DOIs.
+
+    Optionally canonicalizes leading author names against the ORCID public API
+    when ORCID_AUTHOR_ENRICHMENT=1 (off by default: one ORCID lookup per
+    enriched author would otherwise add latency to every run).
+    """
     paper_dicts = state.get("paper_records") or []
     cleaned_records: List[Dict[str, Any]] = []
+
+    orcid_enrichment = os.getenv("ORCID_AUTHOR_ENRICHMENT", "").strip().lower() in {"1", "true", "yes"}
+    if orcid_enrichment:
+        from backend.app.tools.orcid_search import enrich_records_authors
 
     for p in paper_dicts:
         item = dict(p)
@@ -117,6 +127,15 @@ async def metadata_validator_agent(state: Dict[str, Any]) -> Dict[str, Any]:
         if isinstance(authors, list):
             item["authors"] = [a.strip() for a in authors if a and str(a).strip()]
         cleaned_records.append(item)
+
+    if orcid_enrichment:
+        try:
+            records = [PaperRecord.from_dict(item) for item in cleaned_records]
+            enriched = await enrich_records_authors(records)
+            cleaned_records = [r.model_dump() for r in enriched]
+            logger.info("ORCID author enrichment applied to corpus.")
+        except Exception as e:
+            logger.warning(f"ORCID author enrichment skipped (non-fatal): {e}")
 
     return {
         "paper_records": cleaned_records,

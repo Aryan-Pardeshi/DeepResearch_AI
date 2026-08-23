@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="dj-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F68C1F"/>
+      <stop offset="100%" stop-color="#D95F02"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="6" fill="#331B04"/>
+  <!-- DOAJ: open-access journal book -->
+  <path d="M7 8.5c3-1.6 6-1.6 9 0v15c-3-1.6-6-1.6-9 0z" fill="#F68C1F"/>
+  <path d="M25 8.5c-3-1.6-6-1.6-9 0v15c3-1.6 6-1.6 9 0z" fill="url(#dj-grad)"/>
+  <path d="M16 9.5v13" stroke="#331B04" stroke-width="1.6"/>
+  <path d="M10 12.5h4M10 16h4M10 19.5h4M18 12.5h4M18 16h4M18 19.5h4" stroke="#FFC46B" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect width="32" height="32" rx="6" fill="#062A33"/>
+  <!-- Europe PMC: literature corpus with life-science plus -->
+  <path d="M5 10c3.7-2 7.3-2 11 0v14c-3.7-2-7.3-2-11 0z" fill="#159A9A"/>
+  <path d="M27 10c-3.7-2-7.3-2-11 0v14c3.7-2 7.3-2 11 0z" fill="#0E6E6E"/>
+  <circle cx="16" cy="17" r="5.2" fill="#082A30"/>
+  <path d="M16 14v6M13 17h6" stroke="#4FD1C5" stroke-width="1.8" stroke-linecap="round"/>
+</svg>
