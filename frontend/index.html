@@ -130,40 +130,44 @@
                     <p class="hero-eyebrow">Academic Research Assistant</p>
 
                     <h1 class="hero-title">
-                        Turn a research question into a <span class="text-gradient">literature review.</span>
+                        Turn a research question into an <span class="text-gradient">evidence-grounded literature review.</span>
                     </h1>
 
                     <p class="hero-subtitle">
-                        DeepResearch searches academic literature, screens papers, synthesizes evidence, verifies citations, and helps you build a structured research paper — with you in control at every major decision.
+                        Search academic literature <span aria-hidden="true">→</span> extract evidence <span aria-hidden="true">→</span> validate citations <span aria-hidden="true">→</span> generate a structured research paper.
                     </p>
 
                     <div class="hero-btn-group">
-                        <a href="/app" class="btn-primary btn-lg">
-                            <span>Start a Research Run</span>
-                            <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
-                        </a>
                         <a href="#example-paper" class="btn-secondary btn-lg">
-                            <span>See an Example Paper</span>
+                            <span>Try an example</span>
                             <span style="margin-left: 2px;">›</span>
+                        </a>
+                        <a href="/app" class="btn-primary btn-lg">
+                            <span>Start researching</span>
+                            <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
                         </a>
                     </div>
 
                     <div class="hero-trust-bar">
                         <div class="trust-item">
                             <i data-lucide="check" style="width: 14px; height: 14px;"></i>
-                            <span>Open source (MIT)</span>
+                            <span>25 specialized agents</span>
                         </div>
                         <div class="trust-item">
                             <i data-lucide="check" style="width: 14px; height: 14px;"></i>
-                            <span>25-agent research pipeline</span>
+                            <span>6 academic databases</span>
                         </div>
                         <div class="trust-item">
                             <i data-lucide="check" style="width: 14px; height: 14px;"></i>
-                            <span>3 human review checkpoints</span>
+                            <span>PRISMA tracking</span>
                         </div>
                         <div class="trust-item">
                             <i data-lucide="check" style="width: 14px; height: 14px;"></i>
-                            <span>PRISMA-style selection flow</span>
+                            <span>Evidence validation</span>
+                        </div>
+                        <div class="trust-item">
+                            <i data-lucide="check" style="width: 14px; height: 14px;"></i>
+                            <span>PDF/DOCX</span>
                         </div>
                     </div>
                 </div>
@@ -172,15 +176,30 @@
                      2. REAL EXAMPLE OUTPUT (MACOS STUDIO WINDOW)
                      ========================================================================== -->
                 <div class="hero-visual-wrapper apple-scroll-reveal delay-1" id="example-paper">
+                    <div class="example-select-row" role="tablist" aria-label="Example research runs">
+                        <button class="example-select-card active" data-example-id="hallucination" role="tab" aria-selected="true">
+                            <span class="example-select-title">AI hallucination mitigation</span>
+                            <span class="example-select-link">View completed research <span aria-hidden="true">›</span></span>
+                        </button>
+                        <button class="example-select-card" data-example-id="rag-vs-finetuning" role="tab" aria-selected="false">
+                            <span class="example-select-title">RAG vs fine-tuning</span>
+                            <span class="example-select-link">View completed research <span aria-hidden="true">›</span></span>
+                        </button>
+                        <button class="example-select-card" data-example-id="multi-agent-healthcare" role="tab" aria-selected="false">
+                            <span class="example-select-title">Multi-agent systems in healthcare</span>
+                            <span class="example-select-link">View completed research <span aria-hidden="true">›</span></span>
+                        </button>
+                    </div>
+
                     <div class="example-banner-header card-specular-glow">
                         <div class="example-question-box">
                             <span class="example-label">Input Research Question</span>
-                            <p class="example-question-text">"What techniques reduce hallucinations in large language models?"</p>
+                            <p class="example-question-text" id="example-question-text">"What techniques reduce hallucinations in large language models?"</p>
                         </div>
                         <div class="example-metrics-row">
-                            <div class="metric-chip"><strong class="metric-num">143</strong> discovered</div>
-                            <div class="metric-chip"><strong class="metric-num">87</strong> screened</div>
-                            <div class="metric-chip highlight"><strong class="metric-num">31</strong> included</div>
+                            <div class="metric-chip"><strong class="metric-num" id="metric-discovered">143</strong> discovered</div>
+                            <div class="metric-chip"><strong class="metric-num" id="metric-screened">87</strong> screened</div>
+                            <div class="metric-chip highlight"><strong class="metric-num" id="metric-included">31</strong> included</div>
                         </div>
                     </div>
 
@@ -223,25 +242,32 @@
                                 <div class="paper-mockup-sheet">
                                     <div class="paper-header-actions">
                                         <div>
-                                            <div class="paper-mock-title">Mitigating Hallucinations in Large Language Models: A Systematic Literature Review</div>
-                                            <div class="paper-mock-meta">
+                                            <div class="paper-mock-title" id="paper-mock-title">Mitigating Hallucinations in Large Language Models: A Systematic Literature Review</div>
+                                            <div class="paper-mock-meta" id="paper-mock-meta">
                                                 <span>DeepResearch Synthesis</span> • <span>31 Included Studies</span> • <span>Indexed via Crossref, PubMed, OpenAlex &amp; arXiv</span>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div class="paper-mock-abstract">
-                                        <strong>Abstract:</strong> Hallucination remains a critical bottleneck in deploying large language models for high-stakes decision making. This systematic literature review synthesizes 31 empirical studies spanning retrieval-augmented generation (RAG), fine-grained verification, decoding-time constraints, and chain-of-thought grounding. We extract an actionable taxonomy of mitigation mechanisms and identify key gaps in benchmark reproducibility.
+                                    <div class="paper-mock-abstract" id="paper-mock-abstract">
+                                        <strong>Abstract:</strong> <span id="paper-mock-abstract-text">Hallucination remains a critical bottleneck in deploying large language models for high-stakes decision making. This systematic literature review synthesizes 31 empirical studies spanning retrieval-augmented generation (RAG), fine-grained verification, decoding-time constraints, and chain-of-thought grounding. We extract an actionable taxonomy of mitigation mechanisms and identify key gaps in benchmark reproducibility.</span>
                                     </div>
                                     <div class="paper-mock-body">
-                                        <p>Recent empirical analyses <span class="citation-pill">(Ji et al., 2023)</span> categorize model unfaithfulness into intrinsic contradictions and extrinsic fabrications. Retrieval-augmented architectures <span class="citation-pill">(Lewis et al., 2020)</span> significantly reduce factual errors by grounding generation on indexed document corpora. Furthermore, post-hoc verification agents <span class="citation-pill">(Gao et al., 2023)</span> enforce bidirectional citation tracing, reducing unsupported claims across multi-turn reasoning workflows...</p>
+                                        <p id="paper-mock-body-text">Recent empirical analyses <span class="citation-pill">(Ji et al., 2023)</span> categorize model unfaithfulness into intrinsic contradictions and extrinsic fabrications. Retrieval-augmented architectures <span class="citation-pill">(Lewis et al., 2020)</span> significantly reduce factual errors by grounding generation on indexed document corpora. Furthermore, post-hoc verification agents <span class="citation-pill">(Gao et al., 2023)</span> enforce bidirectional citation tracing, reducing unsupported claims across multi-turn reasoning workflows...</p>
+                                    </div>
+                                    <div class="paper-mock-citations">
+                                        <div class="paper-mock-citations-label">Key Citations</div>
+                                        <ul id="paper-mock-citations-list">
+                                            <li>Ji, Z. et al. (2023). Survey of Hallucination in Natural Language Generation.</li>
+                                            <li>Lewis, P. et al. (2020). Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks.</li>
+                                        </ul>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Tab 2: PRISMA Diagram -->
                             <div class="tab-pane" id="tab-pane-prisma">
-                                <div class="prisma-diagram-preview">
+                                <div class="prisma-diagram-preview" id="prisma-diagram-preview">
                                     <div class="prisma-step-row">
                                         <div class="prisma-box">
                                             <div class="prisma-box-title">1. Identification</div>
@@ -289,7 +315,7 @@
                                                 <th>Evidence Level</th>
                                             </tr>
                                         </thead>
-                                        <tbody>
+                                        <tbody id="evidence-table-body">
                                             <tr>
                                                 <td><strong>Ji et al. (2023)</strong></td>
                                                 <td>Taxonomy &amp; Evaluation</td>
@@ -371,6 +397,13 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="run-example-cta">
+                        <a href="/app?mode=researchmode&q=What%20techniques%20mitigate%20hallucinations%20in%20large%20language%20models%3F" class="btn-primary btn-lg" id="run-example-btn">
+                            <span>Run this research yourself</span>
+                            <i data-lucide="arrow-right" style="width: 15px; height: 15px;"></i>
+                        </a>
                     </div>
                 </div>
 
