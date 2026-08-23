@@ -2631,10 +2631,10 @@ const SOURCE_BADGE_MAP = {
     crossref: { src: 'assets/crossref.svg', label: 'Crossref', cls: 'badge-crossref' },
     pubmed: { src: 'assets/pubmed.svg', label: 'PubMed', cls: 'badge-pubmed' },
     opencitations: { src: 'assets/opencitations.svg', label: 'OpenCitations', cls: 'badge-opencitations' },
-    europe_pmc: { src: 'assets/europe-pmc.svg', label: 'Europe PMC', cls: 'badge-europepmc' },
-    europepmc: { src: 'assets/europe-pmc.svg', label: 'Europe PMC', cls: 'badge-europepmc' },
+    europe_pmc: { src: 'assets/europe-pmc.png', label: 'Europe PMC', cls: 'badge-europepmc' },
+    europepmc: { src: 'assets/europe-pmc.png', label: 'Europe PMC', cls: 'badge-europepmc' },
     doaj: { src: 'assets/doaj.svg', label: 'DOAJ', cls: 'badge-doaj' },
-    datacite: { src: 'assets/datacite.svg', label: 'DataCite', cls: 'badge-datacite' },
+    datacite: { src: 'assets/datacite.png', label: 'DataCite', cls: 'badge-datacite' },
     orcid: { src: 'assets/orcid.svg', label: 'ORCID', cls: 'badge-orcid' },
     tavily_web_fallback: { src: 'assets/openalex.png', label: 'Web Fallback', cls: 'badge-generic' }
 };
