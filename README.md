@@ -62,6 +62,14 @@ flowchart TB
 
 ## 25-Agent Evidence-First Research Pipeline
 
+<p align="center">
+  <img src="frontend/assets/pipeline_diagram.svg" alt="25-Agent Evidence-First Research Pipeline Architecture" width="100%">
+</p>
+
+<details>
+<summary><b>🔍 View Granular 25-Agent Execution Graph (Mermaid)</b></summary>
+<br/>
+
 ```mermaid
 flowchart TB
     START(["🚀 Problem Statement"]) --> P1["📋 <b>Phase 1: Planning & Protocol</b><br/>1. scope_definition (PICOC) → 2. protocol_agent → 3. keyword_extractor"]
@@ -97,6 +105,8 @@ flowchart TB
     style P5A fill:#1e293b,stroke:#475569,color:#fff
     style P5B fill:#1e293b,stroke:#475569,color:#fff
 ```
+
+</details>
 
 ---
 
