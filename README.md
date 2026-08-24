@@ -116,9 +116,11 @@ Each gate genuinely pauses graph execution via LangGraph `interrupt()`, allowing
 
 1. **Deterministic Flow-Tracking State Machine (PRISMA 2020-aligned)**:
    `PRISMATracker.validate_invariants()` asserts these *internal* conservation relations:
-   $$\text{records\_identified} - \text{duplicates\_removed} = \text{records\_after\_dedup}$$
-   $$\text{records\_screened} - \text{excluded\_title\_abstract} = \text{full\_text\_requested}$$
-   $$\text{full\_text\_assessed} - \text{excluded\_full\_text} = \text{studies\_included}$$
+   ```python
+   records_identified - duplicates_removed     == records_after_dedup
+   records_screened   - excluded_title_abstract == full_text_requested
+   full_text_assessed - excluded_full_text      == studies_included
+   ```
    `full_text_requested` is the tracker's internal shortcut for PRISMA's *reports sought for retrieval*. The distinct PRISMA stages *reports not retrieved* (`full_text_unavailable`) and *reports assessed for eligibility* (`full_text_assessed`) are tracked as separate fields, but the hand-off between them is not asserted—so the equations above are internal invariants rather than the complete PRISMA 2020 flow. Every count is tracked deterministically in code—never generated or estimated by an LLM.
 
 2. **Immutable Evidence Store**:
