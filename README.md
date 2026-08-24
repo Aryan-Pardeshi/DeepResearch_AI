@@ -62,51 +62,32 @@ flowchart TB
 
 ## 25-Agent Evidence-First Research Pipeline
 
-<p align="center">
-  <img src="frontend/assets/pipeline_diagram.svg" alt="25-Agent Evidence-First Research Pipeline Architecture" width="100%">
-</p>
-
-<details>
-<summary><b>🔍 View Granular 25-Agent Execution Graph (Mermaid)</b></summary>
-<br/>
-
 ```mermaid
-flowchart TB
-    START(["🚀 Problem Statement"]) --> P1["📋 <b>Phase 1: Planning & Protocol</b><br/>1. scope_definition (PICOC) → 2. protocol_agent → 3. keyword_extractor"]
-    P1 --> G1{"🧑 <b>Gate 1: Protocol Review</b>"}
-    G1 -.->|"revise"| P1_REV["scope_reviser"]
-    P1_REV -.-> G1
+flowchart TD
+    START(["🚀 PROBLEM STATEMENT"]) --> P1["📋 <b>1 - SCOPE</b><br/>definition & keywords"]
+    P1 --> G1{"🧑 <b>HUMAN REVIEW 1</b><br/>Protocol Review"}
+    G1 -.->|"revise"| P1
+    G1 -->|"approved"| P2["📚 <b>2 - LITERATURE</b><br/>corpus, 6 academic APIs & screening"]
+    P2 --> G2{"🧑 <b>HUMAN REVIEW 2</b><br/>Evidence Review"}
+    G2 -.->|"revise"| P2
+    G2 -->|"approved"| P3["💡 <b>3 - HYPOTHESES</b><br/>theoretical framing & empirical"]
+    P3 --> G3{"🧑 <b>HUMAN REVIEW 3</b><br/>Hypotheses Review"}
+    G3 -.->|"revise"| P3
+    G3 -->|"approved"| P4["📐 <b>4 - METHODOLOGY</b><br/>design & analysis plan"]
+    P4 --> P5["📁 <b>5 - PAPER ASSEMBLY</b><br/>sections, refs & figures"]
+    P5 --> OUT(["📄 <b>FINAL RESEARCH PAPER</b><br/>Publication-Grade PDF / DOCX"])
 
-    G1 -->|"approved"| P2A["🌐 <b>Phase 2A: Multi-Source Retrieval</b><br/>4. paper_fetcher (OpenAlex, S2, Crossref, PubMed, arXiv) → 5. citation_expander → 6. metadata_validator"]
-    P2A --> P2B["🔍 <b>Phase 2B: Screening & Quality Appraisal</b><br/>7. paper_screener (Scored Filter) → 8. fulltext_eligibility (OA PDF) → 9. quality_appraisal"]
-
-    P2B --> P3["📊 <b>Phase 3: Structured Evidence Extraction</b><br/>10. evidence_extractor → 11. quantitative_extractor → 12. methodology_extractor → 13. limitation_extractor → 14. provenance_agent"]
-    P3 --> G2{"🧑 <b>Gate 2: Evidence Review</b>"}
-
-    G2 -->|"approved"| P4["💡 <b>Phase 4: Theoretical Framing & Synthesis</b><br/>15. taxonomy_agent → 16. gap_analysis → 17. conceptual_framework → 18. hypotheses (H1..H5)"]
-    P4 --> G3{"🧑 <b>Gate 3: Hypotheses Review</b>"}
-
-    G3 -->|"approved"| P5A["✍️ <b>Phase 5A: Methodology & Section Drafting</b><br/>19. research_design → 20. data_collection → 21. data_analysis → Literature Review<br/>22. results → 23. discussion → 24. limitations → 25. conclusion"]
-    P5A --> P5B["🛡️ <b>Phase 5B: Verification & Publication</b><br/>References → citation_validator → claim_validator → integrity_auditor → figures_node (PRISMA) → Appendices"]
-
-    P5B --> END_NODE(["📄 <b>Complete Publication-Grade Paper (PDF / DOCX)</b>"])
-
-    style START fill:#6366f1,stroke:#4338ca,color:#fff
-    style G1 fill:#f59e0b,stroke:#b45309,color:#fff
-    style G2 fill:#f59e0b,stroke:#b45309,color:#fff
-    style G3 fill:#f59e0b,stroke:#b45309,color:#fff
-    style END_NODE fill:#10b981,stroke:#047857,color:#fff
-    style P1 fill:#1e293b,stroke:#475569,color:#fff
-    style P1_REV fill:#334155,stroke:#475569,color:#fff
-    style P2A fill:#1e293b,stroke:#475569,color:#fff
-    style P2B fill:#1e293b,stroke:#475569,color:#fff
-    style P3 fill:#1e293b,stroke:#475569,color:#fff
-    style P4 fill:#1e293b,stroke:#475569,color:#fff
-    style P5A fill:#1e293b,stroke:#475569,color:#fff
-    style P5B fill:#1e293b,stroke:#475569,color:#fff
+    style START fill:#1e293b,stroke:#475569,color:#fff
+    style P1 fill:#1e2433,stroke:#475569,color:#fff
+    style P2 fill:#1e2433,stroke:#475569,color:#fff
+    style P3 fill:#1e2433,stroke:#475569,color:#fff
+    style P4 fill:#1e2433,stroke:#475569,color:#fff
+    style P5 fill:#1e2433,stroke:#475569,color:#fff
+    style G1 fill:#f8fafc,stroke:#cbd5e1,color:#0f172a
+    style G2 fill:#f8fafc,stroke:#cbd5e1,color:#0f172a
+    style G3 fill:#f8fafc,stroke:#cbd5e1,color:#0f172a
+    style OUT fill:#0284c7,stroke:#0369a1,color:#fff
 ```
-
-</details>
 
 ---
 
