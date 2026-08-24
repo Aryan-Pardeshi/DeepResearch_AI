@@ -64,80 +64,38 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    subgraph P1 ["Phase 1: Planning & Protocol"]
-        direction LR
-        START(["Problem Statement"]) --> SCOPE["<b>1. scope_definition</b><br/>PICOC Scoping"]
-        SCOPE --> PROT["<b>2. protocol_agent</b><br/>Search Protocol"]
-        PROT --> KW["<b>3. keyword_extractor</b><br/>Boolean Search Strings"]
-        KW --> G1{"🧑 Gate 1<br/>Protocol Review"}
-        G1 -.->|"revise"| REVISER["scope_reviser"]
-        REVISER -.-> G1
-    end
+    START(["🚀 Problem Statement"]) --> P1["📋 <b>Phase 1: Planning & Protocol</b><br/>1. scope_definition (PICOC) → 2. protocol_agent → 3. keyword_extractor"]
+    P1 --> G1{"🧑 <b>Gate 1: Protocol Review</b>"}
+    G1 -.->|"revise"| P1_REV["scope_reviser"]
+    P1_REV -.-> G1
 
-    subgraph P2 ["Phase 2: Multi-Source Retrieval & Screening"]
-        direction LR
-        FETCH["<b>4. paper_fetcher</b><br/>OpenAlex · S2 · Crossref · PubMed · arXiv"] --> CITE["<b>5. citation_expander</b><br/>OpenCitations 1-Hop Graph"]
-        CITE --> META["<b>6. metadata_validator</b><br/>DOI Dedup & Normalization"]
-        META --> SCREEN["<b>7. paper_screener</b><br/>Title/Abstract Scored Filter"]
-        SCREEN --> FULL["<b>8. fulltext_eligibility</b><br/>OA Full-Text PDF Ingestion"]
-        FULL --> QUAL["<b>9. quality_appraisal</b><br/>Methodological Rigor"]
-    end
+    G1 -->|"approved"| P2A["🌐 <b>Phase 2A: Multi-Source Retrieval</b><br/>4. paper_fetcher (OpenAlex, S2, Crossref, PubMed, arXiv) → 5. citation_expander → 6. metadata_validator"]
+    P2A --> P2B["🔍 <b>Phase 2B: Screening & Quality Appraisal</b><br/>7. paper_screener (Scored Filter) → 8. fulltext_eligibility (OA PDF) → 9. quality_appraisal"]
 
-    subgraph P3 ["Phase 3: Structured Evidence Extraction"]
-        direction LR
-        EX_FIND["<b>10. evidence_extractor</b><br/>Qualitative Findings"] --> EX_QUANT["<b>11. quantitative_extractor</b><br/>Metrics & Baselines"]
-        EX_QUANT --> EX_METH["<b>12. methodology_extractor</b><br/>Design & Sample Sizes"]
-        EX_METH --> EX_LIM["<b>13. limitation_extractor</b><br/>Reported Constraints"]
-        EX_LIM --> PROV["<b>14. provenance_agent</b><br/>Deterministic ID Anchoring"]
-        PROV --> G2{"🧑 Gate 2<br/>Evidence Review"}
-    end
+    P2B --> P3["📊 <b>Phase 3: Structured Evidence Extraction</b><br/>10. evidence_extractor → 11. quantitative_extractor → 12. methodology_extractor → 13. limitation_extractor → 14. provenance_agent"]
+    P3 --> G2{"🧑 <b>Gate 2: Evidence Review</b>"}
 
-    subgraph P4 ["Phase 4: Theoretical Framing & Synthesis"]
-        direction LR
-        TAX["<b>15. taxonomy_agent</b><br/>Thematic Clustering"] --> GAP["<b>16. gap_analysis</b><br/>Contradictions & Open Questions"]
-        GAP --> FRAME["<b>17. conceptual_framework</b><br/>Theoretical Paradigm"]
-        FRAME --> HYP["<b>18. hypotheses</b><br/>Directional Hypotheses H1..H5"]
-        HYP --> G3{"🧑 Gate 3<br/>Hypotheses Review"}
-    end
+    G2 -->|"approved"| P4["💡 <b>Phase 4: Theoretical Framing & Synthesis</b><br/>15. taxonomy_agent → 16. gap_analysis → 17. conceptual_framework → 18. hypotheses (H1..H5)"]
+    P4 --> G3{"🧑 <b>Gate 3: Hypotheses Review</b>"}
 
-    subgraph P5A ["Phase 5A: Methodology & Section Drafting"]
-        direction LR
-        M_DES["<b>19. research_design</b>"] --> M_COL["<b>20. data_collection</b>"]
-        M_COL --> M_ANA["<b>21. data_analysis</b>"]
-        M_ANA --> W_REV["<b>Literature Review</b>"]
-        W_REV --> W_RES["<b>22. results</b><br/>(Empirical Matrix)"]
-        W_RES --> W_DISC["<b>23. discussion</b>"]
-        W_DISC --> W_LIM["<b>24. limitations</b>"]
-        W_LIM --> W_CONC["<b>25. conclusion</b>"]
-    end
+    G3 -->|"approved"| P5A["✍️ <b>Phase 5A: Methodology & Section Drafting</b><br/>19. research_design → 20. data_collection → 21. data_analysis → Literature Review<br/>22. results → 23. discussion → 24. limitations → 25. conclusion"]
+    P5A --> P5B["🛡️ <b>Phase 5B: Verification & Publication</b><br/>References → citation_validator → claim_validator → integrity_auditor → figures_node (PRISMA) → Appendices"]
 
-    subgraph P5B ["Phase 5B: Verification, Figures & Delivery"]
-        direction LR
-        W_REF["<b>References & Citations</b>"] --> V_CITE["🔍 citation_validator"]
-        V_CITE --> V_CLAIM["🔍 claim_validator"]
-        V_CLAIM --> V_AUDIT["🛡️ integrity_auditor"]
-        V_AUDIT --> FIGS["📊 figures_node<br/>PRISMA + Evidence Matrix"]
-        FIGS --> APPS["Appendices & Audit Protocol"]
-        APPS --> END_NODE(["📄 Complete Publication-Grade Paper (PDF / DOCX)"])
-    end
-
-    G1 -->|"approved"| FETCH
-    QUAL --> EX_FIND
-    G2 -->|"approved"| TAX
-    G3 -->|"approved"| M_DES
-    W_CONC --> W_REF
+    P5B --> END_NODE(["📄 <b>Complete Publication-Grade Paper (PDF / DOCX)</b>"])
 
     style START fill:#6366f1,stroke:#4338ca,color:#fff
     style G1 fill:#f59e0b,stroke:#b45309,color:#fff
     style G2 fill:#f59e0b,stroke:#b45309,color:#fff
     style G3 fill:#f59e0b,stroke:#b45309,color:#fff
     style END_NODE fill:#10b981,stroke:#047857,color:#fff
-    style P1 fill:none,stroke:#64748b,stroke-width:1px,stroke-dasharray: 4 4
-    style P2 fill:none,stroke:#64748b,stroke-width:1px,stroke-dasharray: 4 4
-    style P3 fill:none,stroke:#64748b,stroke-width:1px,stroke-dasharray: 4 4
-    style P4 fill:none,stroke:#64748b,stroke-width:1px,stroke-dasharray: 4 4
-    style P5A fill:none,stroke:#64748b,stroke-width:1px,stroke-dasharray: 4 4
-    style P5B fill:none,stroke:#64748b,stroke-width:1px,stroke-dasharray: 4 4
+    style P1 fill:#1e293b,stroke:#475569,color:#fff
+    style P1_REV fill:#334155,stroke:#475569,color:#fff
+    style P2A fill:#1e293b,stroke:#475569,color:#fff
+    style P2B fill:#1e293b,stroke:#475569,color:#fff
+    style P3 fill:#1e293b,stroke:#475569,color:#fff
+    style P4 fill:#1e293b,stroke:#475569,color:#fff
+    style P5A fill:#1e293b,stroke:#475569,color:#fff
+    style P5B fill:#1e293b,stroke:#475569,color:#fff
 ```
 
 ---
