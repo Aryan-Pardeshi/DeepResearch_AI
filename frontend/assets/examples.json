@@ -2,7 +2,7 @@
   {
     "id": "hallucination",
     "topic": "AI hallucination mitigation",
-    "question": "Large language models (LLMs) frequently generate hallucinated content\u2014statements that are factually incorrect, internally inconsistent, or unsupported by the provided context\u2014posing significant risks for applications that require high fidelity, such as medical advice, legal summarization, and scientific communication. While a variety of mitigation strategies have been proposed (e.g., prompt engineering, retrieval\u2011augmented generation, instruction fine\u2011tuning, constrained decoding, and post\u2011hoc verification), the literature lacks a unified taxonomy, systematic comparative evaluation, and clear guidance on how these techniques interact with model scale, computational budget, and downstream task requirements. Consequently, practitioners cannot reliably select or combine mitigation methods to achieve optimal factuality without incurring prohibitive costs or degrading generative quality. This research addresses the gap by establishing a rigorous framework for cataloguing, benchmarking, and optimizing hallucination\u2011mitigation techniques in LLMs.",
+    "question": "What techniques mitigate hallucinations in large language models?",
     "stats": {
       "discovered": 892,
       "screened": 802,
@@ -77,7 +77,7 @@
   {
     "id": "rag-vs-finetuning",
     "topic": "RAG vs fine-tuning",
-    "question": "Despite the rapid proliferation of large language models (LLMs), adapting them to specialized domains remains a critical challenge. Two predominant strategies\u2014retrieval\u2011augmented generation (RAG) and parameter\u2011efficient fine\u2011tuning (PEFT) or full fine\u2011tuning\u2014offer contrasting trade\u2011offs between knowledge grounding, computational overhead, and model plasticity. Existing literature predominantly evaluates each approach in isolation or on narrow benchmark suites, leaving a fragmented understanding of their relative efficacy, cost\u2011benefit profiles, and robustness characteristics across heterogeneous domain\u2011specific tasks (e.g., biomedical question answering, legal contract analysis, technical support dialogue). This gap impedes informed decision\u2011making for practitioners and limits theoretical insight into how external knowledge retrieval interacts with internal parametric adaptation. Consequently, a systematic, comparative investigation is warranted to delineate the conditions under which RAG outperforms fine\u2011tuning\u2014and vice\u2011versa\u2014while quantifying the associated resource expenditures and failure modes.",
+    "question": "How does retrieval-augmented generation compare to fine-tuning for adapting large language models to domain-specific tasks?",
     "stats": {
       "discovered": 955,
       "screened": 781,
@@ -152,7 +152,7 @@
   {
     "id": "multi-agent-healthcare",
     "topic": "Multi-agent systems in healthcare",
-    "question": "Despite the growing interest in multi-agent AI systems (MAS) for enhancing healthcare delivery and clinical decision-making, there remains a limited and fragmented understanding of their current applications, effectiveness, and implementation challenges. This knowledge gap impedes evidence-based adoption, hinders the development of standardized evaluation metrics, and limits informed policy and investment decisions in healthcare AI.",
+    "question": "How are multi-agent AI systems being applied in healthcare delivery and clinical decision-making?",
     "stats": {
       "discovered": 877,
       "screened": 748,

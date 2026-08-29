@@ -160,6 +160,50 @@ async function initExampleGallery() {
     renderExample(LANDING_EXAMPLES[0], selectCards[0]);
 }
 
+/* Collapse markdown source to a plain-text teaser of at most `max` characters,
+   trimmed at a word boundary. The landing card is a preview, not the full paper. */
+function plainSnippet(md, max) {
+    const text = String(md || '')
+        .replace(/```[\s\S]*?```/g, ' ')
+        .replace(/^\s*[-*_]{3,}\s*$/gm, '')            // horizontal rules
+        .replace(/^\s*#{1,6}\s*(.+?)\s*$/gm, '$1. ')   // heading line -> "Heading. "
+        .replace(/^\s*\*\*(.+?)\*\*\s*$/gm, '$1. ')    // bold-only line -> "Label. "
+        .replace(/\*\*(.+?)\*\*/g, '$1')               // inline bold -> unwrap
+        .replace(/[*_`>#]/g, '')
+        .replace(/^\s*Literature Review:[^.]*\.\s*/i, '') // drop the outer review label
+        .replace(/\s+/g, ' ')
+        .replace(/\s+([.,;:])/g, '$1')
+        .replace(/(\.\s*){2,}/g, '. ')
+        .trim();
+    if (text.length <= max) return text;
+    const cut = text.slice(0, max);
+    const sp = cut.lastIndexOf(' ');
+    return (sp > 0 ? cut.slice(0, sp) : cut).replace(/[\s.,;:—-]+$/, '') + '…';
+}
+
+/* Shorten the "Indexed via …" tail of a paper meta line to a few flagship
+   sources with pretty names, so it stays on one line in the mockup card. */
+function prettifyMeta(meta) {
+    const NAMES = {
+        openalex: 'OpenAlex', semantic_scholar: 'Semantic Scholar', crossref: 'Crossref',
+        pubmed: 'PubMed', arxiv: 'arXiv', europe_pmc: 'Europe PMC', doaj: 'DOAJ',
+        datacite: 'DataCite', opencitations: 'OpenCitations', core: 'CORE', unpaywall: 'Unpaywall',
+    };
+    const ORDER = ['OpenAlex', 'Semantic Scholar', 'Crossref', 'PubMed', 'arXiv', 'Europe PMC', 'DOAJ', 'DataCite', 'OpenCitations'];
+    return String(meta || '').replace(/Indexed via\s+(.+)$/i, (_, list) => {
+        let sources = [...new Set(list.split(/,\s*/)
+            .map(s => s.trim())
+            .filter(s => s && !/fallback/i.test(s))
+            .map(s => NAMES[s.toLowerCase()] || s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())))];
+        sources.sort((a, b) => {
+            const ia = ORDER.indexOf(a), ib = ORDER.indexOf(b);
+            return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+        });
+        const shown = sources.slice(0, 5).join(', ');
+        return 'Indexed via ' + (sources.length > 5 ? `${shown} +${sources.length - 5} more` : shown);
+    });
+}
+
 function renderExample(example, activeCard) {
     document.querySelectorAll('.example-select-card').forEach(c => {
         const isActive = c === activeCard;
@@ -234,9 +278,9 @@ function renderExample(example, activeCard) {
     const bodyEl = document.getElementById('paper-mock-body-text');
     const citationsEl = document.getElementById('paper-mock-citations-list');
     if (titleEl) titleEl.textContent = example.paper.title;
-    if (metaEl) metaEl.textContent = example.paper.meta;
-    if (abstractEl) abstractEl.textContent = example.paper.abstract;
-    if (bodyEl) bodyEl.textContent = example.paper.body;
+    if (metaEl) metaEl.textContent = prettifyMeta(example.paper.meta);
+    if (abstractEl) abstractEl.textContent = plainSnippet(example.paper.abstract, 400);
+    if (bodyEl) bodyEl.textContent = plainSnippet(example.paper.body, 260);
     if (citationsEl) {
         citationsEl.innerHTML = example.paper.citations.map(c => `<li>${c}</li>`).join('');
     }

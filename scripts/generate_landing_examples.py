@@ -133,7 +133,10 @@ def extract_example(meta: Dict[str, str], values: Dict[str, Any]) -> Dict[str, A
     return {
         "id": meta["id"],
         "topic": meta["topic"],
-        "question": values.get("problem_statement") or meta["question"],
+        # Landing page shows this as the "input research question", so keep the
+        # crisp prompt the user would actually type - not the pipeline's expanded
+        # problem statement, which runs to ~1000 chars and overflows the card.
+        "question": meta["question"],
         "stats": {
             "discovered": records_identified,
             "screened": records_screened,
