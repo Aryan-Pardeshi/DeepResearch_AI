@@ -63,19 +63,25 @@ flowchart TB
 ## 25-Agent Evidence-First Research Pipeline
 
 ```mermaid
-flowchart TD
-    START(["🚀 PROBLEM STATEMENT"]) --> P1["📋 <b>1 - SCOPE</b><br/>definition & keywords"]
-    P1 --> G1{"🧑 <b>HUMAN REVIEW 1</b><br/>Protocol Review"}
-    G1 -.->|"revise"| P1
-    G1 -->|"approved"| P2["📚 <b>2 - LITERATURE</b><br/>corpus, 6 academic APIs & screening"]
-    P2 --> G2{"🧑 <b>HUMAN REVIEW 2</b><br/>Evidence Review"}
-    G2 -.->|"revise"| P2
-    G2 -->|"approved"| P3["💡 <b>3 - HYPOTHESES</b><br/>theoretical framing & empirical"]
-    P3 --> G3{"🧑 <b>HUMAN REVIEW 3</b><br/>Hypotheses Review"}
-    G3 -.->|"revise"| P3
-    G3 -->|"approved"| P4["📐 <b>4 - METHODOLOGY</b><br/>design & analysis plan"]
-    P4 --> P5["📁 <b>5 - PAPER ASSEMBLY</b><br/>sections, refs & figures"]
-    P5 --> OUT(["📄 <b>FINAL RESEARCH PAPER</b><br/>Publication-Grade PDF / DOCX"])
+flowchart TB
+    subgraph R1 [" "]
+        direction LR
+        START(["🚀 PROBLEM<br/>STATEMENT"]) --> P1["📋 <b>1 - SCOPE</b><br/>definition & keywords"]
+        P1 --> G1{"🧑 <b>HUMAN REVIEW 1</b><br/>Protocol Review"}
+        G1 -.->|"revise"| P1
+        G1 ==>|"approved"| P2["📚 <b>2 - LITERATURE</b><br/>corpus · 6 academic APIs · screening"]
+        P2 --> G2{"🧑 <b>HUMAN REVIEW 2</b><br/>Evidence Review"}
+        G2 -.->|"revise"| P2
+    end
+    subgraph R2 [" "]
+        direction LR
+        P3["💡 <b>3 - HYPOTHESES</b><br/>theoretical framing & empirical"] --> G3{"🧑 <b>HUMAN REVIEW 3</b><br/>Hypotheses Review"}
+        G3 -.->|"revise"| P3
+        G3 ==>|"approved"| P4["📐 <b>4 - METHODOLOGY</b><br/>design & analysis plan"]
+        P4 --> P5["📁 <b>5 - PAPER ASSEMBLY</b><br/>sections, refs & figures"]
+        P5 --> OUT(["📄 <b>FINAL RESEARCH PAPER</b><br/>Publication-Grade PDF / DOCX"])
+    end
+    G2 ==>|"approved"| P3
 
     style START fill:#1e293b,stroke:#475569,color:#fff
     style P1 fill:#1e2433,stroke:#475569,color:#fff
@@ -87,6 +93,8 @@ flowchart TD
     style G2 fill:#f8fafc,stroke:#cbd5e1,color:#0f172a
     style G3 fill:#f8fafc,stroke:#cbd5e1,color:#0f172a
     style OUT fill:#0284c7,stroke:#0369a1,color:#fff
+    style R1 fill:transparent,stroke:transparent
+    style R2 fill:transparent,stroke:transparent
 ```
 
 ---
