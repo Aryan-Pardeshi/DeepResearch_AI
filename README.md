@@ -15,7 +15,7 @@ An AI-powered multi-agent research workspace with **two modes**: fast web resear
 | | **DeepSearch** | **Research Mode (Evidence-First)** |
 |---|---|---|
 | **Goal** | Answer a question from the live web | Write a full, evidence-grounded academic paper |
-| **Sources** | Tavily web search | OpenAlex · Semantic Scholar · Crossref · PubMed · arXiv · OpenCitations |
+| **Sources** | Tavily web search | OpenAlex · Semantic Scholar · Crossref · PubMed · arXiv · Europe PMC · DOAJ · DataCite · OpenCitations |
 | **Agents** | 5 (fan-out parallel researchers) | 25 specialized agents across 5 evidence phases |
 | **HITL Checkpoints** | 1 (plan approval) | 3 Quality Gates (Protocol, Evidence Corpus, Hypotheses) |
 | **Data Invariant** | LLM web summary | Deterministic `EvidenceRecord` store (quotes, metrics, baselines) |
@@ -42,7 +42,7 @@ flowchart TB
     API --> RM["📚 Research Mode<br/>25-Agent Graph"]
 
     DS --> TAV["🌐 Tavily<br/>Web Search"]
-    RM --> ACAD["🎓 Multi-Source Academic APIs<br/>OpenAlex · Semantic Scholar · Crossref<br/>PubMed · arXiv · OpenCitations"]
+    RM --> ACAD["🎓 Multi-Source Academic APIs<br/>8 discovery providers · citation expansion<br/>author enrichment · full-text resolution"]
 
     DS --> LLM["🧠 LLM Layer<br/>Structured JSON Outputs"]
     RM --> LLM
@@ -73,7 +73,7 @@ flowchart TB
         START(["🚀 PROBLEM<br/>STATEMENT"]) --> P1["📋 <b>1 - SCOPE</b><br/>definition & keywords"]
         P1 --> G1{"🧑 <b>HUMAN REVIEW 1</b><br/>Protocol Review"}
         G1 -.->|"revise"| P1
-        G1 ==>|"approved"| P2["📚 <b>2 - LITERATURE</b><br/>corpus · 6 academic APIs · screening"]
+        G1 ==>|"approved"| P2["📚 <b>2 - LITERATURE</b><br/>corpus · 8 discovery APIs · screening"]
         P2 --> G2{"🧑 <b>HUMAN REVIEW 2</b><br/>Evidence Review"}
         G2 -.->|"revise"| P2
     end
@@ -144,12 +144,34 @@ Each gate genuinely pauses graph execution via LangGraph `interrupt()`, allowing
 |---|---|
 | **Orchestration** | LangGraph (StateGraph, `interrupt()` HITL, `Send()` fan-out, SQLite persistence) |
 | **Structured LLM** | Pydantic v2 schemas + `ainvoke_structured_with_retry` |
-| **Academic Sources** | OpenAlex, Semantic Scholar, Crossref, PubMed, arXiv, OpenCitations |
+| **Academic Sources** | OpenAlex, Semantic Scholar, Crossref, PubMed, arXiv, Europe PMC, DOAJ, DataCite, OpenCitations |
+| **Author Enrichment** | Optional ORCID author-name canonicalization |
 | **Full-Text Ingestion** | Unpaywall → Europe PMC → CORE fallback chain |
 | **Backend API** | FastAPI + Server-Sent Events (SSE) with keep-alive heartbeats |
 | **Frontend UI/UX** | Vanilla JS + CSS (Swiss Modernism 2.0, zero-build, responsive) |
 | **Figures & Charts** | matplotlib (PRISMA 2020 Flowchart, Hypothesis Evidence Matrix) |
 | **Document Export** | FPDF2 (`.pdf` with hanging APA indents) · python-docx (`.docx`) |
+
+---
+
+## Academic API coverage
+
+Research Mode uses each academic API for a specific stage:
+
+| API | Role | Configuration |
+|---|---|---|
+| **OpenAlex** | Literature discovery and open-access metadata | `OPENALEX_EMAIL` |
+| **Semantic Scholar** | Literature discovery and citation metadata | Optional `SEMANTIC_SCHOLAR_API_KEY` |
+| **Crossref** | Literature discovery and DOI metadata resolution | Uses `OPENALEX_EMAIL` for polite-pool requests |
+| **PubMed (NCBI E-utilities)** | Biomedical literature discovery | `NCBI_EMAIL` and `NCBI_TOOL_NAME`; optional `NCBI_API_KEY` |
+| **arXiv** | Preprint discovery | No credentials |
+| **Europe PMC** | Biomedical discovery and full-text fallback | No credentials |
+| **Directory of Open Access Journals (DOAJ)** | Open-access journal discovery | No credentials |
+| **DataCite** | Research-output and dataset discovery | No credentials |
+| **OpenCitations** | Forward and backward citation-graph expansion | No credentials |
+| **ORCID** | Optional author identity enrichment | Set `ORCID_AUTHOR_ENRICHMENT=1` |
+| **Unpaywall** | Open-access PDF resolution | Uses `OPENALEX_EMAIL` |
+| **CORE** | Optional full-text fallback | Optional `CORE_API_KEY` |
 
 ---
 
@@ -170,6 +192,17 @@ LLM_API_KEY="your_api_key_here"
 LLM_BASE_URL="https://api.deepseek.com"
 TAVILY_API_KEY="your_tavily_key_here"
 OPENALEX_EMAIL="you@example.com"
+NCBI_EMAIL="you@example.com"
+NCBI_TOOL_NAME="your_tool_name"
+```
+
+Optional academic API configuration:
+
+```bash
+SEMANTIC_SCHOLAR_API_KEY="your_api_key_here"
+NCBI_API_KEY="your_api_key_here"
+CORE_API_KEY="your_api_key_here"
+ORCID_AUTHOR_ENRICHMENT=0
 ```
 
 ### 2. Run with Docker
