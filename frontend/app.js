@@ -2198,15 +2198,16 @@ function renderRMHitlPanel(checkpoint) {
             const sectionLabel = e.section || e.source_section || 'unknown';
             const pageLabel = e.page != null ? `p. ${e.page}` : 'page n/a';
             const confidencePct = e.confidence != null ? Math.round(e.confidence * 100) : null;
-            const verified = e.verification_status === 'verified';
-            const confColor = verified ? 'rgba(34,197,94,0.18)' : 'rgba(234,179,8,0.18)';
-            const confTextColor = verified ? '#16a34a' : '#ca8a04';
+            // 'resolved' = quote located and chain complete; 'verified' is the legacy value from runs saved before the rename.
+            const resolved = ['resolved', 'verified'].includes(e.verification_status);
+            const confColor = resolved ? 'rgba(34,197,94,0.18)' : 'rgba(234,179,8,0.18)';
+            const confTextColor = resolved ? '#16a34a' : '#ca8a04';
             return `
             <div class="evidence-extract-card" style="background: var(--surface-bg-subtle, rgba(255,255,255,0.02)); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 0.65rem; margin-bottom: 0.5rem; font-size: 0.82rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
                     <span style="font-family: monospace; font-size: 0.75rem; color: var(--academic-blue);">${escapeHtml(e.evidence_id || '')}</span>
                     <span style="display: flex; gap: 0.35rem; align-items: center;">
-                        ${confidencePct != null ? `<span title="${verified ? 'Verbatim quote anchored to source' : 'Paraphrase or incomplete traceability chain'}" style="font-size: 0.72rem; padding: 0.1rem 0.4rem; border-radius: 4px; background: ${confColor}; color: ${confTextColor}; font-weight: 600;">${verified ? '&#10003;' : '&#9888;'} ${confidencePct}%</span>` : ''}
+                        ${confidencePct != null ? `<span title="${resolved ? 'Verbatim quote anchored to source' : 'Paraphrase or incomplete traceability chain'}" style="font-size: 0.72rem; padding: 0.1rem 0.4rem; border-radius: 4px; background: ${confColor}; color: ${confTextColor}; font-weight: 600;">${resolved ? '&#10003;' : '&#9888;'} ${confidencePct}%</span>` : ''}
                         <span style="font-size: 0.72rem; padding: 0.1rem 0.4rem; border-radius: 4px; background: rgba(59,130,246,0.15); color: var(--academic-blue); font-weight: 600;">${escapeHtml(sectionLabel)}</span>
                         <span style="font-size: 0.72rem; padding: 0.1rem 0.4rem; border-radius: 4px; background: rgba(148,163,184,0.15); color: var(--text-secondary);">${escapeHtml(pageLabel)}</span>
                     </span>

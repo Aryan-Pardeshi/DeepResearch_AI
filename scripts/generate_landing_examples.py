@@ -98,9 +98,10 @@ def _study_label(paper: Dict[str, Any]) -> str:
 
 def _evidence_level(record: Dict[str, Any]) -> str:
     confidence = record.get("confidence", 0.4)
-    verified = record.get("verification_status") == "verified"
+    # "verified" is the legacy status value from runs saved before the rename to "resolved".
+    resolved = record.get("verification_status") in ("resolved", "verified")
     if confidence >= 0.75:
-        return "High (Verified)" if verified else "High"
+        return "High (Quote anchored)" if resolved else "High"
     if confidence >= 0.5:
         return "Moderate-High"
     return "Moderate"
