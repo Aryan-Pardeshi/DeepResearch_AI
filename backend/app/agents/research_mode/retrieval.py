@@ -104,11 +104,16 @@ async def citation_expander_agent(state: Dict[str, Any]) -> Dict[str, Any]:
 
 
 async def metadata_validator_agent(state: Dict[str, Any]) -> Dict[str, Any]:
-    """Agent 7: Validates publication venues, canonicalizes author lists, and cleans DOIs.
+    """Agent 7: Normalizes paper metadata; optionally canonicalizes author names via ORCID.
 
-    Optionally canonicalizes leading author names against the ORCID public API
-    when ORCID_AUTHOR_ENRICHMENT=1 (off by default: one ORCID lookup per
-    enriched author would otherwise add latency to every run).
+    Collapses whitespace in titles (dropping a trailing period) and strips blank
+    author entries. When ORCID_AUTHOR_ENRICHMENT=1 (off by default: one ORCID
+    lookup per enriched author would otherwise add latency to every run), leading
+    author names are replaced by their canonical ORCID display name on a confident
+    match.
+
+    It does not validate venues, clean or resolve DOIs, or cross-check metadata
+    against a registry: DOIs and venues pass through unchanged.
     """
     paper_dicts = state.get("paper_records") or []
     cleaned_records: List[Dict[str, Any]] = []

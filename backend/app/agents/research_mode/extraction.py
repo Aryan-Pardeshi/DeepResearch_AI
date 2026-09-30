@@ -120,7 +120,7 @@ def anchor_quote_to_paper(
         "char_offset_end": end_off,
         "confidence": confidence,
         "confidence_basis": basis.value,
-        "verification_status": "verified" if basis != ConfidenceBasis.PARAPHRASE else "unverified",
+        "verification_status": "resolved" if basis != ConfidenceBasis.PARAPHRASE else "unresolved",
         "source_url": paper.get("source_url") or "",
         "doi": paper.get("doi"),
     }
@@ -351,7 +351,7 @@ async def provenance_agent(state: Dict[str, Any]) -> Dict[str, Any]:
     - Drops records whose paper_id matches nothing in the corpus (ungroundable).
     - Backfills missing full text via PDF fetch for paraphrase-grade records,
       re-anchoring them when the verbatim quote is then located.
-    - Downgrades records with incomplete chains to unverified + low confidence
+    - Downgrades records with incomplete chains to unresolved + low confidence
       instead of surfacing black-box claims.
     - Emits machine-readable Claim objects for downstream output layers.
     """

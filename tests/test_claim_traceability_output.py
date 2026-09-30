@@ -265,13 +265,42 @@ def test_chain_validation_flags_empty_support_and_missing_locator():
 
 
 @pytest.mark.asyncio
-async def test_citation_validator_marks_claims_verified_on_completed_run():
+async def test_citation_validator_marks_claims_resolved_on_completed_run():
     linked = await claims_linker_node(_completed_state())
     state = {**_completed_state(), "review_claims": linked["review_claims"]}
     result = await citation_validator_node(state)
     assert result.get("unresolved_claims") == []
     statuses = {c["claim_id"]: c["validation_status"] for c in result["review_claims"]}
-    assert statuses and all(s == "verified" for s in statuses.values())
+    # A resolving chain proves the cited source exists and is locatable, nothing
+    # more: no validator tests that the passage supports the sentence, so the
+    # status must never read "verified".
+    assert statuses and all(s == "resolved" for s in statuses.values())
+
+
+@pytest.mark.asyncio
+async def test_claim_validator_grounding_does_not_upgrade_status_to_verified():
+    """Numeric grounding is reported in grounded_quantitative_claim_ids, not as a label."""
+    linked = await claims_linker_node(_completed_state())
+    state = {**_completed_state(), "review_claims": linked["review_claims"]}
+    state.update(await citation_validator_node(state))
+    result = await claim_validator_node(state)
+    assert result["grounded_quantitative_claim_ids"]
+    assert {c["validation_status"] for c in result["review_claims"]} == {"resolved"}
+
+
+@pytest.mark.asyncio
+async def test_claim_validator_marks_ungrounded_quantitative_claim_unsupported():
+    claims = [{
+        "claim_id": "results_cl001",
+        "claim_text": "Accuracy reaches 99.9% on ImageNet.",
+        "target_section": "results",
+        "supporting_evidence_ids": [EVIDENCE[0]["evidence_id"]],
+        "is_quantitative": True,
+        "validation_status": "resolved",
+    }]
+    result = await claim_validator_node({**_completed_state(), "review_claims": claims})
+    assert result["review_claims"][0]["validation_status"] == "unsupported"
+    assert "results_cl001" in result["unsupported_numerical_claims"]
 
 
 @pytest.mark.asyncio

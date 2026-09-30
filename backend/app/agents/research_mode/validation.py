@@ -1,6 +1,11 @@
 """Phase 5 Deterministic Citation & Claim Validation Pipeline for Research Mode.
 
-Enforces academic integrity gates, provenance verification, and PRISMA consistency.
+Enforces resolution gates (citations and claim chains resolve to located sources),
+numeric metric matching, and PRISMA consistency.
+
+Scope: none of these gates tests that a cited passage supports the sentence it is
+attached to. "verified" in names such as verified_citations means "resolved against
+the corpus" only, and ReviewClaim.validation_status never reports "verified".
 """
 
 from __future__ import annotations
@@ -96,7 +101,12 @@ def validate_citations_in_text(
     text: str,
     paper_records: List[Dict[str, Any]]
 ) -> Tuple[int, int, List[str], List[str]]:
-    """Validate all inline citations against the PaperRecord store."""
+    """Resolve all inline author-year citations against the PaperRecord store.
+
+    A citation counts as verified when its (first-author surname, year) matches a
+    PaperRecord. That is a resolution check: it does not test that the matched paper
+    supports the sentence the citation is attached to.
+    """
     if not text:
         return 0, 0, [], []
 
@@ -158,12 +168,14 @@ def validate_citations_in_text(
 
 
 async def citation_validator_node(state: Dict[str, Any]) -> Dict[str, Any]:
-    """Validator 1: Verifies inline citations, orphan references, and claim chains.
+    """Validator 1: Resolves inline citations, orphan references, and claim chains.
 
-    Beyond regex-matching rendered author-year text, validates every structured
+    Beyond regex-matching rendered author-year text, resolves every structured
     ReviewClaim against the evidence store: each supporting_evidence_id must
     resolve to an EvidenceRecord whose paper_id resolves to a located paper.
-    Claims are annotated with a machine verdict in the manifest itself.
+    Claims are annotated in the manifest itself: "resolved" when the chain
+    resolves, "flagged" when it does not. Resolution only; nothing here tests that
+    the cited passage supports the sentence.
     """
     papers = state.get("paper_records") or state.get("screened_papers") or []
     ev_dicts = state.get("evidence_records") or []
@@ -182,11 +194,11 @@ async def citation_validator_node(state: Dict[str, Any]) -> Dict[str, Any]:
     )
     unresolved_set = set(unresolved_claims)
     adjudicated = [
-        dict(c, validation_status="flagged" if str(c.get("claim_id")) in unresolved_set else "verified")
+        dict(c, validation_status="flagged" if str(c.get("claim_id")) in unresolved_set else "resolved")
         for c in review_claims
     ]
     logger.info(
-        f"citation_validator: {verified}/{total} citations verified; "
+        f"citation_validator: {verified}/{total} citations matched a known paper record; "
         f"{resolved_rc}/{total_rc} review claims resolve full provenance chains."
     )
 
@@ -232,7 +244,11 @@ def _mentions_metric(sentence_lower: str, metric_name: str) -> bool:
 
 
 async def claim_validator_node(state: Dict[str, Any]) -> Dict[str, Any]:
-    """Validator 2: Audits quantitative sentences and structured claims against EvidenceRecord values."""
+    """Validator 2: Matches numbers in quantitative sentences and structured claims to EvidenceRecord values.
+
+    Numeric match only. A grounded claim keeps its status (its id is reported in
+    grounded_quantitative_claim_ids); an ungrounded quantitative claim becomes "unsupported".
+    """
     ev_dicts = state.get("evidence_records") or []
     results_text = str(state.get("results") or "")
 
@@ -311,9 +327,10 @@ async def claim_validator_node(state: Dict[str, Any]) -> Dict[str, Any]:
                 for n in nums
             )
             if grounded:
+                # A numeric match does not test that the passage supports the
+                # claim, so it is reported in grounded_quant_ids and leaves the
+                # status untouched rather than upgrading it.
                 grounded_quant_ids.append(str(c.get("claim_id")))
-                if c.get("validation_status") != "flagged":
-                    c["validation_status"] = "verified"
             else:
                 unsupported.append(str(c.get("claim_id")))
                 c["validation_status"] = "unsupported"
@@ -332,7 +349,11 @@ async def claim_validator_node(state: Dict[str, Any]) -> Dict[str, Any]:
 
 
 async def integrity_auditor_node(state: Dict[str, Any]) -> Dict[str, Any]:
-    """Validator 3: Overall research integrity audit and PRISMA invariant verification."""
+    """Validator 3: Aggregates the resolution and numeric-match gates and checks PRISMA invariants.
+
+    passed_all_gates means every gate passed. It is not a finding that the cited
+    sources support the prose.
+    """
     raw_tr = state.get("prisma_tracker") or {}
     valid_keys = set(PRISMATracker.model_fields.keys())
     filtered_tr = {k: v for k, v in raw_tr.items() if k in valid_keys} if isinstance(raw_tr, dict) else {}

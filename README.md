@@ -132,9 +132,9 @@ Each gate genuinely pauses graph execution via LangGraph `interrupt()`, allowing
    - `ReviewClaim.claim_id`: deterministic composite identifier `{section}_cl001` (section slug truncated to 8 characters) linking paper claims to supporting evidence IDs.
 
 3. **Deterministic Validation Pipeline**:
-   - `citation_validator`: Audits every in-text citation against known `PaperRecord` metadata; flags unverified or hallucinated citations.
-   - `claim_validator`: Audits quantitative sentences against extracted `EvidenceRecord` benchmark metrics.
-   - `integrity_auditor`: Validates PRISMA invariants and issues comprehensive `ValidationReport`.
+   - `citation_validator`: Resolves every in-text citation against known `PaperRecord` metadata and every `ReviewClaim` through its claim → evidence → paper → DOI/URL chain; flags citations and claims that do not resolve. This is a resolution check only: it does not test that the cited passage supports the sentence, so a resolving claim is marked `resolved`, never `verified`.
+   - `claim_validator`: Matches numbers in quantitative sentences against extracted `EvidenceRecord` benchmark metrics (numeric match only).
+   - `integrity_auditor`: Validates PRISMA invariants and issues comprehensive `ValidationReport`; `passed_all_gates` means the resolution and numeric-match gates passed, not that sources support the prose.
 
 ---
 

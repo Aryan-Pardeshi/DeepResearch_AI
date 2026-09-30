@@ -176,7 +176,7 @@ async def test_evidence_extractor_anchors_quotes_with_span_page_confidence(monke
     assert rec["doi"] == PAPER["doi"]
     assert rec["confidence"] >= 0.85
     assert rec["confidence_basis"] == ConfidenceBasis.EXACT_QUOTE_FULLTEXT
-    assert rec["verification_status"] == "verified"
+    assert rec["verification_status"] == "resolved"
     # Span carries the exact quoted text plus machine location.
     assert span["page"] == 2
     assert FULLTEXT[span["char_offset_start"]:span["char_offset_end"]] == span["text"]
@@ -200,7 +200,7 @@ async def test_extractor_downgrades_unverifiable_paraphrase(monkeypatch):
     result = await extraction.evidence_extractor_agent({"paper_records": [dict(PAPER)]})
     rec = result["evidence_records"][0]
     assert rec["confidence_basis"] == ConfidenceBasis.PARAPHRASE
-    assert rec["verification_status"] == "unverified"
+    assert rec["verification_status"] == "unresolved"
     assert rec["confidence"] <= 0.5
     # Even downgraded claims keep the mandatory provenance fields populated.
     assert rec["paper_id"] and rec["section"] and rec["source_url"] is not None
@@ -233,7 +233,7 @@ async def test_abstract_only_source_marks_location_unknown_not_guessed(monkeypat
 # ---------------------------------------------------------------------------
 
 
-def test_complete_chain_resolves_verified():
+def test_complete_chain_resolves():
     record = {
         "evidence_id": f"{PAPER['paper_id']}_ev001",
         "paper_id": PAPER["paper_id"],
@@ -249,7 +249,7 @@ def test_complete_chain_resolves_verified():
     chains = build_evidence_chains([record], [PAPER])
     chain = chains[0]
     assert set(["claim", "paper_id", "evidence", "section", "page", "confidence"]).issubset(chain)
-    assert chain["verification_status"] == "verified"
+    assert chain["verification_status"] == "resolved"
     assert chain["missing_links"] == []
     assert chain["evidence"]["exact_quote"] or chain["evidence"]["span_id"]
 
@@ -259,10 +259,10 @@ def test_complete_chain_resolves_verified():
     assert c.paper_id == PAPER["paper_id"]
     assert c.evidence_span_id == record["evidence_span_id"]
     assert c.source_url == PAPER["source_url"]
-    assert c.verification_status == "verified"
+    assert c.verification_status == "resolved"
 
 
-def test_broken_chain_downgrades_to_unverified_low_confidence():
+def test_broken_chain_downgrades_to_unresolved_low_confidence():
     orphan_record = {
         "evidence_id": "ghost_ev001",
         "paper_id": "ghostpaper0000000",
@@ -274,13 +274,13 @@ def test_broken_chain_downgrades_to_unverified_low_confidence():
     }
     chains = build_evidence_chains([orphan_record], [PAPER])
     chain = chains[0]
-    assert chain["verification_status"] == "unverified"
+    assert chain["verification_status"] == "unresolved"
     assert chain["confidence"] <= 0.4
     assert "paper_not_in_corpus" in chain["missing_links"]
 
 
 def test_record_without_locator_gets_downgraded():
-    """No source_url AND no doi anywhere in the chain -> unverified downgrade."""
+    """No source_url AND no doi anywhere in the chain -> unresolved downgrade."""
     paper_no_links = dict(PAPER)
     paper_no_links["doi"] = None
     paper_no_links["source_url"] = ""
@@ -294,7 +294,7 @@ def test_record_without_locator_gets_downgraded():
         "confidence_basis": ConfidenceBasis.EXACT_QUOTE_FULLTEXT,
     }
     chains = build_evidence_chains([record], [paper_no_links])
-    assert chains[0]["verification_status"] == "unverified"
+    assert chains[0]["verification_status"] == "unresolved"
     assert chains[0]["confidence"] < 0.9  # downgraded from exact-quote grade
     assert any("locator" in link for link in chains[0]["missing_links"])
 
@@ -313,7 +313,7 @@ async def test_provenance_agent_emits_claims_and_keeps_state_consistent(monkeypa
         "page": 2,
         "confidence": 0.9,
         "confidence_basis": ConfidenceBasis.EXACT_QUOTE_FULLTEXT,
-        "verification_status": "verified",
+        "verification_status": "resolved",
         "source_url": PAPER["source_url"],
         "doi": PAPER["doi"],
     }
@@ -323,7 +323,7 @@ async def test_provenance_agent_emits_claims_and_keeps_state_consistent(monkeypa
         "claim_summary": "Orphaned claim.",
         "section": "unknown",
         "confidence": 0.5,
-        "verification_status": "unverified",
+        "verification_status": "unresolved",
     }
     result = await extraction.provenance_agent({
         "evidence_records": [good_record, ghost_record],
@@ -335,7 +335,7 @@ async def test_provenance_agent_emits_claims_and_keeps_state_consistent(monkeypa
     claims = result["claims"]
     assert len(claims) == 1
     assert claims[0]["paper_id"] == PAPER["paper_id"]
-    assert claims[0]["verification_status"] == "verified"
+    assert claims[0]["verification_status"] == "resolved"
     # Spans from the extractor remain attached for downstream consumers.
     assert isinstance(result.get("evidence_spans"), list)
 
@@ -356,7 +356,7 @@ async def test_provenance_backfills_missing_fulltext_then_upgrades_anchor(monkey
         "page": None,
         "confidence": 0.4,
         "confidence_basis": ConfidenceBasis.PARAPHRASE,
-        "verification_status": "unverified",
+        "verification_status": "unresolved",
         "source_url": paper["source_url"],
         "doi": paper["doi"],
     }
@@ -377,5 +377,5 @@ async def test_provenance_backfills_missing_fulltext_then_upgrades_anchor(monkey
     })
     rec = result["evidence_records"][0]
     assert rec["confidence_basis"] == ConfidenceBasis.EXACT_QUOTE_FULLTEXT
-    assert rec["verification_status"] == "verified"
+    assert rec["verification_status"] == "resolved"
     assert rec["page"] == 2

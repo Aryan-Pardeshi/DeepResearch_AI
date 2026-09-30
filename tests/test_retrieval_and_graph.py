@@ -25,6 +25,32 @@ def test_clean_abstract_and_doi():
     assert _clean_doi("http://doi.org/10.1234/test") == "10.1234/test"
 
 
+@pytest.mark.asyncio
+async def test_metadata_validator_normalizes_text_but_does_not_validate_doi_or_venue(monkeypatch):
+    """Pins the scope documented on metadata_validator_agent.
+
+    It tidies titles and author lists (and optionally canonicalizes author names via
+    ORCID); DOIs and venues pass through untouched and nothing is checked against a
+    registry.
+    """
+    from backend.app.agents.research_mode.retrieval import metadata_validator_agent
+
+    monkeypatch.delenv("ORCID_AUTHOR_ENRICHMENT", raising=False)
+    paper = {
+        "paper_id": "p1",
+        "title": "  Deep   Learning in   Practice. ",
+        "authors": [" Ada Lovelace ", "", "   "],
+        "doi": "10.1000/ABC-def",
+        "venue": "  Not   A Real Journal  ",
+    }
+    result = await metadata_validator_agent({"paper_records": [paper]})
+    rec = result["paper_records"][0]
+    assert rec["title"] == "Deep Learning in Practice"
+    assert rec["authors"] == ["Ada Lovelace"]
+    assert rec["doi"] == "10.1000/ABC-def"
+    assert rec["venue"] == "  Not   A Real Journal  "
+
+
 def test_normalize_title():
     """Test title normalization ignores punctuation, whitespace, and case."""
     t1 = _normalize_title("Deep Learning in 2026: A Survey!")

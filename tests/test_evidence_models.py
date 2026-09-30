@@ -1,7 +1,9 @@
 """Unit tests for Stage 1: Structured Evidence Models & PRISMA Invariants."""
 
 import pytest
+from pydantic import ValidationError
 from backend.app.models.evidence import (
+    Claim,
     PaperRecord,
     EvidenceRecord,
     ReviewClaim,
@@ -84,6 +86,35 @@ def test_evidence_record_schema():
     assert ev.effect_direction == "positive"
     assert ev.reported_value == 28.4
     assert ev.hypothesis_relevance["H1"] == "Supports"
+
+
+def test_review_claim_status_vocabulary_has_no_verified():
+    """'verified' would imply a passage-supports-sentence check that no validator performs.
+
+    A claim whose claim -> evidence -> paper -> locator chain resolves is 'resolved'.
+    """
+    kwargs = dict(claim_id="results_cl001", claim_text="A claim.", target_section="results")
+    assert ReviewClaim(**kwargs, validation_status="resolved").validation_status == "resolved"
+    with pytest.raises(ValidationError):
+        ReviewClaim(**kwargs, validation_status="verified")
+
+
+def test_evidence_record_verification_status_means_resolution_only():
+    """'resolved' = quote located and chain complete; it makes no claim about support."""
+    base = dict(evidence_id="p_ev001", paper_id="p", claim_summary="Any finding.")
+    assert EvidenceRecord(**base).verification_status == "unresolved"
+    assert EvidenceRecord(**base, verification_status="resolved").verification_status == "resolved"
+    for legacy in ("verified", "unverified"):
+        with pytest.raises(ValidationError):
+            EvidenceRecord(**base, verification_status=legacy)
+
+
+def test_claim_verification_status_means_resolution_only():
+    base = dict(text="A claim.", paper_id="p", evidence_span_id="p_sp001")
+    assert Claim(**base).verification_status == "unresolved"
+    assert Claim(**base, verification_status="resolved").verification_status == "resolved"
+    with pytest.raises(ValidationError):
+        Claim(**base, verification_status="verified")
 
 
 def test_prisma_tracker_invariants():

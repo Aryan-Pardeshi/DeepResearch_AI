@@ -192,8 +192,16 @@ Return a valid JSON array of strings:
 
 
 async def evidence_auditor_agent(state: Dict[str, Any]) -> Dict[str, Any]:
-    """Agent 20: Pre-synthesis audit verifying evidence integrity and provenance."""
+    """Agent 20: Pre-synthesis pass-through; performs no checks.
+
+    Only logs how many evidence records and papers enter synthesis. Provenance
+    resolution happens in provenance_agent, and the citation, claim and integrity
+    validators run after the paper is written.
+    """
     ev_dicts = state.get("evidence_records") or []
     paper_dicts = state.get("paper_records") or []
-    logger.info(f"evidence_auditor_agent: Verified {len(ev_dicts)} evidence records across {len(paper_dicts)} papers.")
+    logger.info(
+        f"evidence_auditor_agent: {len(ev_dicts)} evidence records across "
+        f"{len(paper_dicts)} papers entering synthesis (no checks performed here)."
+    )
     return {}
