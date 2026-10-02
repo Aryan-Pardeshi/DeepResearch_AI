@@ -1,0 +1,15 @@
+backend:
+  - changed-files:
+      - any-glob-to-any-file: ['backend/**', 'main.py', 'requirements.txt', 'langgraph.json']
+frontend:
+  - changed-files:
+      - any-glob-to-any-file: ['frontend/**']
+tests:
+  - changed-files:
+      - any-glob-to-any-file: ['tests/**', 'pytest.ini']
+docs:
+  - changed-files:
+      - any-glob-to-any-file: ['docs/**', 'README.md']
+ci:
+  - changed-files:
+      - any-glob-to-any-file: ['.github/**', 'Dockerfile', 'docker-compose.yml', 'vercel.json']
