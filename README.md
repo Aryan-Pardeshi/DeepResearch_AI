@@ -4,7 +4,7 @@
 
 [![Live demo](https://img.shields.io/badge/demo-live-2ea44f?style=flat-square)](https://deep-research-ai-xi.vercel.app/) ![Frontend on Vercel](https://img.shields.io/badge/frontend-Vercel-000000?style=flat-square&logo=vercel&logoColor=white) ![Backend on Render](https://img.shields.io/badge/backend-Render-46E3B7?style=flat-square&logo=render&logoColor=white) [![GitHub stars](https://img.shields.io/github/stars/Aryan-Pardeshi/DeepResearch_AI?style=flat-square)](https://github.com/Aryan-Pardeshi/DeepResearch_AI/stargazers) ![Last commit](https://img.shields.io/github/last-commit/Aryan-Pardeshi/DeepResearch_AI?style=flat-square)
 
-An AI-powered multi-agent research workspace with **two modes**: fast web research that returns a cited report, and a full evidence-grounded academic pipeline that writes complete, citation-verified research papers with human-in-the-loop quality gates.
+An AI-powered multi-agent research workspace with **two modes**: fast web research that returns a cited report, and a full evidence-grounded academic pipeline that writes complete, source-traced research papers with human-in-the-loop quality gates.
 
 **🔗 Live demo → [deep-research-ai-xi.vercel.app](https://deep-research-ai-xi.vercel.app/)**
 
