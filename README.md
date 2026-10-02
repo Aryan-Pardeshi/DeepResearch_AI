@@ -224,6 +224,12 @@ uvicorn backend.app.main:app --reload --port 8000
 
 ---
 
+## Contributing
+
+Contributions are welcome, from typo fixes to new academic source adapters. Start with [CONTRIBUTING.md](CONTRIBUTING.md) for setup and a project map, then pick an issue labelled [`good first issue`](https://github.com/Aryan-Pardeshi/DeepResearch_AI/labels/good%20first%20issue) or [`help wanted`](https://github.com/Aryan-Pardeshi/DeepResearch_AI/labels/help%20wanted). The test suite runs offline with `pytest`.
+
+---
+
 ## Author
 
 Built by [Aryan Pardeshi](https://github.com/Aryan-Pardeshi) — open to AI/ML internship opportunities.

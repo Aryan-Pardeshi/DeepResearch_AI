@@ -1,0 +1,41 @@
+name: Bug report
+description: Something is broken or behaves wrongly
+labels: [bug]
+body:
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode
+      options:
+        - DeepSearch
+        - Research Mode
+        - Export (PDF / DOCX / BibTeX)
+        - Frontend only
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you got instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: The query or input, and any settings you changed.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Paste the shortest relevant error. Remove API keys and emails first.
+      render: shell
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      placeholder: "OS, Python version, Docker or local, LLM provider/model"

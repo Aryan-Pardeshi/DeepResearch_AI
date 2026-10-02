@@ -1,0 +1,26 @@
+name: Feature request
+description: Suggest an improvement or a new academic source
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do that is hard or impossible today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Rough idea is fine. Alternatives you considered are welcome.
+  - type: dropdown
+    id: help
+    attributes:
+      label: Would you like to build this?
+      options:
+        - "Yes, I would like to open a PR"
+        - "Maybe, with guidance"
+        - "No, just suggesting"
+    validations:
+      required: true
