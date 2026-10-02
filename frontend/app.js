@@ -83,6 +83,10 @@ const state = {
     }
 };
 
+function setResearchBackdropActive(active) {
+    document.body?.classList.toggle('research-active', Boolean(active));
+}
+
 // Research Mode Pipeline Stage Metadata (30 numbered stages + 3 checkpoints = 33 pipeline steps)
 const RM_STAGES = [
     // ── Phase 1: Planning & Protocol ──────────────────────────────────────────
@@ -570,8 +574,23 @@ async function fetchLivePaperCount() {
 // DOM Cache
 let dom = {};
 
+function initMobileDisclosurePanels() {
+    const mobileLayout = window.matchMedia('(max-width: 640px)');
+    const indexStrip = document.getElementById('index-strip');
+
+    const syncDisclosureState = () => {
+        const shouldExpand = !mobileLayout.matches;
+        if (indexStrip) indexStrip.open = shouldExpand;
+        if (dom.backendOfflineBanner) dom.backendOfflineBanner.open = shouldExpand;
+    };
+
+    syncDisclosureState();
+    mobileLayout.addEventListener('change', syncDisclosureState);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     cacheDomElements();
+    initMobileDisclosurePanels();
     initTheme();
     updateModeTimeEstimate(state.mode);
     initHeaderOffset();
@@ -1466,6 +1485,7 @@ async function restoreRMSessionOnLoad() {
 
         // 1. Immediately restore state from localStorage so progress is NEVER wiped on page reload
         state.rm.threadId = session.threadId;
+        setResearchBackdropActive(true);
         if (session.rmState) {
             Object.assign(state.rm, session.rmState);
         }
@@ -1633,6 +1653,7 @@ function showResumeBanner(data) {
 
 function resetResearchModeForm() {
     clearRMSession();
+    setResearchBackdropActive(false);
     state.rm.threadId = null;
     state.rm.status = 'idle';
     state.rm.hitlCheckpoint = null;
@@ -1942,6 +1963,7 @@ async function handleRMStart() {
         }
 
         state.rm.threadId = data.thread_id;
+        setResearchBackdropActive(true);
         if (typeof data.papers_total === 'number') {
             animatePaperCounter(data.papers_total, 400);
         }
@@ -3123,6 +3145,7 @@ async function submitPlanApprovalWithMessage(message, { isRevision = false } = {
         if (!response.ok || !response.body) {
             throw new Error(`Server returned ${response.status} ${response.statusText || ''}`.trim());
         }
+        setResearchBackdropActive(true);
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder('utf-8');
@@ -3278,6 +3301,7 @@ function resetToLanding() {
         return;
     }
     researchTimer.reset();
+    setResearchBackdropActive(false);
     state.threadId = null;
     state.ps = '';
     state.plan = [];

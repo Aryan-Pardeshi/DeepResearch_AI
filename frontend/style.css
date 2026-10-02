@@ -96,10 +96,6 @@
 
 body {
     background: #08090f;
-    background-image: 
-        radial-gradient(ellipse 70% 45% at 50% -15%, rgba(99, 102, 241, 0.22), transparent 70%),
-        radial-gradient(ellipse 50% 35% at 85% 15%, rgba(59, 130, 246, 0.18), transparent 70%),
-        radial-gradient(ellipse 50% 35% at 15% 20%, rgba(147, 51, 234, 0.16), transparent 70%);
     background-attachment: fixed;
     color: var(--text-primary);
     font-family: var(--font-inter);
@@ -114,15 +110,30 @@ body {
 body::before {
     content: "";
     position: fixed;
-    inset: 0;
+    inset: -10%;
     pointer-events: none;
     z-index: 0;
     background:
-        radial-gradient(60% 45% at 50% -5%, rgba(99, 102, 241, 0.2), transparent 75%),
-        radial-gradient(40% 35% at 10% 25%, rgba(168, 85, 247, 0.15), transparent 70%),
-        radial-gradient(45% 35% at 90% 20%, rgba(59, 130, 246, 0.18), transparent 70%);
+        radial-gradient(ellipse 80% 55% at 50% 0%, rgba(99, 102, 241, 0.34), transparent 75%),
+        radial-gradient(ellipse 55% 45% at 0% 8%, rgba(147, 51, 234, 0.27), transparent 70%),
+        radial-gradient(ellipse 60% 48% at 100% 12%, rgba(59, 130, 246, 0.3), transparent 72%),
+        radial-gradient(60% 45% at 50% -5%, rgba(99, 102, 241, 0.28), transparent 75%),
+        radial-gradient(40% 35% at 10% 25%, rgba(168, 85, 247, 0.22), transparent 70%),
+        radial-gradient(45% 35% at 90% 20%, rgba(59, 130, 246, 0.26), transparent 70%);
+    background-size: 130% 130%, 145% 145%, 130% 130%, 150% 150%, 140% 140%, 150% 150%;
+    background-position: 0% 0%, 100% 25%, 0% 100%, 100% 0%, 0% 60%, 100% 100%;
+    background-repeat: no-repeat;
     filter: blur(50px);
-    animation: ambientDrift 20s ease-in-out infinite alternate;
+    opacity: 1;
+    animation:
+        ambientDrift 14s ease-in-out infinite alternate,
+        ambientBreath 2.4s ease-in-out infinite alternate;
+    transition: opacity 1.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+body.research-active::before {
+    opacity: 0.12;
+    animation: none;
 }
 
 /* Subtle, refined hairline grid */
@@ -141,8 +152,23 @@ body::after {
 }
 
 @keyframes ambientDrift {
-    from { transform: translate3d(-1.5%, 0, 0) scale(1); }
-    to   { transform: translate3d(1.5%, 2%, 0) scale(1.06); }
+    0% {
+        background-position: 0% 0%, 100% 25%, 0% 100%, 100% 0%, 0% 60%, 100% 100%;
+        transform: translate3d(-2%, -1%, 0) scale(0.94);
+    }
+    50% {
+        background-position: 50% 100%, 0% 55%, 100% 15%, 0% 85%, 100% 25%, 0% 30%;
+        transform: translate3d(2%, 1%, 0) scale(1.12);
+    }
+    100% {
+        background-position: 100% 0%, 0% 100%, 100% 70%, 0% 0%, 100% 100%, 0% 0%;
+        transform: translate3d(-1%, 2%, 0) scale(1.04);
+    }
+}
+
+@keyframes ambientBreath {
+    from { opacity: 0.72; }
+    to { opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -151,8 +177,13 @@ body::after {
 
 :root.light-mode body::before {
     background:
-        radial-gradient(55% 42% at 50% 0%, rgba(99, 102, 241, 0.1), transparent 70%),
-        radial-gradient(40% 32% at 85% 15%, rgba(37, 99, 235, 0.08), transparent 70%);
+        radial-gradient(ellipse 80% 55% at 50% 0%, rgba(99, 102, 241, 0.2), transparent 75%),
+        radial-gradient(ellipse 55% 45% at 0% 8%, rgba(147, 51, 234, 0.16), transparent 70%),
+        radial-gradient(ellipse 60% 48% at 100% 12%, rgba(59, 130, 246, 0.18), transparent 72%),
+        radial-gradient(55% 42% at 50% 0%, rgba(99, 102, 241, 0.16), transparent 70%),
+        radial-gradient(40% 32% at 85% 15%, rgba(37, 99, 235, 0.12), transparent 70%);
+    background-size: 130% 130%, 145% 145%, 130% 130%, 150% 150%, 140% 140%;
+    background-repeat: no-repeat;
 }
 
 :root.light-mode body::after { display: none; }
@@ -4634,11 +4665,6 @@ select:focus-visible,
     margin: 0;
 }
 
-.footer-security-note {
-    color: var(--text-muted);
-    font-style: italic;
-}
-
 @media (max-width: 1024px) {
     .footer-container {
         grid-template-columns: 1.3fr 1fr 1fr 1fr;
@@ -6466,14 +6492,14 @@ body {
         align-items: center !important;
         justify-content: space-between !important;
         gap: 0.3rem !important;
-        background: rgba(7, 9, 14, 0.9) !important;
+        background: linear-gradient(110deg, rgba(48, 16, 72, 0.48), rgba(16, 34, 72, 0.5)) !important;
         backdrop-filter: blur(24px) saturate(190%) !important;
         -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
         border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
     }
 
     :root.light-mode header {
-        background: rgba(255, 255, 255, 0.94) !important;
+        background: linear-gradient(110deg, rgba(237, 233, 254, 0.76), rgba(219, 234, 254, 0.74)) !important;
         border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
     }
 
@@ -6647,11 +6673,139 @@ body {
         display: none !important;
     }
 
-    .rm-query-chip {
+.rm-query-chip {
         flex-shrink: 0 !important;
         padding: 0.32rem 0.68rem !important;
         font-size: 0.74rem !important;
         border-radius: 999px !important;
+    }
+}
+
+/* Keep long source and service details compact on phones; native disclosures
+   provide keyboard access and leave the desktop layout expanded. */
+.index-strip > .index-strip-label,
+.backend-offline-summary {
+    list-style: none;
+}
+
+.index-strip > .index-strip-label::-webkit-details-marker,
+.backend-offline-summary::-webkit-details-marker {
+    display: none;
+}
+
+.index-strip-count,
+.index-strip-chevron,
+.backend-offline-summary-hint {
+    display: none;
+}
+
+.backend-offline-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+}
+
+.backend-offline-details {
+    display: inline;
+}
+
+@media (max-width: 640px) {
+    .index-strip {
+        width: 100%;
+        align-items: stretch;
+        gap: 0.65rem;
+        margin-top: 1.1rem;
+    }
+
+    .index-strip > .index-strip-label {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        min-height: 44px;
+        padding: 0.55rem 0.8rem;
+        border: 1px solid var(--card-border);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.035);
+        cursor: pointer;
+    }
+
+    .index-strip-count {
+        display: inline;
+        margin-left: auto;
+        font-size: 0.75rem;
+        font-weight: 500;
+        letter-spacing: 0;
+        text-transform: none;
+        color: var(--text-secondary);
+    }
+
+    .index-strip-chevron {
+        display: block;
+        width: 16px;
+        height: 16px;
+        transition: transform 0.2s ease;
+    }
+
+    .index-strip[open] .index-strip-chevron {
+        transform: rotate(180deg);
+    }
+
+    .index-list,
+    .index-strip .index-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: stretch;
+        justify-content: initial;
+        gap: 0.45rem;
+    }
+
+    .index-chip {
+        min-width: 0;
+        justify-content: flex-start;
+        gap: 0.4rem;
+        padding: 0.4rem 0.55rem;
+        font-size: 0.78rem;
+    }
+
+    .index-chip .index-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .index-footnote {
+        margin: 0;
+        font-size: 0.75rem;
+    }
+
+    #backend-offline-banner {
+        align-items: stretch;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        gap: 0;
+        padding: 0.45rem 0.75rem;
+        font-size: 0.82rem;
+    }
+
+    #backend-offline-banner > .backend-offline-summary {
+        width: 100%;
+        min-height: 38px;
+        cursor: pointer;
+    }
+
+    #backend-offline-banner .backend-offline-summary-hint {
+        display: inline;
+        margin-left: auto;
+        font-size: 0.72rem;
+        font-weight: 500;
+        color: currentColor;
+        opacity: 0.8;
+    }
+
+    #backend-offline-banner .backend-offline-details {
+        width: 100%;
+        padding: 0.35rem 0 0.25rem 1.8rem;
+        line-height: 1.45;
     }
 }
 

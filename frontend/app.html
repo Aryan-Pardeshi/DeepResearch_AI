@@ -110,7 +110,7 @@
     }
     </script>
 
-    <link rel="stylesheet" href="style.css?v=3.5.6">
+    <link rel="stylesheet" href="style.css?v=3.6.1">
     <!-- Marked.js for markdown parsing -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- DOMPurify for XSS sanitization -->
@@ -125,10 +125,16 @@
 
     <!-- Backend Offline Banner. The styles for this existed but the element did
          not, so a backend that was down or still cold-starting gave no signal. -->
-    <div class="backend-offline-banner" id="backend-offline-banner" style="display:none;">
-        <i data-lucide="wifi-off" style="width: 18px; height: 18px; flex-shrink: 0;"></i>
-        <span><strong>Backend unreachable.</strong> Waiting for the research service to respond — a sleeping host can take up to a minute to wake.<span id="backend-offline-reason" class="backend-offline-reason"></span></span>
-    </div>
+    <details class="backend-offline-banner" id="backend-offline-banner" style="display:none;">
+        <summary class="backend-offline-summary">
+            <i data-lucide="wifi-off" style="width: 18px; height: 18px; flex-shrink: 0;"></i>
+            <strong>Backend unreachable.</strong>
+            <span class="backend-offline-summary-hint">Details</span>
+        </summary>
+        <div class="backend-offline-details">
+            Waiting for the research service to respond — a sleeping host can take up to a minute to wake.<span id="backend-offline-reason" class="backend-offline-reason"></span>
+        </div>
+    </details>
 
     <!-- Header -->
     <header role="banner" class="app-header">
@@ -505,8 +511,12 @@
                 </button>
 
                 <!-- The academic retrieval indexes queried by academic_search.py. -->
-                <div class="index-strip">
-                    <span class="index-strip-label">Indexed sources</span>
+                <details class="index-strip" id="index-strip">
+                    <summary class="index-strip-label">
+                        <span>Indexed sources</span>
+                        <span class="index-strip-count">10 sources</span>
+                        <i data-lucide="chevron-down" class="index-strip-chevron" aria-hidden="true"></i>
+                    </summary>
                     <div class="index-list">
                         <a class="index-chip" href="https://openalex.org" target="_blank" rel="noopener noreferrer" title="OpenAlex — open catalogue of 320M+ scholarly works">
                             <img class="index-mark index-mark-openalex" src="assets/openalex.png" alt="OpenAlex scholarly catalog logo" width="22" height="22" loading="lazy">
@@ -549,11 +559,10 @@
                             <span class="index-name">OpenCitations</span>
                         </a>
                     </div>
-                </div>
-
-                <p class="index-footnote">
-                    Open-access full text resolved through Unpaywall, Europe PMC and CORE.
-                </p>
+                    <p class="index-footnote">
+                        Open-access full text resolved through Unpaywall, Europe PMC and CORE.
+                    </p>
+                </details>
             </div>
         </section>
 
@@ -823,7 +832,6 @@
         <div class="footer-bottom">
             <div class="footer-bottom-inner">
                 <p>&copy; 2026 DeepResearch Academic Lab. Released under MIT License.</p>
-                <p class="footer-security-note">Zero data leakage guarantee: API keys stored locally in .env.</p>
             </div>
         </div>
     </footer>
@@ -845,6 +853,6 @@
     <div class="toast-container" id="toast-container"></div>
 
     <!-- Application Script -->
-    <script src="app.js?v=3.5.2"></script>
+    <script src="app.js?v=3.5.4"></script>
 </body>
 </html>
