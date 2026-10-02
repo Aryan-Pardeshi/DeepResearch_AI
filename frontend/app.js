@@ -489,7 +489,7 @@ const rmTimer = {
     }
 };
 
-// Cold-start auto-reload guard. If the user lands on a cold Render instance
+// Cold-start auto-reload guard. If the user lands on a cold backend instance
 // where the backend takes 30-60s to wake up, the page can sit stuck with the
 // offline banner visible. A bounded one-shot reload gives the page a single
 // chance to cleanly recover once the backend spins up, without looping
@@ -1319,7 +1319,7 @@ function switchPanel(targetPanel) {
 }
 
 // Health Check. This ran exactly once at load, so a host that was still waking
-// up (Render free instances cold-start for ~30-60s) pinned the offline banner on
+// up (a cold-starting host can take ~30-60s to wake) pinned the offline banner on
 // screen for the whole session even after the backend came up.
 //
 // The poll loop alone isn't enough: Chrome/Brave throttle setTimeout heavily in
@@ -1330,7 +1330,7 @@ function switchPanel(targetPanel) {
 // markBackendOnline() lets any real successful API response clear the banner
 // immediately instead of waiting on the timer at all.
 //
-// A single failed /healthz poll isn't treated as "down" either: Render's free
+// A single failed /healthz poll isn't treated as "down" either: a small
 // single worker occasionally queues or drops one request under load even while
 // the app is otherwise working (a real API call can succeed seconds later), and
 // that lone blip was enough to re-show the banner right after markBackendOnline()
@@ -2409,11 +2409,11 @@ async function openRMEventStream(message) {
 
             if (isTerminal) break;
 
-            // RENDER ERROR HANDLING:
+            // PROXY ERROR HANDLING:
             // Stream ended without a terminal event (checkpoint/completed/error).
-            // This happens when Render's reverse proxy terminates idle SSE connections (90s limit)
-            // or when network drops occur between client and Render server during heavy LLM tasks.
-            // We check the pipeline-status endpoint to verify if the server on Render is still executing.
+            // This happens when the host's reverse proxy terminates idle SSE connections
+            // or when network drops occur between client and server during heavy LLM tasks.
+            // We check the pipeline-status endpoint to verify if the server is still executing.
             if (!isTerminal && state.rm.threadId) {
                 try {
                     const statusRes = await fetch(
@@ -2422,9 +2422,9 @@ async function openRMEventStream(message) {
                     if (statusRes.ok) {
                         const statusData = await statusRes.json();
                         if (statusData.running) {
-                            // RENDER ERROR HANDLING:
-                            // Backend on Render is still executing — reconnect to pick up buffered
-                            // events that arrived while disconnected from Render.
+                            // PROXY ERROR HANDLING:
+                            // Backend is still executing — reconnect to pick up buffered
+                            // events that arrived while disconnected.
                             appendLogLine('Connection dropped mid-run — reconnecting to resume stream…', 'warn');
                             if (dom.rmPipelineStatusTag) {
                                 dom.rmPipelineStatusTag.textContent = 'Reconnecting to pipeline…';
