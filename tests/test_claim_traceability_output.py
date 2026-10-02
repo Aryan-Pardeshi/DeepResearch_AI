@@ -347,6 +347,16 @@ async def test_appendices_render_traceability_matrix():
 
 
 @pytest.mark.asyncio
+async def test_appendix_states_traceability_coverage_without_overclaiming():
+    """Only sentences the writer tagged with [EV:...] get a chain, so Appendix C must not claim every statement."""
+    linked = await claims_linker_node(_completed_state())
+    state = {**_completed_state(), "review_claims": linked["review_claims"]}
+    appendix = (await import_appendices()(state))["appendices"]
+    assert "for every statement" not in appendix
+    assert "Untagged sentences are not linked" in appendix
+
+
+@pytest.mark.asyncio
 async def test_final_pipeline_state_carries_resolvable_manifest_end_to_end():
     """Integration: completed-run shape -> linker -> validators all green."""
     linked = await claims_linker_node(_completed_state())

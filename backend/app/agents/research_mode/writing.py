@@ -467,7 +467,10 @@ async def appendices_agent(state: Dict[str, Any]) -> Dict[str, Any]:
                 f"{str(c.get('claim_text') or '')[:140]} -> {'; '.join(locations) if locations else 'unlinked'}"
             )
         app_text += "\n## Appendix C: Claim Traceability Matrix\n"
-        app_text += "Machine-readable claim -> evidence -> source chains for every statement in this document.\n"
+        app_text += (
+            "Machine-readable claim -> evidence -> source chains for each sentence the writer tagged with "
+            "evidence (introduction, literature review, results and discussion). Untagged sentences are not linked.\n"
+        )
         app_text += "\n".join(rows) + "\n"
 
     return {"appendices": app_text}
