@@ -17,3 +17,5 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt pytest pytest-asyncio
       - run: pytest -q
+        env:
+          LLM_API_KEY: test-key
