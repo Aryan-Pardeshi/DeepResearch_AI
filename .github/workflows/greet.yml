@@ -13,6 +13,6 @@ jobs:
     steps:
       - uses: actions/first-interaction@v3
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          issue-message: Thanks for opening your first issue! It will be triaged soon. If you want to fix it yourself, see CONTRIBUTING.md.
-          pr-message: Thanks for your first PR! Please check that `pytest` passes and the checklist is filled in. A maintainer will review it shortly.
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          issue_message: Thanks for opening your first issue! It will be triaged soon. If you want to fix it yourself, see CONTRIBUTING.md.
+          pr_message: Thanks for your first PR! Please check that `pytest` passes and the checklist is filled in. A maintainer will review it shortly.
