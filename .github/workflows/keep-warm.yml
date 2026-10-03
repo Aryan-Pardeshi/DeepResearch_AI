@@ -2,7 +2,7 @@ name: Keep Backend Warm
 
 # Caveat: GitHub's `schedule` trigger is not guaranteed to fire exactly on time —
 # under platform load it can be delayed several minutes, occasionally more.
-# A */10 cadence gives real margin against Render's ~15 minute idle window,
+# A */10 cadence gives margin against the host's idle spin-down window,
 # but treat this as "usually keeps it warm," not a hard guarantee.
 # Do not schedule more frequently than every 10 minutes (to avoid throttling/disabling on free accounts).
 
@@ -18,7 +18,7 @@ jobs:
     steps:
       - name: Ping live health endpoint
         run: |
-          URL="https://deepresearch-ai-gxiu.onrender.com/healthz"
+          URL="https://deepresearch-ai.fastapicloud.dev/healthz"
           RESPONSE=$(curl -s -o /dev/null -w "%{http_code} %{time_total}" --max-time 60 "$URL")
           HTTP_CODE=$(echo "$RESPONSE" | awk '{print $1}')
           HTTP_TIME=$(echo "$RESPONSE" | awk '{print $2}')

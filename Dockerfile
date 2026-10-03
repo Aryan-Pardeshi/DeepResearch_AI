@@ -32,5 +32,5 @@ RUN mkdir -p /app/data /app/data/figures && chmod -R 777 /app/data
 EXPOSE 8000
 
 # Shell form so $PORT is expanded at runtime: hosts like Hugging Face Spaces and
-# Render assign the port themselves.
+# FastAPI Cloud assign the port themselves.
 CMD ["sh", "-c", "uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
