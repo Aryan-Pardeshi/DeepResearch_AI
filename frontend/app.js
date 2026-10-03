@@ -839,8 +839,7 @@ async function checkConfigGate() {
         if (!data.ok || (data.missing_required && data.missing_required.length > 0)) {
             // The gate writes to the server's own .env, so it only makes sense where
             // that is allowed. On a deployment with the config API locked it could
-            // neither save nor honour its "stored locally" promise, so it stays hidden
-            // and the operator is told to set the environment variables instead.
+            // not save, so it stays hidden and the operator is told to set the environment variables instead.
             if (!data.config_writable) {
                 showToast(
                     `Server is missing ${(data.missing_required || []).join(', ')}. ` +
@@ -1248,7 +1247,7 @@ async function submitSetupGate() {
         OPENALEX_EMAIL: dom.gateOpenalexEmail.value.trim()
     };
 
-    dom.gateSaveStatus.textContent = 'Saving configuration locally...';
+    dom.gateSaveStatus.textContent = 'Saving configuration to the backend...';
     try {
         let res = await fetch(`${API_BASE_URL}/config/setup`, {
             method: 'POST',
