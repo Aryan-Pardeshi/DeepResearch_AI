@@ -26,15 +26,9 @@ from backend.app.graph.research_mode_builder import (
 )
 from backend.app.models.evidence import PaperRecord, PRISMATracker, SearchProtocol
 
-try:
-    from backend.app.models.evidence import ConfidenceBasis
-    CONF_BASIS_VAL = (
-        list(ConfidenceBasis)[0].value
-        if hasattr(list(ConfidenceBasis)[0], "value")
-        else str(list(ConfidenceBasis)[0])
-    )
-except Exception:
-    CONF_BASIS_VAL = "exact_quote_fulltext"
+from backend.app.models.evidence import ConfidenceBasis
+
+CONF_BASIS_VAL = list(ConfidenceBasis)[0].value
 
 
 DEFAULT_QUOTE = "Artificial intelligence has demonstrated applications in healthcare."
@@ -596,11 +590,6 @@ async def test_research_mode_runs_offline_from_problem_to_final_paper():
         assert "__interrupt__" not in result, "graph never ran to completion"
         final_state = result
 
-    # ---- Debug output (visible with `pytest -s`, or on failure) ----
-    print("INTRO:", final_state.get("introduction"))
-    print("CLAIMS:", final_state.get("review_claims"))
-    print("UNRESOLVED:", final_state.get("unresolved_claims"))
-    print("REPORT:", final_state.get("validation_report"))
 
     # ---- PRISMA invariants ----
     prisma = final_state.get("prisma_tracker") or {}
@@ -637,9 +626,12 @@ async def test_research_mode_runs_offline_from_problem_to_final_paper():
 
     # Markers must be stripped from the rendered prose.
     for section in ("introduction", "literature_review", "results", "discussion"):
-        assert "[EV:" not in str(final_state.get(section)).upper().replace("[ EV:", "[EV:")
+        assert "[EV:" not in str(final_state.get(section)).upper()
 
     # ---- Validation report ----
     report = final_state["validation_report"]
     assert report["prisma_invariants_valid"] is True
     assert report["total_review_claims"] == len(claims)
+    assert report["resolved_review_claims"] == len(claims)
+    assert report["unresolved_review_claims"] == []
+    assert report["passed_all_gates"] is True
