@@ -53,6 +53,9 @@ def _canned_llm_response(items):
 
     return _fake
 
+def _fake_llm():
+    return object()
+
 
 # ---------------------------------------------------------------------------
 # 1. Data models: Claim always resolves paper_id + section + source_url
@@ -152,6 +155,11 @@ async def test_evidence_extractor_anchors_quotes_with_span_page_confidence(monke
 
     monkeypatch.setattr(
         extraction,
+        "get_llm_for",
+        lambda *args, **kwargs: _fake_llm(),
+    )
+    monkeypatch.setattr(
+        extraction,
         "_safe_invoke_llm",
         _canned_llm_response([
             {
@@ -188,6 +196,11 @@ async def test_extractor_downgrades_unverifiable_paraphrase(monkeypatch):
 
     monkeypatch.setattr(
         extraction,
+        "get_llm_for",
+        lambda *args, **kwargs: _fake_llm(),
+    )
+    monkeypatch.setattr(
+        extraction,
         "_safe_invoke_llm",
         _canned_llm_response([
             {
@@ -213,6 +226,12 @@ async def test_abstract_only_source_marks_location_unknown_not_guessed(monkeypat
     paper = dict(PAPER)
     paper.pop("fulltext_excerpt")
     quote = "robustness of deep networks against distribution shift"
+
+    monkeypatch.setattr(
+        extraction,
+        "get_llm_for",
+        lambda *args, **kwargs: _fake_llm(),
+    )
     monkeypatch.setattr(
         extraction,
         "_safe_invoke_llm",
