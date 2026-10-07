@@ -6,7 +6,7 @@
 
 An AI-powered multi-agent research workspace with **two modes**: fast web research that returns a cited report, and a full evidence-grounded academic pipeline that writes complete research papers whose cited claims link back to source passages, with human-in-the-loop quality gates.
 
-**🔗 Live demo → https://research.aryanpardeshi.tech/
+**🔗 Live demo → [deep-research-ai-xi.vercel.app](https://deep-research-ai-xi.vercel.app/)**
 
 ---
 
